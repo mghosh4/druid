@@ -54,7 +54,7 @@ public class LookupExtractorTest
       "emptyString",
       Arrays.asList("")
   );
-  LookupExtractor lookupExtractor = new MapLookupExtractor(EXPECTED_MAP);
+  LookupExtractor lookupExtractor = new MapLookupExtractor(EXPECTED_MAP, false);
 
   @Test
   public void testApplyAll()

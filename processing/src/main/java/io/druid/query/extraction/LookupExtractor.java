@@ -30,9 +30,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = LookupDelegator.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "map", value = MapLookupExtractor.class)
+    @JsonSubTypes.Type(name = "map", value = MapLookupExtractor.class),
+    @JsonSubTypes.Type(name = "registered", value = LookupDelegator.class)
 })
 public abstract class LookupExtractor
 {
@@ -106,6 +107,11 @@ public abstract class LookupExtractor
    * @return A byte array that can be used to uniquely identify if results of a prior lookup can use the cached values
    */
 
-  @Nullable
   public abstract byte[] getCacheKey();
+
+  // make this abstract again once @drcrallen fix the metmax lookup implementation.
+  public boolean isOneToOne()
+  {
+    return false;
+  }
 }

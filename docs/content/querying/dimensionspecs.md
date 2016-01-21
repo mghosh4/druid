@@ -393,3 +393,29 @@ or without setting "locale" (in this case, the current value of the default loca
   "type" : "lower"
 }
 ```
+
+### Lookup DimensionSpecs
+
+Lookup DimensionSpecs can be used to define directly a lookup implementation as dimension spec.
+Generally speaking there is two different kind of lookups implementations. 
+The first kind is passed at the query time like `map` implementation.
+
+```json
+{ 
+  "type":"lookup"
+  "dimension":"dimensionName"
+  "outputName":"dimensionOutputName"
+  "lookup":{"type": "map", "map":{"key":"value"}, "isOneToOne":false}
+}
+```
+
+The second kind where it is not possible to pass at query time due to their size, will be based on an external lookup table or resource that is already registered via configuration file or/and coordinator.
+
+```json
+{ 
+  "type":"lookup"
+  "dimension":"dimensionName"
+  "outputName":"dimensionOutputName"
+  "lookup":{"type": "registered", "lookupName":"registredName"}
+}
+```
