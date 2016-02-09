@@ -30,10 +30,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = LookupDelegator.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "map", value = MapLookupExtractor.class),
-    @JsonSubTypes.Type(name = "registered", value = LookupDelegator.class)
+    @JsonSubTypes.Type(name = "map", value = MapLookupExtractor.class)
 })
 public abstract class LookupExtractor
 {

@@ -19,58 +19,102 @@
 
 package io.druid.query.dimension;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.LookupExtractor;
+import io.druid.query.extraction.LookupExtractorFactory;
+import io.druid.query.extraction.LookupReferencesManager;
 import io.druid.query.extraction.MapLookupExtractor;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
+import org.easymock.EasyMock;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Map;
 
 @RunWith(JUnitParamsRunner.class)
 public class LookupDimensionSpecTest
 {
-  private static final LookupExtractor lookupMap = new MapLookupExtractor(
-      ImmutableMap.of("key", "value", "key2", "value2"), true);
+  private static final Map<String, String> STRING_MAP = ImmutableMap.of("key", "value", "key2", "value2");
+  private static LookupExtractor MAP_LOOKUP_EXTRACTOR = new MapLookupExtractor(
+      STRING_MAP, true);
 
-  private DimensionSpec lookupDimSpec;
+  private static final LookupReferencesManager LOOKUP_REF_MANAGER = EasyMock.createMock(LookupReferencesManager.class);
 
-  @Before
-  public void setUp()
-  {
-    lookupDimSpec = new LookupDimensionSpec("dimName", "outputName", lookupMap, false, null);
+  static {
+    EasyMock.expect(LOOKUP_REF_MANAGER.get(EasyMock.eq("lookupName"))).andReturn(new LookupExtractorFactory()
+    {
+      @Override
+      public boolean start()
+      {
+        return true;
+      }
+
+      @Override
+      public boolean close()
+      {
+        return true;
+      }
+
+      @Override
+      public LookupExtractor get()
+      {
+        return MAP_LOOKUP_EXTRACTOR;
+      }
+    }).anyTimes();
+    EasyMock.replay(LOOKUP_REF_MANAGER);
   }
+
+  private final DimensionSpec lookupDimSpec = new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, null);
+
 
   @Parameters
   @Test
   public void testSerDesr(DimensionSpec lookupDimSpec) throws IOException
   {
     ObjectMapper mapper = new DefaultObjectMapper();
+    InjectableValues injectableValues = new InjectableValues.Std().addValue(
+        LookupReferencesManager.class,
+        LOOKUP_REF_MANAGER
+    );
     String serLookup = mapper.writeValueAsString(lookupDimSpec);
-    Assert.assertEquals(lookupDimSpec, mapper.reader(DimensionSpec.class).readValue(serLookup));
+    Assert.assertEquals(lookupDimSpec, mapper.reader(DimensionSpec.class).with(injectableValues).readValue(serLookup));
   }
 
   private Object[] parametersForTestSerDesr()
   {
     return new Object[]{
-        new LookupDimensionSpec("dimName", "outputName", lookupMap, true, null),
-        new LookupDimensionSpec("dimName", "outputName", lookupMap, false, "Missing_value"),
-        new LookupDimensionSpec("dimName", "outputName", lookupMap, false, null)
+        new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, true, null, null, null),
+        new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, "Missing_value", null, null),
+        new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, null),
+        new LookupDimensionSpec("dimName", "outputName", null, false, null, "name", LOOKUP_REF_MANAGER)
     };
   }
 
   @Test(expected = Exception.class)
   public void testExceptionWhenRetainMissingAndReplaceMissing()
   {
-    new LookupDimensionSpec("dimName", "outputName", lookupMap, true, "replace");
+    new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, true, "replace", null, null);
+  }
+
+  @Test(expected = Exception.class)
+  public void testExceptionWhenNameAndLookupNotNull()
+  {
+    new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, "replace", "name", null);
+  }
+
+  @Test(expected = Exception.class)
+  public void testExceptionWhenNameAndLookupNull()
+  {
+    new LookupDimensionSpec("dimName", "outputName", null, false, "replace", "", null);
   }
 
   @Test
@@ -85,36 +129,83 @@ public class LookupDimensionSpecTest
     Assert.assertEquals("outputName", lookupDimSpec.getOutputName());
   }
 
-  @Test
-  @Parameters
-  public void testApply(DimensionSpec dimensionSpec, String expectedString)
+  public Object[] parametersForTestApply()
   {
-    Assert.assertEquals(expectedString, dimensionSpec.getExtractionFn().apply("not there"));
-    Assert.assertEquals("value", dimensionSpec.getExtractionFn().apply("key"));
-    Assert.assertEquals("value2", dimensionSpec.getExtractionFn().apply("key2"));
-  }
-  public Object[] parametersForTestApply(){
     return new Object[]{
-        new Object[]{new LookupDimensionSpec("dimName", "outputName", lookupMap, true, null), "not there"},
-        new Object[]{new LookupDimensionSpec("dimName", "outputName", lookupMap, false, "Missing_value"), "Missing_value"},
-        new Object[]{new LookupDimensionSpec("dimName", "outputName", lookupMap, false, null), null}
+        new Object[]{
+            new LookupDimensionSpec("dimName", "outputName", null, true, null, "lookupName", LOOKUP_REF_MANAGER),
+            STRING_MAP
+        },
+        new Object[]{
+            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, true, null, null, null),
+            STRING_MAP
+        },
+        new Object[]{
+            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, null),
+            ImmutableMap.of("not there", "")
+        },
+        new Object[]{
+            new LookupDimensionSpec("dimName", "outputName", null, false, null, "lookupName", LOOKUP_REF_MANAGER),
+            ImmutableMap.of("not there", "")
+        },
+        new Object[]{
+            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, "Missing_value", null, null),
+            ImmutableMap.of("not there", "Missing_value")
+        },
+        new Object[]{
+            new LookupDimensionSpec("dimName", "outputName", null, false, "Missing_value", "lookupName", LOOKUP_REF_MANAGER),
+            ImmutableMap.of("not there", "Missing_value")
+        },
+        new Object[]{
+            new LookupDimensionSpec("dimName", "outputName", null, true, null, "lookupName", LOOKUP_REF_MANAGER),
+            ImmutableMap.of("not there", "not there")
+        },
+        new Object[]{
+            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, true, null, "", null),
+            ImmutableMap.of("not there", "not there")
+        }
+
     };
   }
 
   @Test
-  public void testGetExtractionFnWithReplaceMissing()
+  @Parameters
+  public void testApply(DimensionSpec dimensionSpec, Map<String, String> map)
   {
-    lookupDimSpec = new LookupDimensionSpec("dimName", "outputName", lookupMap, false, "Missing_value");
-    Assert.assertEquals("Missing_value", lookupDimSpec.getExtractionFn().apply("not there"));
-    Assert.assertEquals("value", lookupDimSpec.getExtractionFn().apply("key"));
+    for (Map.Entry<String, String> entry : map.entrySet()
+        ) {
+      Assert.assertEquals(Strings.emptyToNull(entry.getValue()), dimensionSpec.getExtractionFn().apply(entry.getKey()));
+    }
   }
 
-  @Test
-  public void testGetExtractionFnWithRetainMissing()
+  public Object[] parametersForTestGetCacheKey()
   {
-    lookupDimSpec = new LookupDimensionSpec("dimName", "outputName", lookupMap, true, null);
-    Assert.assertEquals("not there", lookupDimSpec.getExtractionFn().apply("not there"));
-    Assert.assertEquals("value", lookupDimSpec.getExtractionFn().apply("key"));
+    return new Object[]{
+        new Object[]{
+            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, true, null, null, null),
+            false
+        },
+        new Object[]{
+            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, "Missing_value", null, null),
+            false
+        },
+        new Object[]{
+            new LookupDimensionSpec("dimName", "outputName2", MAP_LOOKUP_EXTRACTOR, false, null, null, null),
+            false
+        },
+        new Object[]{
+            new LookupDimensionSpec("dimName2", "outputName2", MAP_LOOKUP_EXTRACTOR, false, null, null, null),
+            false
+        },
+        new Object[]{
+            new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, null),
+            true
+        },
+        new Object[]{
+            new LookupDimensionSpec("dimName", "outputName", null, false, null, "name", LOOKUP_REF_MANAGER),
+            false
+        }
+    };
   }
 
   @Test
@@ -122,17 +213,6 @@ public class LookupDimensionSpecTest
   public void testGetCacheKey(DimensionSpec dimensionSpec, boolean expectedResult)
   {
     Assert.assertEquals(expectedResult, Arrays.equals(lookupDimSpec.getCacheKey(), dimensionSpec.getCacheKey()));
-  }
-
-  private Object[] parametersForTestGetCacheKey()
-  {
-    return new Object[]{
-        new Object[]{new LookupDimensionSpec("dimName", "outputName", lookupMap, true, null), false},
-        new Object[]{new LookupDimensionSpec("dimName", "outputName", lookupMap, false, "Missing_value"), false},
-        new Object[]{new LookupDimensionSpec("dimName", "outputName2", lookupMap, false, null), false},
-        new Object[]{new LookupDimensionSpec("dimName2", "outputName2", lookupMap, false, null), false},
-        new Object[]{new LookupDimensionSpec("dimName", "outputName", lookupMap, false, null), true}
-    };
   }
 
   @Test

@@ -82,7 +82,7 @@ public class MapLookupExtractor extends LookupExtractor
   }
 
   @Override
-  @JsonProperty
+  @JsonProperty("isOneToOne")
   public boolean isOneToOne()
   {
     return isOneToOne;

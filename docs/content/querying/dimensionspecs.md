@@ -416,6 +416,6 @@ The second kind where it is not possible to pass at query time due to their size
   "type":"lookup"
   "dimension":"dimensionName"
   "outputName":"dimensionOutputName"
-  "lookup":{"type": "registered", "lookupName":"registredName"}
+  "name":"lookupName"
 }
 ```

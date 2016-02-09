@@ -19,6 +19,7 @@
 
 package io.druid.query.dimension;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
@@ -27,9 +28,11 @@ import com.metamx.common.StringUtils;
 import io.druid.query.extraction.DimExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.LookupExtractor;
+import io.druid.query.extraction.LookupReferencesManager;
 import io.druid.query.filter.DimFilterCacheHelper;
 import io.druid.segment.DimensionSelector;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 public class LookupDimensionSpec implements DimensionSpec
@@ -51,55 +54,39 @@ public class LookupDimensionSpec implements DimensionSpec
   @JsonProperty
   private final String replaceMissingWith;
 
-  private final ExtractionFn extractionFn;
+  @JsonProperty
+  private final String name;
+
+
+  private final LookupReferencesManager lookupReferencesManager;
+
 
   @JsonCreator
   public LookupDimensionSpec(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("outputName") String outputName,
-      @JsonProperty("lookup") LookupExtractor lookupInput,
+      @JsonProperty("lookup") LookupExtractor lookup,
       @JsonProperty("retainMissingValues") final boolean retainMissingValues,
-      @JsonProperty("replaceMissingWith") final String replaceMissingWith
+      @JsonProperty("replaceMissingWith") final String replaceMissingWith,
+      @JsonProperty("name") String name,
+      @JacksonInject LookupReferencesManager lookupReferencesManager
   )
   {
     this.retainMissingValues = retainMissingValues;
     this.replaceMissingWith = Strings.emptyToNull(replaceMissingWith);
-    Preconditions.checkArgument(!(retainMissingValues && !Strings.isNullOrEmpty(replaceMissingWith)), "Cannot specify a [replaceMissingValue] and set [retainMissingValue] to true");
+    Preconditions.checkArgument(
+        !(retainMissingValues && !Strings.isNullOrEmpty(replaceMissingWith)),
+        "Cannot specify a [replaceMissingValue] and set [retainMissingValue] to true"
+    );
     this.dimension = Preconditions.checkNotNull(dimension, "dimension can not be Null");
     this.outputName = Preconditions.checkNotNull(outputName, "outputName can not be Null");
-    this.lookup = Preconditions.checkNotNull(lookupInput, "lookup can not be Null");
-    this.extractionFn = new DimExtractionFn()
-    {
-      @Override
-      public byte[] getCacheKey()
-      {
-        return lookup.getCacheKey();
-      }
-
-      @Override
-      public String apply(String value)
-      {
-        final String retVal = Strings.emptyToNull(lookup.apply(value));
-        if (retainMissingValues)
-        {
-          return retVal == null ? Strings.emptyToNull(value) : retVal;
-        } else {
-        return retVal == null ? replaceMissingWith : retVal;
-        }
-      }
-
-      @Override
-      public boolean preservesOrdering()
-      {
-        return false;
-      }
-
-      @Override
-      public ExtractionType getExtractionType()
-      {
-        return lookup.isOneToOne() ? ExtractionType.ONE_TO_ONE : ExtractionType.MANY_TO_ONE;
-      }
-    };
+    this.lookupReferencesManager = lookupReferencesManager;
+    this.name = name;
+    this.lookup = lookup;
+    Preconditions.checkArgument(
+        Strings.isNullOrEmpty(name) ^ (lookup == null),
+        "name and lookup are mutually exclusive please provide either a name or a lookup"
+    );
   }
 
   @Override
@@ -117,15 +104,63 @@ public class LookupDimensionSpec implements DimensionSpec
   }
 
   @JsonProperty
+  @Nullable
   public LookupExtractor getLookup()
   {
     return lookup;
   }
 
+  @JsonProperty
+  @Nullable
+  public String getName()
+  {
+    return name;
+  }
+
   @Override
   public ExtractionFn getExtractionFn()
   {
-    return extractionFn;
+    final LookupExtractor lookupExtractor = Strings.isNullOrEmpty(name) ? this.lookup
+                                                                        : Preconditions.checkNotNull(
+                                                                            Preconditions.checkNotNull(
+                                                                                this.lookupReferencesManager,
+                                                                                "can not find lookup manager"
+                                                                            ).get(name).get(),
+                                                                            "can not find lookup with name [%s]",
+                                                                            name
+                                                                        );
+    return new DimExtractionFn()
+    {
+      @Override
+      public byte[] getCacheKey()
+      {
+        return lookupExtractor.getCacheKey();
+      }
+
+      @Override
+      public String apply(String value)
+      {
+        final String retVal = Strings.emptyToNull(lookupExtractor.apply(value));
+        if (retainMissingValues) {
+          return retVal == null ? Strings.emptyToNull(value) : retVal;
+        } else {
+          return retVal == null ? replaceMissingWith : retVal;
+        }
+      }
+
+      @Override
+      public boolean preservesOrdering()
+      {
+        return false;
+      }
+
+      @Override
+      public ExtractionType getExtractionType()
+      {
+        return lookupExtractor.isOneToOne() ? ExtractionType.ONE_TO_ONE : ExtractionType.MANY_TO_ONE;
+      }
+    };
+
   }
 
   @Override
@@ -138,12 +173,18 @@ public class LookupDimensionSpec implements DimensionSpec
   public byte[] getCacheKey()
   {
     byte[] dimensionBytes = StringUtils.toUtf8(dimension);
-    byte[] dimExtractionFnBytes = extractionFn.getCacheKey();
+    byte[] dimExtractionFnBytes = Strings.isNullOrEmpty(name)
+                                  ? getLookup().getCacheKey()
+                                  : StringUtils.toUtf8(name);
     byte[] outputNameBytes = StringUtils.toUtf8(outputName);
     byte[] replaceWithBytes = StringUtils.toUtf8(Strings.nullToEmpty(replaceMissingWith));
 
 
-    return ByteBuffer.allocate(6 + dimensionBytes.length + outputNameBytes.length + dimExtractionFnBytes.length + replaceWithBytes.length)
+    return ByteBuffer.allocate(6
+                               + dimensionBytes.length
+                               + outputNameBytes.length
+                               + dimExtractionFnBytes.length
+                               + replaceWithBytes.length)
                      .put(CACHE_TYPE_ID)
                      .put(dimensionBytes)
                      .put(DimFilterCacheHelper.STRING_SEPARATOR)
@@ -160,7 +201,7 @@ public class LookupDimensionSpec implements DimensionSpec
   @Override
   public boolean preservesOrdering()
   {
-    return extractionFn.preservesOrdering();
+    return getExtractionFn().preservesOrdering();
   }
 
   @Override
@@ -184,12 +225,15 @@ public class LookupDimensionSpec implements DimensionSpec
     if (!getOutputName().equals(that.getOutputName())) {
       return false;
     }
-    if (!getLookup().equals(that.getLookup())) {
+    if (getLookup() != null ? !getLookup().equals(that.getLookup()) : that.getLookup() != null) {
       return false;
     }
-    return replaceMissingWith != null
-           ? replaceMissingWith.equals(that.replaceMissingWith)
-           : that.replaceMissingWith == null;
+    if (replaceMissingWith != null
+        ? !replaceMissingWith.equals(that.replaceMissingWith)
+        : that.replaceMissingWith != null) {
+      return false;
+    }
+    return getName() != null ? getName().equals(that.getName()) : that.getName() == null;
 
   }
 
@@ -198,9 +242,10 @@ public class LookupDimensionSpec implements DimensionSpec
   {
     int result = getDimension().hashCode();
     result = 31 * result + getOutputName().hashCode();
-    result = 31 * result + getLookup().hashCode();
+    result = 31 * result + (getLookup() != null ? getLookup().hashCode() : 0);
     result = 31 * result + (retainMissingValues ? 1 : 0);
     result = 31 * result + (replaceMissingWith != null ? replaceMissingWith.hashCode() : 0);
+    result = 31 * result + (getName() != null ? getName().hashCode() : 0);
     return result;
   }
 }
