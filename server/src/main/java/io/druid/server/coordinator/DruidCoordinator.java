@@ -66,6 +66,7 @@ import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentReplicator;
 import io.druid.server.coordinator.rules.LoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -876,6 +877,7 @@ public class DruidCoordinator
               new DruidCoordinatorCleanupUnneeded(DruidCoordinator.this),
               new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),
               new DruidCoordinatorBalancer(DruidCoordinator.this),
+	      new DruidCoordinatorSegmentReplicator(DruidCoordinator.this),
               new DruidCoordinatorLogger()
           ),
           startingLeaderCounter
