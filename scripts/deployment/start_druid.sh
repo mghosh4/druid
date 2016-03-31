@@ -291,6 +291,8 @@ do
         #COMMAND=$COMMAND" sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password password ';"
         #COMMAND=$COMMAND" sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password ';"
         COMMAND=$COMMAND" sudo apt-get -y install mysql-server;"
+        COMMAND=$COMMAND" sudo service mysql stop;"
+        COMMAND=$COMMAND" sudo service mysql start;"
         COMMAND=$COMMAND" sudo sed -i '47s/.*/#bind-address = 127.0.0.1/' /etc/mysql/my.cnf;"
         COMMAND=$COMMAND" mysql -u root -p -e \"$MYSQL\";"
         COMMAND=$COMMAND" sudo /etc/init.d/mysql stop;"
