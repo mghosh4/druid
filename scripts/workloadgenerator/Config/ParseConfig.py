@@ -1,23 +1,29 @@
 import os
 class ParseConfig:
 	def __init__(self, configFilePath):
-		self.datasource =
-		self.granularity =
-		self.aggregations =
-		self.dimension =
-		self.metric =
-		self.threshold =
-		self.filter =
-		self.distribution =
-		self.postaggregations =
-		self.accessdistribution =
-		self.perioddistribution = 
-		self.querytype =
-		self.brokernodeurl =
-		self.brokerendpoint =
-		self.minqueryperiod =
-		self.maxqueryperiod =
-		self.numqueries =
+		self.datasource = ""
+		self.granularity = ""
+		self.aggregations = ""
+		self.dimension = ""
+		self.metric = ""
+		self.threshold = ""
+		self.filter = ""
+		self.distribution = ""
+		self.postaggregations = ""
+		self.accessdistribution = ""
+		self.perioddistribution = ""
+		self.querytype = ""
+		self.brokernodeurl = ""
+		self.brokerendpoint = ""
+		self.minqueryperiod = 0
+		self.maxqueryperiod = 0
+		self.numqueries = 0
+		self.earliestyear = 0
+		self.earliestmonth = 0
+		self.earliestday = 0
+		self.earliesthour = 0
+		self.earliestminute = 0
+		self.earliestsecond = 0
 
 		if configFilePath is not  None:
 			self.parseConfigFile(configFilePath)
@@ -46,26 +52,38 @@ class ParseConfig:
 					self.threshold = value
 				elif key == "filter":
 					self.filter = value
-				elif key == "distribution"
+				elif key == "distribution":
 					self.distribution = value
-				elif key == "postaggregations"
+				elif key == "postaggregations":
 					self.postaggregations = value
-				elif key == "accessdistribution"
+				elif key == "accessdistribution":
 					self.accessdistribution = value
-				elif key == "perioddistribution"
+				elif key == "perioddistribution":
 					self.perioddistribution = value
-				elif key == "querytype"
+				elif key == "querytype":
 					self.querytype = value
-				elif key == "brokernodeurl"
+				elif key == "brokernodeurl":
 					self.brokernodeurl = value
-				elif key == "brokerendpoint"
+				elif key == "brokerendpoint":
 					self.brokerendpoint = value
-				elif key == "minqueryperiod"
-					self.minqueryperiod
-				elif key == "maxqueryperiod"
-					self.maxqueryperiod
-				elif key == "numqueries"
-					self.numqueries
+				elif key == "minqueryperiod":
+					self.minqueryperiod = int(value)
+				elif key == "maxqueryperiod":
+					self.maxqueryperiod = int(value)
+				elif key == "numqueries":
+					self.numqueries = int(value)
+				elif key == "earliestyear":
+					self.earliestyear = int(value)
+				elif key == "earliestmonth":
+					self.earliestmonth = int(value)
+				elif key == "earliestday":
+					self.earliestday = int(value)
+				elif key == "earliesthour":
+					self.earliesthour = int(value)
+				elif key == "earliestminute":
+					self.earliestminute = int(value)
+				elif key == "earliestsecond":
+					self.earliestsecond = int(value)
 
 	def getDataSource(self):
 		return self.datasource
@@ -118,6 +136,23 @@ class ParseConfig:
 	def getNumQueries(self):
 		return self.numqueries
 
+	def getEarliestYear(self):
+		return self.earliestyear
+
+	def getEarliestMonth(self):
+		return self.earliestmonth
+
+	def getEarliestDay(self):
+		return self.earliestday
+
+	def getEarliestHour(self):
+		return self.earliesthour
+
+	def getEarliestMinute(self):
+		return self.earliestminute
+
+	def getEarliestSecond(self):
+		return self.earliestsecond
 
 	def printConfig(self):
 		print "Config details"
@@ -138,3 +173,9 @@ class ParseConfig:
 		print "Min Query Period : " + self.getMinQueryPeriod()
 		print "Max Query Period : " + self.getMaxQueryPeriod()
 		print "Num Queries : " + self.getNumQueries()
+		print "Earliest Year : " + self.getEarliestYear()
+		print "Earliest Month : " + self.getEarliestMonth()
+		print "Earliest Day : " + self.getEarliestDay()
+		print "Earliest Hour : " + self.getEarliestHour()
+		print "Earliest Minute : " + self.getEarliestMinute()
+		print "Earliest Second : " + self.getEarliestSecond()

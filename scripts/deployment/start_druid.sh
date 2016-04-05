@@ -448,6 +448,7 @@ do
 
         COMMAND=$COMMAND" cd $PATH_TO_KAFKA;"
         COMMAND=$COMMAND" screen -d -m ./bin/zookeeper-server-start.sh config/zookeeper.properties;"
+        COMMAND=$COMMAND" sleep 2;"
         COMMAND=$COMMAND" screen -d -m ./bin/kafka-server-start.sh config/server.properties;"
         COMMAND=$COMMAND" screen -d -m ./bin/kafka-topics.sh --create --zookeeper $KAFKA_NODE-big-lan:2181 --replication-factor 1 --partitions 1 --topic $KAFKA_TOPIC;"
         #COMMAND=$COMMAND" ./emit-random-metrics.py -n 250"

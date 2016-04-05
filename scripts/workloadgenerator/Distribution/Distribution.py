@@ -1,5 +1,4 @@
 import numpy
-from Utils import Utils
 class Uniform(object):
 
 	def generateDistribution(self, minSample, maxSample, numSamples):
