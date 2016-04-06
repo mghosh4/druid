@@ -131,83 +131,7 @@ do
     fi
 done
 
-#construct broker FQDN
-NEW_REDIS_NODES=''
-for node in ${REDIS_NODE//,/ }
-do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
-    then
-        NEW_REDIS_NODES=$NEW_REDIS_NODES$node,
-    else
-        NEW_REDIS_NODES=$NEW_REDIS_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV,
-    fi
-done
 ############################## SETUP ################################
-
-#generate keys for passwordless ssh
-echo -ne '\n' | ssh-keygen;
-#for node in ${NEW_COORDINATOR_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_HISTORICAL_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_BROKER_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_REALTIME_NODE//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_ZOOKEEPER_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_OVERLORD_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_MIDDLE_MANAGER_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_MYSQL_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_KAFKA_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-
-#start redis FQDN
-#counter=0
-#echo "Setting up redis nodes:"
-#for  node in ${NEW_REDIS_NODES//,/ }
-#do
-
-#        echo "Setting up $node ..."
-#        COMMAND=''
-
-#        COMMAND=$COMMAND" cd $PATH_TO_REDIS_BIN && ./create-cluster start;"
-#        COMMAND=$COMMAND" ./create-cluster create"
-
-#        if [ "$IP" == "TRUE" ]
-#        then
-#            COMMAND=$COMMAND" --bind_ip $node;"
-#        else
-#            COMMAND=$COMMAND";"
-#        fi
-#        echo "redis node startup command is $COMMAND"
-
-    #ssh to node and run command
-        #ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
-            #$COMMAND"
-#done
-#echo ""
 
 #start zookeeper FQDN
 counter=0
@@ -233,8 +157,8 @@ do
             $COMMAND"
 done
 echo ""
-MYSQL="DROP DATABASE druid"
-MYSQL=" CREATE DATABASE druid DEFAULT CHARACTER SET utf8;"
+MYSQL="DROP DATABASE druid;"
+MYSQL=$MYSQL" CREATE DATABASE druid DEFAULT CHARACTER SET utf8;"
 
 for node in ${OVERLORD_NODE//,/ }
 do
@@ -284,12 +208,6 @@ do
 
         echo "Setting up $node ..."
         COMMAND=''
-
-        #COMMAND=$COMMAND" sudo chsh -s /bin/bash tkao4;"
-        #COMMAND=$COMMAND" export DEBIAN_FRONTEND=noninteractive;"
-
-        #COMMAND=$COMMAND" sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password password ';"
-        #COMMAND=$COMMAND" sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password ';"
         COMMAND=$COMMAND" sudo apt-get -y install mysql-server;"
         COMMAND=$COMMAND" sudo service mysql stop;"
         COMMAND=$COMMAND" sudo service mysql start;"
@@ -321,7 +239,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash tkao4 && screen -d -m java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/overlord:lib/* io.druid.cli.Main server overlord"
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/overlord:lib/* io.druid.cli.Main server overlord"
 
         if [ "$IP" == "TRUE" ]
         then
@@ -346,7 +264,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash tkao4 && screen -d -m java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/middleManager:lib/* io.druid.cli.Main server middleManager"
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/middleManager:lib/* io.druid.cli.Main server middleManager"
 
         if [ "$IP" == "TRUE" ]
         then
@@ -371,7 +289,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash tkao4 && screen -d -m java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/coordinator:lib/* io.druid.cli.Main server coordinator"  
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/coordinator:lib/* io.druid.cli.Main server coordinator"  
 
         if [ "$IP" == "TRUE" ]
         then
@@ -396,8 +314,8 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        COMMAND=$COMMAND" sudo sed -i '19s/.*/druid.host=$node-big-lan/' /proj/DCSQ/druid_proj/druid-0.8.3/config/historical/runtime.properties;"
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash tkao4 && screen -d -m java -Xmx256m -XX:MaxDirectMemorySize=2147483648 -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/historical:lib/* io.druid.cli.Main server historical"
+        COMMAND=$COMMAND" sudo sed -i '19s/.*/druid.host=$node-big-lan/' $HISTORICAL_CONFIG;"
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -XX:MaxDirectMemorySize=2147483648 -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/historical:lib/* io.druid.cli.Main server historical"
 
         if [ "$IP" == "TRUE" ]
         then
@@ -421,7 +339,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash tkao4 && screen -d -m java -Xmx256m -XX:MaxDirectMemorySize=2147483648 -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/broker:lib/* io.druid.cli.Main server broker"
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -XX:MaxDirectMemorySize=2147483648 -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/broker:lib/* io.druid.cli.Main server broker"
 
         if [ "$IP" == "TRUE" ]
         then
@@ -451,8 +369,6 @@ do
         COMMAND=$COMMAND" sleep 2;"
         COMMAND=$COMMAND" screen -d -m ./bin/kafka-server-start.sh config/server.properties;"
         COMMAND=$COMMAND" screen -d -m ./bin/kafka-topics.sh --create --zookeeper $KAFKA_NODE-big-lan:2181 --replication-factor 1 --partitions 1 --topic $KAFKA_TOPIC;"
-        #COMMAND=$COMMAND" ./emit-random-metrics.py -n 250"
-        #COMMAND=$COMMAND" screen -d -m ./bin/kafka-console-producer.sh --broker-list $KAFKA_NODE-big-lan:9092 --topic metrics"
 
         if [ "$IP" == "TRUE" ]
         then
@@ -475,7 +391,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-    COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash tkao4 && screen -d -m java -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=$SPEC_FILE -classpath config/_common:config/realtime:lib/* io.druid.cli.Main server realtime"
+    COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=$SPEC_FILE -classpath config/_common:config/realtime:lib/* io.druid.cli.Main server realtime"
 
         if [ "$IP" == "TRUE" ]
         then

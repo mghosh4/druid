@@ -140,83 +140,8 @@ do
     fi
 done
 
-#construct broker FQDN
-NEW_REDIS_NODES=''
-for node in ${REDIS_NODE//,/ }
-do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
-    then
-        NEW_REDIS_NODES=$NEW_REDIS_NODES$node,
-    else
-        NEW_REDIS_NODES=$NEW_REDIS_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV,
-    fi
-done
 
 ############################ SHUTDOWN ##########################################
-
-#generate keys for passwordless ssh
-#echo -ne '\n' | ssh-keygen;
-#for node in ${NEW_COORDINATOR_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_HISTORICAL_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_BROKER_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_REALTIME_NODE//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_ZOOKEEPER_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_OVERLORD_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_MIDDLE_MANAGER_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_MYSQL_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_KAFKA_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-
-#shutdown redis
-#counter=0
-#echo "Shutting down redis nodes:"
-#for  node in ${NEW_REDIS_NODES//,/ }
-#do
-
-#        echo "Setting up $node ..."
-#        COMMAND=''
-
-#        COMMAND=$COMMAND" cd $PATH_TO_REDIS_BIN && ./create-cluster stop"
-
-#        if [ "$IP" == "TRUE" ]
-#        then
-#            COMMAND=$COMMAND" --bind_ip $node;"
-#        else
-#            COMMAND=$COMMAND";"
-#        fi
-#        echo "redis node shutdown command is $COMMAND"
-
-    #ssh to node and run command
-#        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
-#            $COMMAND"
-#done
-#echo ""
 
 #shutdown the kafka server
 echo "Shutting down kafka server:"
@@ -229,9 +154,8 @@ do
     then
         COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
     fi
-    COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN;"
-    COMMAND=$COMMAND" cd kafka_2.10-0.8.2.1;"
-    COMMAND=$COMMAND" ./bin/kafka-topics.sh --zookeeper $KAFKA_NODE-big-lan:2181 --delete --topic metrics;"
+    COMMAND=$COMMAND" cd $PATH_TO_KAFKA;"
+    COMMAND=$COMMAND" ./bin/kafka-topics.sh --zookeeper $KAFKA_NODE-big-lan:2181 --delete --topic $KAFKA_TOPIC;"
     COMMAND=$COMMAND" ./bin/kafka-server-stop.sh;"
     COMMAND=$COMMAND" ./bin/zookeeper-server-stop.sh;"
     echo "kafka server shutdown command is $COMMAND"

@@ -33,17 +33,18 @@ def getConfig(configFile):
 	configFilePath = configFile
 	return ParseConfig(configFilePath)
 
-def applyWorkload(self, numQueries, newquerylist = []):
-	for i in xrange(numQueries):
-		self.applyOperation(newquerylist[i])
+#def applyWorkload(self, numQueries, newquerylist = []):
+#	for i in xrange(numQueries):
+#		self.applyOperation(newquerylist[i])
 
-def applyOperation(self, query):
+def applyOperation(query):
 		dbOpsHandler = DBOpsHandler(config)
-		if querytype == "ts":
+		if querytype == "timeseries":
+
 			dbOpsHandler.timeseries(query)
-		elif querytype == "tn":
+		elif querytype == "topn":
 			dbOpsHandler.topn(query)
-		elif querytype == "gb":
+		elif querytype == "groupby":
 			dbOpsHandler.groupby(query)
 
 configFile = checkAndReturnArgs(sys.argv)
@@ -73,7 +74,8 @@ time = datetime.datetime.now()
 start = datetime.datetime(earliestyear, earliestmonth, earliestday, earliesthour, earliestminute, earliestsecond)
 
 newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator);
-applyWorkload(numqueries, newquerylist)
+for i in xrange(numqueries):
+	applyOperation(newquerylist[i])
 
 
 

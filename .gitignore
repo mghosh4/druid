@@ -14,3 +14,4 @@ target
 *.log
 *.DS_Store
 _site
+*.pyc
