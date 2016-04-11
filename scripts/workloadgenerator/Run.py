@@ -37,7 +37,7 @@ def getConfig(configFile):
 #	for i in xrange(numQueries):
 #		self.applyOperation(newquerylist[i])
 
-def applyOperation(query):
+def applyOperation(query, config):
 		dbOpsHandler = DBOpsHandler(config)
 		if querytype == "timeseries":
 
@@ -75,7 +75,7 @@ start = datetime.datetime(earliestyear, earliestmonth, earliestday, earliesthour
 
 newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator);
 for i in xrange(numqueries):
-	applyOperation(newquerylist[i])
+	applyOperation(newquerylist[i], config)
 
 
 

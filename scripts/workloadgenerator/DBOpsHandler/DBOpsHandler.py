@@ -30,10 +30,10 @@ class DBOpsHandler:
 			filterarg = ", filter=" + config.getFilter()
 		argstring = "datasource=" + config.getDataSource()  + ", granularity="+ config.getGranularity() + ", intervals=" + query.interval + ", aggregations=" + config.getAggregations() + postaggregatearg + filterarg
 		args = dict(tuple(e.split('=')) for e in argstring.split(', '))
-		ts = newquery.timeseries(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, aggregations={"count": doublesum("count")})
+		ts = newquery.timeseries(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, aggregations={'count': doublesum('count')})
 		x = newquery.export_pandas()
 		print x
-		
+
 	def groupby(self, query):
 		config = self.getConfig()
 		newquery = PyDruid(config.getBrokerNodeUrl(), config.getBrokerEndpoint())

@@ -24,7 +24,7 @@ class QueryGenerator(object):
 			#if (starttime + periodlist[i] - 1 > elapsed):
 			#	starttime = starttime - (periodlist[i] - (elapsed - starttime + 1)
 			newstart = start + datetime.timedelta(0, starttime)
-			startstring = newstart.strftime('%Y-%m-%d')
+			startstring = newstart.strftime('%Y-%m-%dT%H:%M:%S')
 
 			if(periodlist[i] < 31536000):
 				if(periodlist[i] < 2592000):

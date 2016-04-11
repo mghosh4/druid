@@ -314,7 +314,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        COMMAND=$COMMAND" sudo sed -i '19s/.*/druid.host=$node-big-lan/' $HISTORICAL_CONFIG;"
+        COMMAND=$COMMAND" sudo sed -i '19s/.*/druid.host=node-2-big-lan/' $HISTORICAL_CONFIG;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -XX:MaxDirectMemorySize=2147483648 -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/historical:lib/* io.druid.cli.Main server historical"
 
         if [ "$IP" == "TRUE" ]
