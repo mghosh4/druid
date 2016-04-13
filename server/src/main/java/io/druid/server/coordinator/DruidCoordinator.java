@@ -125,6 +125,7 @@ public class DruidCoordinator
   private final ScheduledExecutorService exec;
   private final LoadQueueTaskMaster taskMaster;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
+  private final HashMap<DataSegment, Number> weightedAccessCounts;
   private final AtomicReference<LeaderLatch> leaderLatch;
   private final ServiceAnnouncer serviceAnnouncer;
   private final DruidNode self;
@@ -148,6 +149,7 @@ public class DruidCoordinator
       IndexingServiceClient indexingServiceClient,
       LoadQueueTaskMaster taskMaster,
       ServiceAnnouncer serviceAnnouncer,
+      Hashmap<DataSegment, Number> weightedAccessCounts,
       @Self DruidNode self
   )
   {
@@ -164,6 +166,7 @@ public class DruidCoordinator
         indexingServiceClient,
         taskMaster,
         serviceAnnouncer,
+        weightedAccessCounts,
         self,
         Maps.<String, LoadQueuePeon>newConcurrentMap()
     );
@@ -182,6 +185,7 @@ public class DruidCoordinator
       IndexingServiceClient indexingServiceClient,
       LoadQueueTaskMaster taskMaster,
       ServiceAnnouncer serviceAnnouncer,
+      HashMap<DataSegment, Number> weightedAccessCounts,
       DruidNode self,
       ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap
   )
@@ -189,6 +193,7 @@ public class DruidCoordinator
     this.config = config;
     this.zkPaths = zkPaths;
     this.configManager = configManager;
+    this.weightedAccessCounts = weightedAccessCounts;
 
     this.metadataSegmentManager = metadataSegmentManager;
     this.serverInventoryView = serverInventoryView;
@@ -214,6 +219,16 @@ public class DruidCoordinator
   public Map<String, LoadQueuePeon> getLoadManagementPeons()
   {
     return loadManagementPeons;
+  }
+
+  public HashMap<DataSegment, Number> getWeightedAccessCounts()
+  {
+    return weightedAccessCounts;
+  }
+
+  public void setWeightedAccessCounts()
+  {
+    this.weightedAccessCounts = coordinator.getSegmentPopularityMap();
   }
 
   public Map<String, CountingMap<String>> getReplicationStatus()
@@ -877,7 +892,7 @@ public class DruidCoordinator
               new DruidCoordinatorCleanupUnneeded(DruidCoordinator.this),
               new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),
               new DruidCoordinatorBalancer(DruidCoordinator.this),
-	      new DruidCoordinatorSegmentReplicator(DruidCoordinator.this),
+        new DruidCoordinatorSegmentReplicator(DruidCoordinator.this),
               new DruidCoordinatorLogger()
           ),
           startingLeaderCounter
