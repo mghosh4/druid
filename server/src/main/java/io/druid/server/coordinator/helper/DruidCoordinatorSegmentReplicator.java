@@ -34,6 +34,7 @@ import io.druid.server.coordinator.LoadPeonCallback;
 import io.druid.server.coordinator.ReplicationThrottler;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
+import io.druid.server.coordinator.helper.Tuple;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,17 +44,6 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.joda.time.DateTime;
-
-public class Tuple{
-  public final DataSegment segment;
-  public final Number number;
-
-  public Tuple(Number number, DataSegment segment)
-  {
-    this.segment = segment;
-    this.number = number;
-  }
-}
 
 public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 {
@@ -109,7 +99,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
     // Handle those segments which are in Coordinator's map but not in segments collected from query
     for (Map.Entry<DataSegment,Number> entry : weightedAccessCounts.entrySet())
       if (segments.contains(entry.getKey()) == false)
-    weightedAccessCounts.put(entry.getKey(), 0.5 * entry.getValue().doubleValue())
+    weightedAccessCounts.put(entry.getKey(), 0.5 * entry.getValue().doubleValue());
 
     for (Entry<DataSegment> segment : segments.entrySet())
     {
@@ -200,7 +190,8 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
       expectedCount[tmp.segment] += 1;
       if(valleft > 0)
       {
-        maxheap.add((valleft, tmp.segment))
+        Tuple tmp2 = new Tuple(valleft, tmp.segment);
+        maxheap.add(tmp2);
       }
     }
 
@@ -217,7 +208,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 
   }
 
-  private int bestFit(val, nodeCapacities)
+  private int bestFit(int val, List<int> nodeCapacities)
   {
       int mincapleftafterfill = MAX_VALUE;
       int minvalleftafterfill = MAX_VALUE;
