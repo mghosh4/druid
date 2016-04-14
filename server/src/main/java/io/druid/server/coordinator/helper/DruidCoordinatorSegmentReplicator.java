@@ -20,7 +20,6 @@
 package io.druid.server.coordinator.helper;
 
 import com.metamx.emitter.EmittingLogger;
-import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
@@ -63,18 +62,20 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
   {
     log.info("Starting replication. Getting Segment Popularity");
     final CoordinatorStats stats = new CoordinatorStats();
+    HashMap<DataSegment,Number> insertList = new HashMap<DataSegment,Number>();
+    HashMap<DataSegment,Number> removeList = new HashMap<DataSegment,Number>();
 
     // Acquire Query Workload in the last window
     Multiset<DataSegment> segments = HashMultiset.create();
     calculateSegmentCounts(segments);
 
     // Calculate the popularity map
-    HashMap<DataSegment, Number> weightedAccessCounts = new HashMap<DataSegment, Number>();
-    calculateWeightedAccessCounts(segments, weightedAccessCounts);
+    //TODO: Implement getSegmentPopularityMap
+    HashMap<DataSegment, Number> weightedAccessCounts = coordinator.getSegmentPopularityMap();
+    calculateWeightedAccessCounts(params, segments, weightedAccessCounts, removeList);
+    coordinator.setSegmentPopularityMap(weightedAccessCounts);
 
     // Calculate replication based on popularity
-    HashMap<DataSegment,Number> insertList = new HashMap<DataSegment,Number>();
-    HashMap<DataSegment,Number> removeList = new HashMap<DataSegment,Number>();
     calculateReplication(params, weightedAccessCounts, insertList, removeList);
     
     // Manage replicas
@@ -90,54 +91,43 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
     log.info("Starting replication. Getting Segment Popularity");
   }
 
-  private void calculateWeightedAccessCounts(Multiset<DataSegment> segments, HashMap<DataSegment, Number> weightedAccessCounts)
+  private void calculateWeightedAccessCounts(DruidCoordinatorRuntimeParams params, Multiset<DataSegment> segments, HashMap<DataSegment, Number> weightedAccessCounts, HashMap<DataSegment, Number> removeList)
   {
     log.info("Calculating Weighted Access Counts for Segments");
-    HashMap<DataSegment, EvictingQueue<Number> > segmentCountMap = coordinator.getSegmentCountMap();
-    for (Entry<DataSegment> segment : segments.entrySet())
-    {
-    	int segmentCount = segment.getCount();
-    	EvictingQueue<Number> lastSetOfCounts = segmentCountMap.get(segment.getElement().getIdentifier());
-    	if (lastSetOfCounts == null)
-    	{
-    		lastSetOfCounts = EvictingQueue.create(5);
-    		segmentCountMap.put(segment.getElement(), lastSetOfCounts);
-    	}
-    	lastSetOfCounts.add(segmentCount);
-
-    	updateSegmentCounts(segment.getElement(), lastSetOfCounts, weightedAccessCounts);
-    }
 
     // Handle those segments which are in Coordinator's map but not in segments collected from query
-    for (Map.Entry<DataSegment,EvictingQueue<Number> > entry : segmentCountMap.entrySet())
-    {
-    	if (!weightedAccessCounts.containsKey(entry.getKey()))
-    	{
-    		EvictingQueue<Number> lastSetOfCounts = entry.getValue();
-    		lastSetOfCounts.add(0);
+    for (Map.Entry<DataSegment,Number> entry : weightedAccessCounts.entrySet())
+    	if (segments.contains(entry.getKey()) == false)
+		weightedAccessCounts.put(entry.getKey(), 0.5 * entry.getValue().doubleValue())
 
-    		updateSegmentCounts(entry.getKey(), lastSetOfCounts, weightedAccessCounts);
-    	}
+    for (Entry<DataSegment> segment : segments.entrySet())
+    {
+	DataSegment dataSegment = segment.getElement();
+    	int segmentCount = segment.getCount();
+
+	if (weightedAccessCounts.containsKey(dataSegment) == false)
+		weightedAccessCounts.put(dataSegment, (double)segmentCount);
+	else
+	{
+		double popularity = weightedAccessCounts.get(dataSegment);
+		weightedAccessCounts.put(dataSegment, segmentCount + 0.5 * popularity);
+	}
     }
 
-    // Remove segments with counts less than a threshold from weightedAccessCounts and segmentCountMap. Also add it to removeList
-    // Check for null condition everywhere
-  }
-
-  private void updateSegmentCounts(DataSegment segment, EvictingQueue<Number> lastSetOfCounts, HashMap<DataSegment, Number> weightedAccessCounts)
-  {
-	List<Number> countList = new ArrayList<Number>(lastSetOfCounts);
-	int numCounts = countList.size();
-	double weightedCount = 0;
-	for (int i = numCounts - 1; i >= 0; i--)
+    // Remove segments with counts less than a threshold from weightedAccessCounts. Also add it to removeList
+    for (Map.Entry<DataSegment,Number> entry : weightedAccessCounts.entrySet())
+    {
+	if (entry.getValue().doubleValue() < MIN_THRESHOLD)
 	{
-		double weight = Math.pow(2, i);
-		weightedCount += (1 / weight) * countList.get(numCounts - 1 - i).intValue();
+		DataSegment segment = entry.getKey();
+		removelist.push(segment, params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier()));
+		weightedAccessCount.remove(segment);
 	}
-
-	weightedAccessCounts.put(segment, Math.ceil(weightedCount));
+    }
   }
 
+  // Implemented Adaptive Strategy
+  // TODO: Best Fit Strategy
   private void calculateReplication(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, Number> weightedAccessCounts, HashMap<DataSegment,Number> insertList, HashMap<DataSegment,Number> removeList)
   {
     log.info("Calculating Replication for Segments");
@@ -149,13 +139,12 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
     for (Number number : weightedAccessCounts.values())
     	totalWeightCount += number.intValue();
     
-    final int accessCountPerHN = totalWeightCount / historicalNodeCount;
     for (Map.Entry<DataSegment, Number> entry : weightedAccessCounts.entrySet())
     {
     	DataSegment segment = entry.getKey();
         int totalReplicantsInCluster = params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier());
 
-    	double newReplicationFactor = Math.ceil(entry.getValue().doubleValue() / accessCountPerHN);
+    	double newReplicationFactor = Math.ceil(entry.getValue().doubleValue() * historicalNodeCount / totalWeightCount);
     	
     	if (newReplicationFactor == 0)
     		removeList.put(segment, -1);

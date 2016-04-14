@@ -18,6 +18,7 @@
  */
 
 package io.druid.client;
+//package main.java.io.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,6 +48,7 @@ import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
+import io.druid.client.statserver.Writer;
 import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Smile;
@@ -90,6 +92,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   private final ObjectMapper objectMapper;
   private final CacheConfig cacheConfig;
   private final ListeningExecutorService backgroundExecutorService;
+  private final Writer brokerwriter;
 
   @Inject
   public CachingClusteredClient(
@@ -107,6 +110,8 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     this.objectMapper = objectMapper;
     this.cacheConfig = cacheConfig;
     this.backgroundExecutorService = MoreExecutors.listeningDecorator(backgroundExecutorService);
+    this.brokerwriter = new Writer();
+    new Thread(brokerwriter).start();
 
     serverView.registerSegmentCallback(
         Execs.singleThreaded("CCClient-ServerView-CB-%d"),
@@ -302,6 +307,10 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         }
 
         descriptors.add(segment.rhs);
+        
+        /** Edited by flint-stone: push filtered list to segment list**/
+        /** These are the segment that actually requires access to the server**/
+        this.brokerwriter.writeEntry(segment.lhs.getSegment().getIdentifier());
       }
     }
 
