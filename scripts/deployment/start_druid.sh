@@ -142,7 +142,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        COMMAND=$COMMAND" cd $PATH_TO_ZOOKEEPER && sudo ./bin/zkServer.sh start"
+        COMMAND=$COMMAND" cd $PATH_TO_ZOOKEEPER && sudo ./bin/zkServer.sh start | tee -a $ZOOKEEPER_LOG_FILE"
 
         if [ "$IP" == "TRUE" ]
         then
@@ -157,8 +157,7 @@ do
             $COMMAND"
 done
 echo ""
-MYSQL="DROP DATABASE druid;"
-MYSQL=$MYSQL" CREATE DATABASE druid DEFAULT CHARACTER SET utf8;"
+MYSQL=$MYSQL"CREATE DATABASE druid DEFAULT CHARACTER SET utf8;"
 
 for node in ${OVERLORD_NODE//,/ }
 do
@@ -208,11 +207,13 @@ do
 
         echo "Setting up $node ..."
         COMMAND=''
+        COMMAND=$COMMAND" printf 'mysql-server mysql-server/root_password password ' | sudo debconf-set-selections;"
+        COMMAND=$COMMAND" printf 'mysql-server mysql-server/root_password_again password ' | sudo debconf-set-selections;"
         COMMAND=$COMMAND" sudo apt-get -y install mysql-server;"
         COMMAND=$COMMAND" sudo service mysql stop;"
         COMMAND=$COMMAND" sudo service mysql start;"
         COMMAND=$COMMAND" sudo sed -i '47s/.*/#bind-address = 127.0.0.1/' /etc/mysql/my.cnf;"
-        COMMAND=$COMMAND" mysql -u root -p -e \"$MYSQL\";"
+        COMMAND=$COMMAND" mysql -u root -e \"$MYSQL\";"
         COMMAND=$COMMAND" sudo /etc/init.d/mysql stop;"
         COMMAND=$COMMAND" sudo /etc/init.d/mysql start"
 
@@ -239,7 +240,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/overlord:lib/* io.druid.cli.Main server overlord"
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/overlord:lib/* io.druid.cli.Main server overlord | tee -a $OVERLORD_LOG_FILE"
 
         if [ "$IP" == "TRUE" ]
         then
@@ -264,7 +265,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/middleManager:lib/* io.druid.cli.Main server middleManager"
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/middleManager:lib/* io.druid.cli.Main server middleManager | tee -a $MIDDLE_MANAGER_LOG_FILE"
 
         if [ "$IP" == "TRUE" ]
         then
@@ -289,7 +290,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/coordinator:lib/* io.druid.cli.Main server coordinator"  
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/coordinator:lib/* io.druid.cli.Main server coordinator | tee -a $COORDINATOR_LOG_FILE"  
 
         if [ "$IP" == "TRUE" ]
         then
@@ -315,7 +316,7 @@ do
         COMMAND=''
 
         COMMAND=$COMMAND" sudo sed -i '19s/.*/druid.host=node-2-big-lan/' $HISTORICAL_CONFIG;"
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -XX:MaxDirectMemorySize=2147483648 -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/historical:lib/* io.druid.cli.Main server historical"
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -XX:MaxDirectMemorySize=2147483648 -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/historical:lib/* io.druid.cli.Main server historical | tee -a $HISTORICAL_LOG_FILE"
 
         if [ "$IP" == "TRUE" ]
         then
@@ -339,7 +340,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -XX:MaxDirectMemorySize=2147483648 -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/broker:lib/* io.druid.cli.Main server broker"
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -XX:MaxDirectMemorySize=2147483648 -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/broker:lib/* io.druid.cli.Main server broker  | tee -a $BROKER_LOG_FILE"
 
         if [ "$IP" == "TRUE" ]
         then
@@ -368,7 +369,7 @@ do
         COMMAND=$COMMAND" screen -d -m ./bin/zookeeper-server-start.sh config/zookeeper.properties;"
         COMMAND=$COMMAND" sleep 2;"
         COMMAND=$COMMAND" screen -d -m ./bin/kafka-server-start.sh config/server.properties;"
-        COMMAND=$COMMAND" screen -d -m ./bin/kafka-topics.sh --create --zookeeper $KAFKA_NODE-big-lan:2181 --replication-factor 1 --partitions 1 --topic $KAFKA_TOPIC;"
+        COMMAND=$COMMAND" screen -d -m ./bin/kafka-topics.sh --create --zookeeper $KAFKA_NODE-big-lan:2181 --replication-factor 1 --partitions 1 --topic $KAFKA_TOPIC"
 
         if [ "$IP" == "TRUE" ]
         then
@@ -391,7 +392,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-    COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=$SPEC_FILE -classpath config/_common:config/realtime:lib/* io.druid.cli.Main server realtime"
+    COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=$SPEC_FILE -classpath config/_common:config/realtime:lib/* io.druid.cli.Main server realtime | tee -a $REALTIME_LOG_FILE"
 
         if [ "$IP" == "TRUE" ]
         then

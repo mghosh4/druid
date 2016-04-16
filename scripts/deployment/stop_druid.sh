@@ -150,10 +150,10 @@ for node in ${NEW_KAFKA_NODES//;/ }
 do
     echo "Shutting down $node ..."
     COMMAND=''
-    if [ $TYPE_OF_STOP -eq 1 ]
-    then
-        COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
-    fi
+    #if [ $TYPE_OF_STOP -eq 1 ]
+    #then
+        #COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
+    #fi
     COMMAND=$COMMAND" cd $PATH_TO_KAFKA;"
     COMMAND=$COMMAND" ./bin/kafka-topics.sh --zookeeper $KAFKA_NODE-big-lan:2181 --delete --topic $KAFKA_TOPIC;"
     COMMAND=$COMMAND" ./bin/kafka-server-stop.sh;"
@@ -173,7 +173,7 @@ do
     COMMAND=''
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-        COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
+        COMMAND=$COMMAND"sudo rm -r -f $ZOOKEEPER_LOG_FILE;"
     fi
     COMMAND=$COMMAND" cd $PATH_TO_ZOOKEEPER && sudo bin/zkServer.sh stop;"
     echo "zookeeper server shutdown command is $COMMAND"
@@ -189,10 +189,10 @@ for node in ${NEW_MYSQL_NODES//;/ }
 do
     echo "Shutting down $node ..."
     COMMAND=''
-    if [ $TYPE_OF_STOP -eq 1 ]
-    then
-        COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
-    fi
+    #if [ $TYPE_OF_STOP -eq 1 ]
+    #then
+        #COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
+    #fi
     COMMAND=$COMMAND" sudo service mysql stop"
     COMMAND=$COMMAND" sudo service mysql start"
     MYSQL="DROP DATABASE druid;"
@@ -213,7 +213,7 @@ do
     COMMAND=''
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-        COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
+        COMMAND=$COMMAND"sudo rm -r -f $MIDDLE_MANAGER_LOG_FILE;"
     fi
     COMMAND=$COMMAND" pkill -9 "screen";"
     echo "middle manager server shutdown command is $COMMAND"
@@ -231,7 +231,7 @@ do
     COMMAND=''
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-        COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
+        COMMAND=$COMMAND"sudo rm -r -f $OVERLORD_LOG_FILE;"
     fi
     COMMAND=$COMMAND" pkill -9 "screen";"
     echo "overlord server shutdown command is $COMMAND"
@@ -249,7 +249,7 @@ do
     COMMAND=''
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-        COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
+        COMMAND=$COMMAND"sudo rm -r -f $BROKER_LOG_FILE;"
     fi
     COMMAND=$COMMAND" pkill -9 "screen";"
     echo "Broker server shutdown command is $COMMAND"
@@ -267,7 +267,7 @@ do
     COMMAND=''
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-    COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
+    COMMAND=$COMMAND"sudo rm -r -f $REALTIME_LOG_FILE;"
     fi
     COMMAND=$COMMAND" pkill -9 "screen";"
     echo "Realtime server shutdown command is $COMMAND"
@@ -284,6 +284,10 @@ for  node in ${NEW_COORDINATOR_NODES//,/ }
 do
         echo "Shutting down $node ..."
         COMMAND=''
+        if [ $TYPE_OF_STOP -eq 1 ]
+        then
+        COMMAND=$COMMAND"sudo rm -r -f $COORDINATOR_LOG_FILE;"
+        fi
         COMMAND=$COMMAND"pkill -9 "screen";"
         echo "Config server shutdown command is $COMMAND"
 		ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
@@ -300,9 +304,9 @@ do
         COMMAND=''
         if [ $TYPE_OF_STOP -eq 1 ]
         then
-        	COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
+        	COMMAND=$COMMAND"sudo rm -r -f $HISTORICAL_LOG_FILE;"
         fi
-	COMMAND=$COMMAND"pkill -9 "screen";"
+	    COMMAND=$COMMAND"pkill -9 "screen";"
         echo "Historical server shutdown command is $COMMAND"
         ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
         	$COMMAND"

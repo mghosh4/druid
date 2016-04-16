@@ -33,6 +33,13 @@ def getConfig(configFile):
   configFilePath = configFile
   return ParseIngestionConfig(configFilePath)
 
+def is_number(s):
+  try:
+    float(s)
+    return True
+  except ValueError:
+    return False
+
 configFile = checkAndReturnArgs(sys.argv)
 config = getConfig(configFile)
 kafkapath = config.getKafkaPath()
@@ -82,10 +89,19 @@ elif(datatype == "custom"):
       metrics_dict = {}
       metricsvalues = []
       for word in line.split(delimiter):
-        metricsvalues.append(word)
+        if(is_number(word)):
+        {
+          number = float(word)
+          metricsvalues.append(number)
+        }
+        else:
+        {
+          metricsvalues.append(word)
+        }
       for i in xrange(len(metrics)):
         metrics_dict[metrics[i]] = metricsvalues[i]
-      producer.stdin.write(json.dumps(metrics_dict))
+      producer.stdin.write(json.dumps([{metrics[i]: metricsvalues[i],} for i in xrange(len(metrics))]))
+      #producer.stdin.write(json.dumps(metrics_dict))
       producer.stdin.write("\n")
 
   # Close kafka console producer, wait for exit
