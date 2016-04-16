@@ -8,10 +8,10 @@ import java.util.ArrayList;
  */
 public class WriterLog {
 	
-	Long currentTime;
-	Long previousTime;
-	ArrayList<String> curSegIDList;
-	ArrayList<String> prevSegIDList;
+	public Long currentTime;
+	public Long previousTime;
+	public ArrayList<String> curSegIDList;
+	public ArrayList<String> prevSegIDList;
 	
 	public WriterLog() {
 		currentTime = System.currentTimeMillis() / 1000L;
