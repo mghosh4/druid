@@ -44,6 +44,7 @@ import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.EmittingLogger;
+import com.metamx.common.logger.Logger;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.selector.QueryableDruidServer;
@@ -313,10 +314,10 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         /** These are the segment that actually requires access to the server**/
         this.brokerwriter.writeEntry(segment.lhs.getSegment().getIdentifier());
         //print out the current map
-        WriterLog log = this.brokerwriter.log;
+        WriterLog wlog = this.brokerwriter.log;
         log.debug("------Broker Stat------");
-        log.debug("current time %L", log.currentTime);
-        for(String id: log.curSegIDList){
+        log.debug("current time %L", wlog.currentTime);
+        for(String id: wlog.curSegIDList){
         	log.debug("SegID entry %s", id);
         }
       }
