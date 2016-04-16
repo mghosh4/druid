@@ -311,6 +311,13 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         /** Edited by flint-stone: push filtered list to segment list**/
         /** These are the segment that actually requires access to the server**/
         this.brokerwriter.writeEntry(segment.lhs.getSegment().getIdentifier());
+        //print out the current map
+        WriterLog log = this.brokerwriter.log;
+        log.debug("------Broker Stat------");
+        log.debug("current time %L", log.currentTime);
+        for(String id: log.curSegIDList){
+        	log.debug("SegID entry %s", id);
+        }
       }
     }
 
