@@ -49,6 +49,7 @@ import io.druid.client.cache.CacheConfig;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
 import io.druid.client.statserver.Writer;
+import io.druid.client.statserver.WriterLog;
 import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Smile;
