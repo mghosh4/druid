@@ -30,6 +30,8 @@ import com.metamx.http.client.HttpClient;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
 import io.druid.client.selector.TierSelectorStrategy;
+import io.druid.client.statserver.Writer;
+import io.druid.client.statserver.WriterLog;
 import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.Client;
 import io.druid.guice.annotations.Smile;
@@ -67,6 +69,7 @@ public class BrokerServerView implements TimelineServerView
   private final ServerInventoryView baseView;
   private final TierSelectorStrategy tierSelectorStrategy;
   private final ServiceEmitter emitter;
+  private final Writer brokerwriter;
 
   private volatile boolean initialized = false;
 
@@ -92,6 +95,8 @@ public class BrokerServerView implements TimelineServerView
     this.clients = Maps.newConcurrentMap();
     this.selectors = Maps.newHashMap();
     this.timelines = Maps.newHashMap();
+    this.brokerwriter = new Writer();
+    new Thread(brokerwriter).start();
 
     ExecutorService exec = Execs.singleThreaded("BrokerServerView-%s");
     baseView.registerSegmentCallback(
@@ -192,6 +197,18 @@ public class BrokerServerView implements TimelineServerView
     synchronized (lock) {
       log.debug("Adding segment[%s] for server[%s]", segment, server);
 
+      /** Edited by flint-stone: push filtered list to segment list**/
+      /** These are the segment that actually requires access to the server**/
+      //log.makeAlert("-------ALERT!!!-------").emit();
+      this.brokerwriter.writeEntry(segmentId);
+      //print out the current map
+      WriterLog wlog = this.brokerwriter.log;
+      log.info("------Broker Stat------");
+      log.info("current time %L", wlog.currentTime);
+      for(String id: wlog.curSegIDList){
+      	log.info("SegID entry %s", id);
+      }
+      
       ServerSelector selector = selectors.get(segmentId);
       if (selector == null) {
         selector = new ServerSelector(segment, tierSelectorStrategy);
