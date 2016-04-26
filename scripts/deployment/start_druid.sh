@@ -142,7 +142,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        COMMAND=$COMMAND" cd $PATH_TO_ZOOKEEPER && sudo ./bin/zkServer.sh start | tee -a $ZOOKEEPER_LOG_FILE"
+        COMMAND=$COMMAND" cd $PATH_TO_ZOOKEEPER && sudo ./bin/zkServer.sh start"
 
         if [ "$IP" == "TRUE" ]
         then
@@ -240,7 +240,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath $COMMON_CONFIG:$OVERLORD_CONFIG:lib/* io.druid.cli.Main server overlord | tee -a $OVERLORD_LOG_FILE"
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m sudo java -Xmx256m -Dlogfilename=overlord -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath $COMMON_CONFIG:$OVERLORD_CONFIG:lib/* io.druid.cli.Main server overlord"
 
         if [ "$IP" == "TRUE" ]
         then
@@ -265,7 +265,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath $COMMON_CONFIG:$MIDDLE_MANAGER_CONFIG:lib/* io.druid.cli.Main server middleManager | tee -a $MIDDLE_MANAGER_LOG_FILE"
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m sudo java -Xmx256m -Dlogfilename=middlemanager -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath $COMMON_CONFIG:$MIDDLE_MANAGER_CONFIG:lib/* io.druid.cli.Main server middleManager"
 
         if [ "$IP" == "TRUE" ]
         then
@@ -290,7 +290,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath $COMMON_CONFIG:$COORDINATOR_CONFIG:lib/* io.druid.cli.Main server coordinator | tee -a $COORDINATOR_LOG_FILE"  
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m sudo java -Xmx256m -Dlogfilename=coordinator -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath $COMMON_CONFIG:$COORDINATOR_CONFIG:lib/* io.druid.cli.Main server coordinator"  
 
         if [ "$IP" == "TRUE" ]
         then
@@ -315,8 +315,8 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        COMMAND=$COMMAND" sudo sed -i '19s/.*/druid.host=node-2-big-lan/' $HISTORICAL_CONFIG;"
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -XX:MaxDirectMemorySize=34359738368 -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath $COMMON_CONFIG:$HISTORICAL_CONFIG:lib/* io.druid.cli.Main server historical | tee -a $HISTORICAL_LOG_FILE"
+        COMMAND=$COMMAND" sudo sed -i '19s/.*/druid.host=node-2-big-lan/' $HISTORICAL_CONFIG_FILE;"
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=34359738368 -Dlogfilename=historical -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath $COMMON_CONFIG:$HISTORICAL_CONFIG:lib/* io.druid.cli.Main server historical"
 
         if [ "$IP" == "TRUE" ]
         then
@@ -340,7 +340,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx256m -XX:MaxDirectMemorySize=34359738368 -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath $COMMON_CONFIG:$BROKER_CONFIG:lib/* io.druid.cli.Main server broker  | tee -a $BROKER_LOG_FILE"
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=34359738368 -Dlogfilename=broker -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath $COMMON_CONFIG:$BROKER_CONFIG:lib/* io.druid.cli.Main server broker"
 
         if [ "$IP" == "TRUE" ]
         then
@@ -392,7 +392,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-    COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m java -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -XX:MaxDirectMemorySize=34359738368 -Ddruid.realtime.specFile=$SPEC_FILE -classpath $COMMON_CONFIG:$REALTIME_CONFIG:lib/* io.druid.cli.Main server realtime | tee -a $REALTIME_LOG_FILE"
+    COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m sudo java -Xmx512m -Dlogfilename=realtime -Duser.timezone=UTC -Dfile.encoding=UTF-8 -XX:MaxDirectMemorySize=34359738368 -Ddruid.realtime.specFile=$SPEC_FILE -classpath $COMMON_CONFIG:$REALTIME_CONFIG:lib/* io.druid.cli.Main server realtime"
 
         if [ "$IP" == "TRUE" ]
         then
