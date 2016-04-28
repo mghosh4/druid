@@ -240,6 +240,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
+        COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$OVERLORD_LOG_FILE\">@' $OVERLORD_LOG4J2;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m sudo java -Xmx256m -Dlogfilename=overlord -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath $COMMON_CONFIG:$OVERLORD_CONFIG:lib/* io.druid.cli.Main server overlord"
 
         if [ "$IP" == "TRUE" ]
@@ -265,6 +266,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
+        COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$MIDDLE_MANAGER_LOG_FILE\">@' $MIDDLE_MANAGER_LOG4J2;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m sudo java -Xmx256m -Dlogfilename=middlemanager -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath $COMMON_CONFIG:$MIDDLE_MANAGER_CONFIG:lib/* io.druid.cli.Main server middleManager"
 
         if [ "$IP" == "TRUE" ]
@@ -290,6 +292,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
+        COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$COORDINATOR_LOG_FILE\">@' $COORDINATOR_LOG4J2;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m sudo java -Xmx256m -Dlogfilename=coordinator -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath $COMMON_CONFIG:$COORDINATOR_CONFIG:lib/* io.druid.cli.Main server coordinator"  
 
         if [ "$IP" == "TRUE" ]
@@ -315,7 +318,8 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        COMMAND=$COMMAND" sudo sed -i '19s/.*/druid.host=node-2-big-lan/' $HISTORICAL_CONFIG_FILE;"
+        COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$HISTORICAL_LOG_FILE\">@' $HISTORICAL_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '2s/.*/druid.host=node-2-big-lan/' $HISTORICAL_CONFIG_FILE;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=34359738368 -Dlogfilename=historical -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath $COMMON_CONFIG:$HISTORICAL_CONFIG:lib/* io.druid.cli.Main server historical"
 
         if [ "$IP" == "TRUE" ]
@@ -340,6 +344,7 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
+        COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$BROKER_LOG_FILE\">@' $BROKER_LOG4J2;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=34359738368 -Dlogfilename=broker -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath $COMMON_CONFIG:$BROKER_CONFIG:lib/* io.druid.cli.Main server broker"
 
         if [ "$IP" == "TRUE" ]
@@ -392,7 +397,8 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-    COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m sudo java -Xmx512m -Dlogfilename=realtime -Duser.timezone=UTC -Dfile.encoding=UTF-8 -XX:MaxDirectMemorySize=34359738368 -Ddruid.realtime.specFile=$SPEC_FILE -classpath $COMMON_CONFIG:$REALTIME_CONFIG:lib/* io.druid.cli.Main server realtime"
+        COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$REALTIME_LOG_FILE\">@' $REALTIME_LOG4J2;"
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && sudo chsh -s /bin/bash $USER_NAME && screen -d -m sudo java -Xmx512m -Dlogfilename=realtime -Duser.timezone=UTC -Dfile.encoding=UTF-8 -XX:MaxDirectMemorySize=34359738368 -Ddruid.realtime.specFile=$SPEC_FILE -classpath $COMMON_CONFIG:$REALTIME_CONFIG:lib/* io.druid.cli.Main server realtime"
 
         if [ "$IP" == "TRUE" ]
         then
