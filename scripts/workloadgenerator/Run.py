@@ -1,13 +1,14 @@
 #!/usr/bin/python
 import os, sys
 import datetime
+import thread
 sys.path.append(os.path.abspath('Distribution'))
 sys.path.append(os.path.abspath('Query'))
 sys.path.append(os.path.abspath('Config'))
 sys.path.append(os.path.abspath('DBOpsHandler'))
 
 from pydruid.client import *
-from pylab import plt
+#from pylab import plt
 
 from ParseConfig import ParseConfig
 from DBOpsHandler import DBOpsHandler
@@ -47,6 +48,10 @@ def applyOperation(query, config):
 		elif querytype == "groupby":
 			dbOpsHandler.groupby(query)
 
+def applyOperations(querylist, config):
+	for i in xrange(len(querylist)):
+		applyOperation(querylist[i], config)
+
 configFile = checkAndReturnArgs(sys.argv)
 config = getConfig(configFile)
 
@@ -62,6 +67,10 @@ earliestday = config.getEarliestDay()
 earliesthour = config.getEarliestHour()
 earliestminute = config.getEarliestMinute()
 earliestsecond = config.getEarliestSecond()
+opspersecond = config.getOpsPerSecond()
+queryruntime = config.getQueryRuntime()
+
+#numthreads = int(opspersecond * queryruntime))
 
 timeAccessGenerator = DistributionFactory.createSegmentDistribution(accessdistribution)
 
@@ -74,8 +83,16 @@ time = datetime.datetime.now()
 start = datetime.datetime(earliestyear, earliestmonth, earliestday, earliesthour, earliestminute, earliestsecond)
 
 newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator);
+
 for i in xrange(numqueries):
 	applyOperation(newquerylist[i], config)
 
+#querylistsegment = len(newquerylist)/numthreads
+#querylistsegmentremainder = len(newquerylist)%numthreads
 
+#for i in xrange(numthreads):
+#	try:
+#		thread.start_new_thread(applyOperations, (newquerylist[i:i+querylistsegment], config))
+#	except:
+#		print "Error: unable to start thread"
 

@@ -1,10 +1,15 @@
 #!/usr/bin/env python2.7
 
+import csv
 import argparse
 import json
 import random
 import subprocess
-import time
+from time import mktime
+from datetime import datetime
+import os
+import sys
+
 
 from ParseIngestionConfig import ParseIngestionConfig
 
@@ -57,7 +62,7 @@ producer = subprocess.Popen(
 )
 
 # Generate random query metrics
-if(datatype == "random"):
+if(data == "random" && datatype == "streaming"):
   for n in xrange(0, args.n):
     metric = {
       'timestamp': long(time.time() * 1000),
@@ -76,40 +81,43 @@ if(datatype == "random"):
   if producer.returncode != 0:
     raise Exception("Producer exited with code: " + str(producer.returncode))
 
-elif(datatype == "custom"):
-  f = open(datafilepath, 'r')
-  first = f.readline()
-  #split line into metric parts
-  metrics = []
-  for word in first.split(delimiter):
-    metrics.append(word)
-  #then feed each subsequent line into the producer
-  for line in f:
-    if(line != first):
-      metrics_dict = {}
-      metricsvalues = []
-      for word in line.split(delimiter):
-        if(is_number(word)):
-        {
-          number = float(word)
-          metricsvalues.append(number)
-        }
-        else:
-        {
-          metricsvalues.append(word)
-        }
-      for i in xrange(len(metrics)):
-        metrics_dict[metrics[i]] = metricsvalues[i]
-      producer.stdin.write(json.dumps([{metrics[i]: metricsvalues[i],} for i in xrange(len(metrics))]))
-      #producer.stdin.write(json.dumps(metrics_dict))
-      producer.stdin.write("\n")
+elif(datatype == "custom" && datatype == "streaming"):
 
-  # Close kafka console producer, wait for exit
+  r = csv.reader(open(datafilepath,'rU'), dialect=csv.excel_tab)
+  header = next(r)
+#  print header
+  metrics = []
+  line = header[0].split(delimiter)
+  for word in line:
+    metrics.append(word)
+  csvreader = csv.reader(open(datafilepath,'rU'), dialect=csv.excel_tab)
+  next(csvreader)
+  count = 0
+  for rows in csvreader:
+    line2 = rows[0].split(delimiter)
+    metrics_dict = {}
+    metricsvalues = []
+    for word in line2:
+        if(is_number(word)):
+                number = float(word)
+                metricsvalues.append(number)
+        else:
+                metricsvalues.append(word)
+    for i in xrange(len(metrics)):
+        metrics_dict[metrics[i]] = metricsvalues[i]
+    if count == 0:
+      print json.dumps(metrics_dict)
+    producer.stdin.write(json.dumps(metrics_dict))
+    producer.stdin.write("\n")
+    count += 1
   producer.stdin.close()
   producer.wait()
 
   if producer.returncode != 0:
-    raise Exception("Producer exited with code: " + str(producer.returncode))  
+    raise Exception("Producer exited with code: " + str(producer.returncode))
+
+elif(datatype == "custom" && datatype == "batch"):
+  os.system("curl -X 'POST' -H 'Content-Type:application/json' -d %s.json %s:8090/druid/indexer/v1/task" % (index_task, overlord_host))  
 
 
 

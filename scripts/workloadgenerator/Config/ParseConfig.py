@@ -24,6 +24,8 @@ class ParseConfig:
 		self.earliesthour = 0
 		self.earliestminute = 0
 		self.earliestsecond = 0
+		self.opspersecond = 0
+		self.queryruntime = 0
 
 		if configFilePath is not  None:
 			self.parseConfigFile(configFilePath)
@@ -84,6 +86,10 @@ class ParseConfig:
 					self.earliestminute = int(value)
 				elif key == "earliestsecond":
 					self.earliestsecond = int(value)
+				elif key == "opspersecond":
+					self.opspersecond = int(value)
+				elif key == "queryruntime":
+					self.queryruntime = float(value)
 
 	def getDataSource(self):
 		return self.datasource
@@ -154,6 +160,12 @@ class ParseConfig:
 	def getEarliestSecond(self):
 		return self.earliestsecond
 
+	def getOpsPerSecond(self):
+		return self.opspersecond
+
+	def getQueryRuntime(self):
+		return self.queryruntime
+
 	def printConfig(self):
 		print "Config details"
 		print "Data Source : " + self.getDataSource()
@@ -179,3 +191,5 @@ class ParseConfig:
 		print "Earliest Hour : " + self.getEarliestHour()
 		print "Earliest Minute : " + self.getEarliestMinute()
 		print "Earliest Second : " + self.getEarliestSecond()
+		print "Operations per second : " + self.getOpsPerSecond()
+		print "Query Runtime : " + self.getQueryType()

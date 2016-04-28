@@ -215,7 +215,8 @@ do
     then
         COMMAND=$COMMAND"sudo rm -r -f $MIDDLE_MANAGER_LOG_FILE;"
     fi
-    COMMAND=$COMMAND" pkill -9 "screen";"
+    COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
+    COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "middle manager server shutdown command is $COMMAND"
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
@@ -233,7 +234,8 @@ do
     then
         COMMAND=$COMMAND"sudo rm -r -f $OVERLORD_LOG_FILE;"
     fi
-    COMMAND=$COMMAND" pkill -9 "screen";"
+    COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
+    COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "overlord server shutdown command is $COMMAND"
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
@@ -251,7 +253,8 @@ do
     then
         COMMAND=$COMMAND"sudo rm -r -f $BROKER_LOG_FILE;"
     fi
-    COMMAND=$COMMAND" pkill -9 "screen";"
+    COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
+    COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "Broker server shutdown command is $COMMAND"
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
@@ -269,7 +272,8 @@ do
     then
     COMMAND=$COMMAND"sudo rm -r -f $REALTIME_LOG_FILE;"
     fi
-    COMMAND=$COMMAND" pkill -9 "screen";"
+    COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
+    COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "Realtime server shutdown command is $COMMAND"
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
@@ -288,7 +292,8 @@ do
         then
         COMMAND=$COMMAND"sudo rm -r -f $COORDINATOR_LOG_FILE;"
         fi
-        COMMAND=$COMMAND"pkill -9 "screen";"
+        COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
+        COMMAND=$COMMAND" sudo pkill -9 \"java\";"
         echo "Config server shutdown command is $COMMAND"
 		ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
 			$COMMAND"
@@ -306,7 +311,8 @@ do
         then
         	COMMAND=$COMMAND"sudo rm -r -f $HISTORICAL_LOG_FILE;"
         fi
-	    COMMAND=$COMMAND"pkill -9 "screen";"
+	    COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
+        COMMAND=$COMMAND" sudo pkill -9 \"java\";"
         echo "Historical server shutdown command is $COMMAND"
         ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
         	$COMMAND"
