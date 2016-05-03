@@ -36,12 +36,10 @@ for node in ${REALTIME_NODE//,/ }
 do
     if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
     then
-        REALTIME_NODE_FQDN=$node
+        NEW_REALTIME_NODE=$NEW_REALTIME_NODE$node,
     else
-        REALTIME_NODE_FQDN=$node.$EXPERIMENT.$PROJ.$ENV
+        NEW_REALTIME_NODE=$NEW_REALTIME_NODE$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV,
     fi
- 
-    NEW_REALTIME_NODE=$NEW_REALTIME_NODE$USER_NAME@$REALTIME_NODE_FQDN
 done
 
 #construct broker FQDN
@@ -52,7 +50,7 @@ do
     then
         NEW_BROKER_NODES=$NEW_BROKER_NODES$node,
     else
-        NEW_BROKER_NODES=$NEW_BROKER_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV
+        NEW_BROKER_NODES=$NEW_BROKER_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV,
     fi
 done
 
@@ -76,7 +74,7 @@ do
     then
         NEW_COORDINATOR_NODES=$NEW_COORDINATOR_NODES$node,
     else
-        NEW_COORDINATOR_NODES=$NEW_COORDINATOR_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV
+        NEW_COORDINATOR_NODES=$NEW_COORDINATOR_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV,
     fi
 done
 
@@ -88,7 +86,7 @@ do
     then
         NEW_ZOOKEEPER_NODES=$NEW_ZOOKEEPER_NODES$node,
     else
-        NEW_ZOOKEEPER_NODES=$NEW_ZOOKEEPER_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV
+        NEW_ZOOKEEPER_NODES=$NEW_ZOOKEEPER_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV,
     fi
 done
 
@@ -100,7 +98,7 @@ do
     then
         NEW_MYSQL_NODES=$NEW_MYSQL_NODES$node,
     else
-        NEW_MYSQL_NODES=$NEW_MYSQL_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV
+        NEW_MYSQL_NODES=$NEW_MYSQL_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV,
     fi
 done
 
@@ -112,7 +110,7 @@ do
     then
         NEW_OVERLORD_NODES=$NEW_OVERLORD_NODES$node,
     else
-        NEW_OVERLORD_NODES=$NEW_OVERLORD_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV
+        NEW_OVERLORD_NODES=$NEW_OVERLORD_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV,
     fi
 done
 
@@ -124,7 +122,7 @@ do
     then
         NEW_MIDDLE_MANAGER_NODES=$NEW_MIDDLE_MANAGER_NODES$node,
     else
-        NEW_MIDDLE_MANAGER_NODES=$NEW_MIDDLE_MANAGER_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV
+        NEW_MIDDLE_MANAGER_NODES=$NEW_MIDDLE_MANAGER_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV,
     fi
 done
 
@@ -146,7 +144,7 @@ done
 #shutdown the kafka server
 echo "Shutting down kafka server:"
 counter=0
-for node in ${NEW_KAFKA_NODES//;/ }
+for node in ${NEW_KAFKA_NODES//,/ }
 do
     echo "Shutting down $node ..."
     COMMAND=''
@@ -167,7 +165,7 @@ echo""
 #shutdown the zookeeper server
 echo "Shutting down zookeeper server:"
 counter=0
-for node in ${NEW_ZOOKEEPER_NODES//;/ }
+for node in ${NEW_ZOOKEEPER_NODES//,/ }
 do
     echo "Shutting down $node ..."
     COMMAND=''
@@ -185,7 +183,7 @@ echo""
 #shutdown the mysql server
 echo "Shutting down mysql server:"
 counter=0
-for node in ${NEW_MYSQL_NODES//;/ }
+for node in ${NEW_MYSQL_NODES//,/ }
 do
     echo "Shutting down $node ..."
     COMMAND=''
@@ -207,7 +205,7 @@ echo""
 #shutdown the middle manager server
 echo "Shutting down middle manager server:"
 counter=0
-for node in ${NEW_MIDDLE_MANAGER_NODES//;/ }
+for node in ${NEW_MIDDLE_MANAGER_NODES//,/ }
 do
     echo "Shutting down $node ..."
     COMMAND=''
@@ -227,7 +225,7 @@ echo""
 #shutdown the overlord server
 echo "Shutting down overlord server:"
 counter=0
-for node in ${NEW_OVERLORD_NODES//;/ }
+for node in ${NEW_OVERLORD_NODES//,/ }
 do
     echo "Shutting down $node ..."
     COMMAND=''
@@ -247,7 +245,7 @@ echo""
 #shutdown the broker server
 echo "Shutting down broker server:"
 counter=0
-for node in ${NEW_BROKER_NODES//;/ }
+for node in ${NEW_BROKER_NODES//,/ }
 do
     echo "Shutting down $node ..."
     COMMAND=''
@@ -267,7 +265,7 @@ echo""
 #shutdown the realtime server
 echo "Shutting down realtime server:"
 counter=0
-for node in ${NEW_REALTIME_NODE//;/ }
+for node in ${NEW_REALTIME_NODE//,/ }
 do
     echo "Shutting down $node ..."
     COMMAND=''
