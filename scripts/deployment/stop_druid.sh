@@ -213,11 +213,12 @@ do
     COMMAND=''
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-        COMMAND=$COMMAND"sudo rm -r -f $MIDDLE_MANAGER_LOG_FILE;"
+        COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/middlemanager-$counter.log;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "middle manager server shutdown command is $COMMAND"
+    let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 done
@@ -232,11 +233,12 @@ do
     COMMAND=''
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-        COMMAND=$COMMAND"sudo rm -r -f $OVERLORD_LOG_FILE;"
+        COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/overlord-$counter.log;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "overlord server shutdown command is $COMMAND"
+    let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 done
@@ -251,11 +253,12 @@ do
     COMMAND=''
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-        COMMAND=$COMMAND"sudo rm -r -f $BROKER_LOG_FILE;"
+        COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/broker-$counter.log;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "Broker server shutdown command is $COMMAND"
+    let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 done
@@ -270,11 +273,12 @@ do
     COMMAND=''
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-    COMMAND=$COMMAND"sudo rm -r -f $REALTIME_LOG_FILE;"
+    COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/realtime-$counter.log;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "Realtime server shutdown command is $COMMAND"
+    let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 
@@ -290,7 +294,7 @@ do
         COMMAND=''
         if [ $TYPE_OF_STOP -eq 1 ]
         then
-        COMMAND=$COMMAND"sudo rm -r -f $COORDINATOR_LOG_FILE;"
+        COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/coordinator-$counter.log;"
         fi
         COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
         COMMAND=$COMMAND" sudo pkill -9 \"java\";"
@@ -303,17 +307,19 @@ echo ""
 
 #shutdown the historical server
 echo "Shutting down historical servers:"
+counter=0
 for  node in ${NEW_HISTORICAL_NODES//,/ }
 do
         echo "Shutting down $node ..."
         COMMAND=''
         if [ $TYPE_OF_STOP -eq 1 ]
         then
-        	COMMAND=$COMMAND"sudo rm -r -f $HISTORICAL_LOG_FILE;"
+        	COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/historical-$counter.log;"
         fi
 	    COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
         COMMAND=$COMMAND" sudo pkill -9 \"java\";"
         echo "Historical server shutdown command is $COMMAND"
+        let counter=counter+1
         ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
         	$COMMAND"
 done
