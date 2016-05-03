@@ -248,7 +248,6 @@ do
         NODE_HOST=''
         if [ "$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
         then
-            COMMAND=$COMMAND" sudo chsh -s /bin/bash $USERNAME;"
             if [[ $node == *","* ]]
             then
                 SUBSTRING=${$node##$USER_NAME@}
@@ -267,6 +266,7 @@ do
             NODE_HOST=$node
         fi
 
+        COMMAND=$COMMAND" sudo chsh -s /bin/bash $USERNAME;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$OVERLORD_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/overlord/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '3s@.*@druid.host=$NODE_HOST@' $PATH_TO_DRUID_BIN/conf/druid/overlord/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/overlord-$counter.log\">@' $COMMON_LOG4J2;"
@@ -299,7 +299,6 @@ do
         NODE_HOST=''
         if [ "$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
         then
-            COMMAND=$COMMAND" sudo chsh -s /bin/bash $USERNAME;"
             if [[ $node == *","* ]]
             then
                 SUBSTRING=${$node##$USER_NAME@}
@@ -318,6 +317,7 @@ do
             NODE_HOST=$node
         fi
 
+        COMMAND=$COMMAND" sudo chsh -s /bin/bash $USERNAME;"
         COMMAND=$COMMAND" sudo sed -i '3s@.*@druid.host=$NODE_HOST@' $PATH_TO_DRUID_BIN/conf/druid/middleManager/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$MIDDLE_MANAGER_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/middleManager/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/middlemanager-$counter.log\">@' $COMMON_LOG4J2;"
@@ -353,7 +353,6 @@ do
         then
             if [[ $node == *","* ]]
             then
-                COMMAND=$COMMAND" sudo chsh -s /bin/bash $USERNAME;"
                 SUBSTRING=${$node##$USER_NAME@}
                 NODE_NUMBER=$(echo $SUBSTRING| cut -d'.' -f 1)
                 arr=$(echo $node | tr "," "\n")
@@ -370,6 +369,7 @@ do
             NODE_HOST=$node
         fi
 
+        COMMAND=$COMMAND" sudo chsh -s /bin/bash $USERNAME;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$COORDINATOR_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '3s@.*@druid.host=$NODE_HOST@' $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/coordinator-$counter.log\">@' $COMMON_LOG4J2;"
@@ -402,7 +402,6 @@ do
         NODE_HOST=''
         if [ "$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
         then
-            COMMAND=$COMMAND" sudo chsh -s /bin/bash $USERNAME;"
             if [[ $node == *","* ]]
             then
                 SUBSTRING=${$node##$USER_NAME@}
@@ -421,6 +420,7 @@ do
             NODE_HOST=$node
         fi
 
+        COMMAND=$COMMAND" sudo chsh -s /bin/bash $USERNAME;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$HISTORICAL_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '3s@.*@druid.host=$NODE_HOST@' $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/historical-$counter.log\">@' $COMMON_LOG4J2;"
@@ -453,7 +453,6 @@ do
         NODE_HOST=''
         if [ "$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
         then
-            COMMAND=$COMMAND" sudo chsh -s /bin/bash $USERNAME;"
             if [[ $node == *","* ]]
             then
                 SUBSTRING=${$node##$USER_NAME@}
@@ -472,6 +471,7 @@ do
             NODE_HOST=$node
         fi
 
+        COMMAND=$COMMAND" sudo chsh -s /bin/bash $USERNAME;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$BROKER_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '3s@.*@druid.host=$NODE_HOST@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/broker-$counter.log\">@' $COMMON_LOG4J2;"
@@ -537,7 +537,6 @@ do
         NODE_HOST=''
         if [ "$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
         then
-            COMMAND=$COMMAND" sudo chsh -s /bin/bash $USERNAME;"
             if [[ $node == *","* ]]
             then
                 SUBSTRING=${$node##$USER_NAME@}
@@ -556,6 +555,7 @@ do
             NODE_HOST=$node
         fi
 
+        COMMAND=$COMMAND" sudo chsh -s /bin/bash $USERNAME;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$REALTIME_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/realtime/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '3s@.*@druid.host=$NODE_HOST@' $PATH_TO_DRUID_BIN/conf/druid/realtime/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/realtime-$counter.log\">@' $COMMON_LOG4J2;"
