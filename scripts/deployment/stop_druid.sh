@@ -153,7 +153,7 @@ do
         #COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
     #fi
     COMMAND=$COMMAND" cd $PATH_TO_KAFKA;"
-    COMMAND=$COMMAND" ./bin/kafka-topics.sh --zookeeper $KAFKA_NODE-big-lan:2181 --delete --topic $KAFKA_TOPIC;"
+    COMMAND=$COMMAND" ./bin/kafka-topics.sh --zookeeper $KAFKA_NODE_HOST:2181 --delete --topic $KAFKA_TOPIC;"
     COMMAND=$COMMAND" ./bin/kafka-server-stop.sh;"
     COMMAND=$COMMAND" ./bin/zookeeper-server-stop.sh;"
     echo "kafka server shutdown command is $COMMAND"
