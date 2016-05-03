@@ -11,6 +11,36 @@ class DBOpsHandler:
 	def getConfig(self):
 		return self.config
 
+	def segmentmetadata(self, query):
+		config = self.getConfig()
+		newquery = PyDruid(config.getBrokerNodeUrl(), config.getBrokerEndpoint())
+		t1 = datetime.now().time()
+		sm = newquery.topn(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, aggregations={'count': doublesum('count')}, dimension=config.getDimension(), metric=config.getMetric(), threshold=config.getThreshold())
+		t2 = datetime.combine(date.today(),datetime.now().time()) - datetime.combine(datetime.today(),t1)
+		x = newquery.export_pandas()
+
+		print json.dumps(newquery.query_dict, indent=2)
+		if(x is not None):
+			print x
+			print t2
+		else:
+			print "Query Failed"
+
+	def timeboundary(self, query):
+		config = self.getConfig()
+		newquery = PyDruid(config.getBrokerNodeUrl(), config.getBrokerEndpoint())
+		t1 = datetime.now().time()
+		tb = newquery.topn(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, aggregations={'count': doublesum('count')}, dimension=config.getDimension(), metric=config.getMetric(), threshold=config.getThreshold())
+		t2 = datetime.combine(date.today(),datetime.now().time()) - datetime.combine(datetime.today(),t1)
+		x = newquery.export_pandas()
+
+		print json.dumps(newquery.query_dict, indent=2)
+		if(x is not None):
+			print x
+			print t2
+		else:
+			print "Query Failed"
+
 	def topn(self, query):
 		config = self.getConfig()
 		newquery = PyDruid(config.getBrokerNodeUrl(), config.getBrokerEndpoint())
@@ -19,11 +49,12 @@ class DBOpsHandler:
 		t2 = datetime.combine(date.today(),datetime.now().time()) - datetime.combine(datetime.today(),t1)
 		x = newquery.export_pandas()
 
-		print tn.query_dict
-		if(x == "None"):
-			print "Query Failed"
+		print json.dumps(newquery.query_dict, indent=2)
+		if(x is not None):
+			print x
+			print t2
 		else:
-			print x + str(t2)
+			print "Query Failed"
 
 	def timeseries(self, query):
 		config = self.getConfig()
@@ -43,12 +74,12 @@ class DBOpsHandler:
 		t2 = datetime.combine(date.today(),datetime.now().time()) - datetime.combine(datetime.today(),t1)
 		x = newquery.export_pandas()
 		
-		print x
-		#print ts.query_dict
-		#if(x == None):
-		#	print "Query Failed"
-		#else:
-	#		print x + str(t2)
+		print json.dumps(newquery.query_dict, indent=2)
+		if(x is not None):
+			print x
+			print t2
+		else:
+			print "Query Failed"
 
 	def groupby(self, query):
 		config = self.getConfig()
@@ -58,8 +89,9 @@ class DBOpsHandler:
 		t2 = datetime.combine(date.today(),datetime.now().time()) - datetime.combine(datetime.today(),t1)
 		x = newquery.export_pandas()
 		
-		print gb.query_dict
-		if(x == "None"):
-			print "Query Failed"
+		print json.dumps(newquery.query_dict, indent=2)
+		if(x is not None):
+			print x
+			print t2
 		else:
-			print x + str(t2)
+			print "Query Failed"

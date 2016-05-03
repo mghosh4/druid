@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import os, sys
 import datetime
-import thread
+import threading
 sys.path.append(os.path.abspath('Distribution'))
 sys.path.append(os.path.abspath('Query'))
 sys.path.append(os.path.abspath('Config'))
@@ -14,6 +14,14 @@ from ParseConfig import ParseConfig
 from DBOpsHandler import DBOpsHandler
 from QueryGenerator import QueryGenerator
 from DistributionFactory import DistributionFactory
+
+class FuncThread(threading.Thread):
+	def __init__(self, target, *args):
+		self._target = target
+		self._args = args
+		threading.Thread.__init__(self)
+	def run(self):
+		self._target(*self._args)
 
 def getConfigFile(args):
 	return args[1]
@@ -47,6 +55,10 @@ def applyOperation(query, config):
 			dbOpsHandler.topn(query)
 		elif querytype == "groupby":
 			dbOpsHandler.groupby(query)
+		elif querytype == "segmentmetadata":
+			dbOpsHandler.segmentmetadata(query)
+		elif querytype == "timeboundary":
+			dbOpsHandler.timeboundary(query)
 
 def applyOperations(querylist, config):
 	for i in xrange(len(querylist)):
@@ -70,7 +82,7 @@ earliestsecond = config.getEarliestSecond()
 opspersecond = config.getOpsPerSecond()
 queryruntime = config.getQueryRuntime()
 
-#numthreads = int(opspersecond * queryruntime))
+numthreads = int(opspersecond * queryruntime)
 
 timeAccessGenerator = DistributionFactory.createSegmentDistribution(accessdistribution)
 
@@ -84,15 +96,21 @@ start = datetime.datetime(earliestyear, earliestmonth, earliestday, earliesthour
 
 newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator);
 
-for i in xrange(numqueries):
-	applyOperation(newquerylist[i], config)
+#for i in xrange(numqueries):
+#	applyOperation(newquerylist[i], config)
 
-#querylistsegment = len(newquerylist)/numthreads
-#querylistsegmentremainder = len(newquerylist)%numthreads
+querylistsegment = len(newquerylist)/numthreads
+querylistsegmentremainder = len(newquerylist)%numthreads
 
-#for i in xrange(numthreads):
-#	try:
-#		thread.start_new_thread(applyOperations, (newquerylist[i:i+querylistsegment], config))
-#	except:
-#		print "Error: unable to start thread"
+threadarray = []
 
+for i in xrange(numthreads):
+	try:
+		#thread.start_new_thread(applyOperations, (newquerylist[i:i+querylistsegment], config))
+		threadarray.append(FuncThread(applyOperations, newquerylist[i:i+querylistsegment], config))
+		threadarray[i].start()
+	except:
+		print "Error: unable to start thread"
+
+for i in xrange(numthreads):
+	threadarray[i].join()
