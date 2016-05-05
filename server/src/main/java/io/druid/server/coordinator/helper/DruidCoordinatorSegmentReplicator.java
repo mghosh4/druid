@@ -284,7 +284,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
 		final BalancerStrategy strategy = params.getBalancerStrategyFactory().createBalancerStrategy(referenceTimestamp);
 
-		for (HashMap.Entry<DataSegment, Number> entry : insertList.entrySet())
+		for (Map.Entry<DataSegment, Number> entry : insertList.entrySet())
 		{
 			DataSegment segment = entry.getKey();
 			CoordinatorStats assignStats = assign(
@@ -298,7 +298,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 			stats.accumulate(assignStats);
 		}
 
-		for (HashMap.Entry<DataSegment, Number> entry : removeList.entrySet())
+		for (Map.Entry<DataSegment, Number> entry : removeList.entrySet())
 		{
 			DataSegment segment = entry.getKey();
 			int totalReplicantsInCluster = params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier());
