@@ -269,6 +269,11 @@ do
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$OVERLORD_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/overlord/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '3s@.*@druid.host=$NODE_HOST@' $PATH_TO_DRUID_BIN/conf/druid/overlord/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/overlord-$counter.log\">@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '8s@.*@            <PatternLayout>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '9s@.*@               <Pattern>%d %p %c{1.} [%t] %m%n</Pattern>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '10s@.*@           </PatternLayout>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '11s@.*@       </File>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '16s@.*@           <AppenderRef ref=\"File\" />@' $COMMON_LOG4J2;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath conf/druid/_common:conf/druid/overlord:lib/* io.druid.cli.Main server overlord;"
 
         #if [ "$IP" == "TRUE" ]
@@ -321,6 +326,11 @@ do
         COMMAND=$COMMAND" sudo sed -i '3s@.*@druid.host=$NODE_HOST@' $PATH_TO_DRUID_BIN/conf/druid/middleManager/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$MIDDLE_MANAGER_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/middleManager/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/middlemanager-$counter.log\">@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '8s@.*@            <PatternLayout>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '9s@.*@               <Pattern>%d %p %c{1.} [%t] %m%n</Pattern>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '10s@.*@           </PatternLayout>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '11s@.*@       </File>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '16s@.*@           <AppenderRef ref=\"File\" />@' $COMMON_LOG4J2;"        
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath conf/druid/_common:conf/druid/middleManager:lib/* io.druid.cli.Main server middleManager;"
 
         #if [ "$IP" == "TRUE" ]
@@ -374,6 +384,11 @@ do
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$COORDINATOR_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '3s@.*@druid.host=$NODE_HOST@' $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/coordinator-$counter.log\">@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '8s@.*@            <PatternLayout>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '9s@.*@               <Pattern>%d %p %c{1.} [%t] %m%n</Pattern>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '10s@.*@           </PatternLayout>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '11s@.*@       </File>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '16s@.*@           <AppenderRef ref=\"File\" />@' $COMMON_LOG4J2;"        
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath conf/druid/_common:conf/druid/coordinator:lib/* io.druid.cli.Main server coordinator;"  
 
         #if [ "$IP" == "TRUE" ]
@@ -426,6 +441,11 @@ do
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$HISTORICAL_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '3s@.*@#druid.host=$NODE_HOST@' $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/historical-$counter.log\">@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '8s@.*@            <PatternLayout>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '9s@.*@               <Pattern>%d %p %c{1.} [%t] %m%n</Pattern>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '10s@.*@           </PatternLayout>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '11s@.*@       </File>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '16s@.*@           <AppenderRef ref=\"File\" />@' $COMMON_LOG4J2;"        
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath conf/druid/_common:conf/druid/historical:lib/* io.druid.cli.Main server historical;"
 
         #if [ "$IP" == "TRUE" ]
@@ -478,6 +498,11 @@ do
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$BROKER_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '3s@.*@druid.host=$NODE_HOST@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/broker-$counter.log\">@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '8s@.*@            <PatternLayout>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '9s@.*@               <Pattern>%d %p %c{1.} [%t] %m%n</Pattern>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '10s@.*@           </PatternLayout>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '11s@.*@       </File>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '16s@.*@           <AppenderRef ref=\"File\" />@' $COMMON_LOG4J2;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath conf/druid/_common:conf/druid/broker:lib/* io.druid.cli.Main server broker;"
 
         #if [ "$IP" == "TRUE" ]
@@ -507,11 +532,12 @@ do
         COMMAND=$COMMAND" sudo sed -i '28s@.*@host.name=$KAFKA_NODE_HOST@' $PATH_TO_KAFKA/config/server.properties;"
         COMMAND=$COMMAND" sudo sed -i '33s@.*@advertised.host.name=$KAFKA_NODE_HOST@' $PATH_TO_KAFKA/config/server.properties;"
         COMMAND=$COMMAND" sudo sed -i '37s@.*@advertised.port=$KAFKA_NODE_PORT@' $PATH_TO_KAFKA/config/server.properties;"
-        COMMAND=$COMMAND" sudo sed -i '118s@.*@zookeeper.connect=$KAFKA_NODE_HOST:2181@' $PATH_TO_KAFKA/config/server.properties;"
+        COMMAND=$COMMAND" sudo sed -i '118s@.*@zookeeper.connect=$KAFKA_NODE_HOST:$KAFKA_ZOOKEEPER_PORT@' $PATH_TO_KAFKA/config/server.properties;"
+        COMMAND=$COMMAND" sudo sed -i '18s@.*@clientPort=$KAFKA_ZOOKEEPER_PORT@' $PATH_TO_KAFKA/config/zookeeper.properties;"
         COMMAND=$COMMAND" screen -d -m sudo ./bin/zookeeper-server-start.sh config/zookeeper.properties;"
         COMMAND=$COMMAND" sleep 5;"
         COMMAND=$COMMAND" screen -d -m sudo ./bin/kafka-server-start.sh config/server.properties;"
-        COMMAND=$COMMAND" screen -d -m sudo ./bin/kafka-topics.sh --create --zookeeper $KAFKA_NODE_HOST:2181 --replication-factor 1 --partitions 1 --topic $KAFKA_TOPIC;"
+        COMMAND=$COMMAND" screen -d -m sudo ./bin/kafka-topics.sh --create --zookeeper $KAFKA_NODE_HOST:$KAFKA_ZOOKEEPER_PORT --replication-factor 1 --partitions 1 --topic $KAFKA_TOPIC;"
 
         #if [ "$IP" == "TRUE" ]
         #then
@@ -563,6 +589,11 @@ do
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$REALTIME_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/realtime/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '3s@.*@druid.host=$NODE_HOST@' $PATH_TO_DRUID_BIN/conf/druid/realtime/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/realtime-$counter.log\">@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '8s@.*@            <PatternLayout>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '9s@.*@               <Pattern>%d %p %c{1.} [%t] %m%n</Pattern>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '10s@.*@           </PatternLayout>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '11s@.*@       </File>@' $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo sed -i '16s@.*@           <AppenderRef ref=\"File\" />@' $COMMON_LOG4J2;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Ddruid.realtime.specFile=$SPEC_FILE -classpath conf/druid/_common:conf/druid/realtime:lib/* io.druid.cli.Main server realtime;"
 
         #if [ "$IP" == "TRUE" ]
