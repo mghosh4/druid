@@ -153,9 +153,10 @@ do
         #COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
     #fi
     COMMAND=$COMMAND" cd $PATH_TO_KAFKA;"
-    COMMAND=$COMMAND" ./bin/kafka-topics.sh --zookeeper $KAFKA_NODE_HOST:2181 --delete --topic $KAFKA_TOPIC;"
-    COMMAND=$COMMAND" ./bin/kafka-server-stop.sh;"
-    COMMAND=$COMMAND" ./bin/zookeeper-server-stop.sh;"
+    COMMAND=$COMMAND" sudo ./bin/kafka-topics.sh --zookeeper $KAFKA_NODE_HOST:2181 --delete --topic $KAFKA_TOPIC;"
+    COMMAND=$COMMAND" sudo ./bin/kafka-server-stop.sh;"
+    COMMAND=$COMMAND" sudo ./bin/zookeeper-server-stop.sh;"
+    COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
     echo "kafka server shutdown command is $COMMAND"
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
         $COMMAND"
@@ -191,11 +192,11 @@ do
     #then
         #COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
     #fi
-    COMMAND=$COMMAND" sudo service mysql stop"
-    COMMAND=$COMMAND" sudo service mysql start"
+    COMMAND=$COMMAND" sudo service mysql stop;"
+    COMMAND=$COMMAND" sudo service mysql start;"
     MYSQL="DROP DATABASE druid;"
     COMMAND=$COMMAND" mysql -u root -p -e \"$MYSQL\";"
-    COMMAND=$COMMAND" sudo apt-get -y remove mysql-server;"
+    #COMMAND=$COMMAND" sudo apt-get -y remove mysql-server;"
     echo "mysql server shutdown command is $COMMAND"
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
