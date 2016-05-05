@@ -15,32 +15,34 @@ class DBOpsHandler:
 		config = self.getConfig()
 		newquery = PyDruid(config.getBrokerNodeUrl(), config.getBrokerEndpoint())
 		t1 = datetime.now().time()
-		sm = newquery.topn(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, aggregations={'count': doublesum('count')}, dimension=config.getDimension(), metric=config.getMetric(), threshold=config.getThreshold())
+		sm = newquery.segment_metadata(datasource=config.getDataSource(), intervals=query.interval)
 		t2 = datetime.combine(date.today(),datetime.now().time()) - datetime.combine(datetime.today(),t1)
-		x = newquery.export_pandas()
+		#x = newquery.export_pandas()
 
 		print json.dumps(newquery.query_dict, indent=2)
-		if(x is not None):
-			print x
-			print t2
-		else:
-			print "Query Failed"
+		#if(x is not None):
+		#	print x
+		print t2
+		#else:
+		#	print "Query Failed"
 
 	def timeboundary(self, query):
 		config = self.getConfig()
 		newquery = PyDruid(config.getBrokerNodeUrl(), config.getBrokerEndpoint())
 		t1 = datetime.now().time()
-		tb = newquery.topn(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, aggregations={'count': doublesum('count')}, dimension=config.getDimension(), metric=config.getMetric(), threshold=config.getThreshold())
+		tb = newquery.time_boundary(datasource=config.getDataSource())
 		t2 = datetime.combine(date.today(),datetime.now().time()) - datetime.combine(datetime.today(),t1)
-		x = newquery.export_pandas()
+		#x = newquery.export_pandas()
 
 		print json.dumps(newquery.query_dict, indent=2)
-		if(x is not None):
-			print x
-			print t2
-		else:
-			print "Query Failed"
+		#if(x is not None):
+		#	print x
+		print t2
+		#else:
+		#	print "Query Failed"
 
+
+			#FILTER AND POST_AGGREGATIONS ARE OPTIONAL
 	def topn(self, query):
 		config = self.getConfig()
 		newquery = PyDruid(config.getBrokerNodeUrl(), config.getBrokerEndpoint())
@@ -56,6 +58,8 @@ class DBOpsHandler:
 		else:
 			print "Query Failed"
 
+
+			#FILTER AND POST_AGGREGATIONS ARE OPTIONAL
 	def timeseries(self, query):
 		config = self.getConfig()
 		newquery = PyDruid(config.getBrokerNodeUrl(), config.getBrokerEndpoint())
@@ -81,6 +85,8 @@ class DBOpsHandler:
 		else:
 			print "Query Failed"
 
+
+			#FILTER AND POST_AGGREGATIONS ARE OPTIONAL
 	def groupby(self, query):
 		config = self.getConfig()
 		newquery = PyDruid(config.getBrokerNodeUrl(), config.getBrokerEndpoint())
