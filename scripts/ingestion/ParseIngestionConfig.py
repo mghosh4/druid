@@ -6,6 +6,7 @@ class ParseIngestionConfig:
 		self.datafilepath=""
 		self.kafkatopic=""
 		self.delimiter=""
+		self.kafkahost=""
 
 		if configFilePath is not  None:
 			self.parseConfigFile(configFilePath)
@@ -28,8 +29,10 @@ class ParseIngestionConfig:
 					self.datafilepath = value
 				elif key == "kafkatopic":
 					self.kafkatopic = value
-				elif key == "delimiter"
-					self.delimiter = value
+				elif key == "delimiter":
+					self.delimiter = value				
+				elif key == "kafkahost":
+					self.kafkahost = value
 
 	def getKafkaPath(self):
 		return self.kafkapath
@@ -46,6 +49,9 @@ class ParseIngestionConfig:
 	def getDelimiter(self):
 		return self.delimiter
 
+	def getKafkaHost(self):
+		return self.kafkahost
+
 
 
 	def printConfig(self):
@@ -54,4 +60,5 @@ class ParseIngestionConfig:
 		print "Data Type : " + self.getDataType()
 		print "Data File Path : " + self.getDataFilePath()
 		print "Kafka Topic : " + self.getKafkaTopic()
-		print "Delimiter : " = self.getDelimiter()
+		print "Delimiter : " + self.getDelimiter()
+		print "Kafka Host : " + self.getKafkaHost()

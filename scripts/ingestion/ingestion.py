@@ -5,11 +5,10 @@ import argparse
 import json
 import random
 import subprocess
-from time import mktime
+import time
 from datetime import datetime
 import os
 import sys
-
 
 from ParseIngestionConfig import ParseIngestionConfig
 
@@ -20,7 +19,7 @@ parser.add_argument('file', type=argparse.FileType('r'))
 args = parser.parse_args()
 
 def getConfigFile(args):
-  return args[3]
+  return args[2]
 
 def checkAndReturnArgs(args):
   requiredNumOfArgs = 2
@@ -51,18 +50,21 @@ kafkapath = config.getKafkaPath()
 kafkatopic = config.getKafkaTopic()
 datafilepath = config.getDataFilePath()
 datatype = config.getDataType()
-
+delimiter = config.getDelimiter()
+#index_task = config.getIndexTask()
+#overlord_host = config.getOverlordHost()
+kafkahost = config.getKafkaHost()
 os.chdir(kafkapath)
 
 # Open the kafka console producer
 producer = subprocess.Popen(
-  "./bin/kafka-console-producer.sh --broker-list node-18-big-lan:9092 --topic %s" %(kafkatopic),
+  "./bin/kafka-console-producer.sh --broker-list %s:9092 --topic %s" %(kafkahost, kafkatopic),
   shell=True,
   stdin=subprocess.PIPE
 )
 
 # Generate random query metrics
-if(data == "random" && datatype == "streaming"):
+if(datatype == "randomstream"):
   for n in xrange(0, args.n):
     metric = {
       'timestamp': long(time.time() * 1000),
@@ -81,7 +83,7 @@ if(data == "random" && datatype == "streaming"):
   if producer.returncode != 0:
     raise Exception("Producer exited with code: " + str(producer.returncode))
 
-elif(datatype == "custom" && datatype == "streaming"):
+elif(datatype == "customstream"):
 
   r = csv.reader(open(datafilepath,'rU'), dialect=csv.excel_tab)
   header = next(r)
@@ -98,13 +100,13 @@ elif(datatype == "custom" && datatype == "streaming"):
     metrics_dict = {}
     metricsvalues = []
     for word in line2:
-        if(is_number(word)):
-                number = float(word)
-                metricsvalues.append(number)
-        else:
-                metricsvalues.append(word)
+	if(is_number(word)):
+		number = float(word)
+		metricsvalues.append(number)
+	else:
+        	metricsvalues.append(word)
     for i in xrange(len(metrics)):
-        metrics_dict[metrics[i]] = metricsvalues[i]
+	metrics_dict[metrics[i]] = metricsvalues[i]
     if count == 0:
       print json.dumps(metrics_dict)
     producer.stdin.write(json.dumps(metrics_dict))
@@ -116,8 +118,34 @@ elif(datatype == "custom" && datatype == "streaming"):
   if producer.returncode != 0:
     raise Exception("Producer exited with code: " + str(producer.returncode))
 
-elif(datatype == "custom" && datatype == "batch"):
-  os.system("curl -X 'POST' -H 'Content-Type:application/json' -d %s.json %s:8090/druid/indexer/v1/task" % (index_task, overlord_host))  
+elif(datatype == "batch"):
+  os.system("curl -X 'POST' -H 'Content-Type:application/json' -d %s.json %s:8090/druid/indexer/v1/task" % (index_task, overlord_host)) 
+ # f = open(datafilepath, 'r')
+ # first = f.readline()
+  #split line into metric parts
+ # metrics = []
+ # for word in first.split(delimiter):
+ #   print word
+ #   metrics.append(word)
+  #then feed each subsequent line into the producer
+ # for line in f:
+ #   if(line != f):
+ #     metrics_dict = {}
+ #     metricsvalues = []
+ #     for word in line.split(delimiter):
+ #       metricsvalues.append(word)
+ #     for i in xrange(len(metrics)):
+ #       metrics_dict[metrics[i]] = metricsvalues[i]
+ #     producer.stdin.write(json.dumps(metrics_dict))
+ #     producer.stdin.write("\n")
+
+  # Close kafka console producer, wait for exit
+ # producer.stdin.close()
+ # producer.wait()
+
+ # if producer.returncode != 0:
+ #   raise Exception("Producer exited with code: " + str(producer.returncode))  
+
 
 
 
