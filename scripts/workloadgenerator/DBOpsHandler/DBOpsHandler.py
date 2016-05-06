@@ -91,7 +91,7 @@ class DBOpsHandler:
 		config = self.getConfig()
 		newquery = PyDruid(config.getBrokerNodeUrl(), config.getBrokerEndpoint())
 		t1 = datetime.now().time()
-		gb = newquery.groupby(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, dimensions=["name", "value"], aggregations={"count": doublesum("count")})
+		gb = newquery.groupby(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, dimensions=['name','value'], aggregations={'count': doublesum('count')})
 		t2 = datetime.combine(date.today(),datetime.now().time()) - datetime.combine(datetime.today(),t1)
 		x = newquery.export_pandas()
 		
