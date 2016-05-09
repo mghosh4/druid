@@ -150,8 +150,7 @@ do
     COMMAND=''
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-        COMMAND=$COMMAND" sudo rm -r -f $KAFKA_LOG_FILE;"
-	COMMAND=$COMMAND" mkdir $KAFKA_LOG_FILE;"
+        COMMAND=$COMMAND" sudo rm -r -f $LOG_FILE/kafkalogs;"
     fi
     COMMAND=$COMMAND" cd $PATH_TO_KAFKA;"
     COMMAND=$COMMAND" sudo ./bin/kafka-topics.sh --zookeeper $KAFKA_NODE_HOST:2181 --delete --topic $KAFKA_TOPIC;"
@@ -173,7 +172,8 @@ do
     COMMAND=''
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-        COMMAND=$COMMAND"sudo rm -r -f $ZOOKEEPER_LOG_FILE;"
+        COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/zookeeper.log;"
+        COMMAND=$COMMAND" sudo rm -rf $LOG_FILE/zookeeper.out;"
     fi
     COMMAND=$COMMAND" cd $PATH_TO_ZOOKEEPER && sudo bin/zkServer.sh stop;"
     echo "zookeeper server shutdown command is $COMMAND"
@@ -189,14 +189,15 @@ for node in ${NEW_MYSQL_NODES//,/ }
 do
     echo "Shutting down $node ..."
     COMMAND=''
-    #if [ $TYPE_OF_STOP -eq 1 ]
-    #then
-        #COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
-    #fi
+    if [ $TYPE_OF_STOP -eq 1 ]
+    then
+        COMMAND=$COMMAND" sudo rm -r -f $LOG_FILE/mysql.log;"
+    fi
     COMMAND=$COMMAND" sudo service mysql stop;"
     COMMAND=$COMMAND" sudo service mysql start;"
     MYSQL="DROP DATABASE druid;"
     COMMAND=$COMMAND" mysql -u root -p -e \"$MYSQL\";"
+    COMMAND=$COMMAND" sudo service mysql stop;"
     #COMMAND=$COMMAND" sudo apt-get -y remove mysql-server;"
     echo "mysql server shutdown command is $COMMAND"
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "

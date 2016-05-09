@@ -131,22 +131,59 @@ done
 
 ############################## SETUP ################################
 
-#start zookeeper FQDN
+#clean up files
 counter=0
-echo "Setting up zookeeper nodes:"
+for  node in ${NEW_ZOOKEEPER_NODES//,/ }
+do
+    COMMAND=''
+    if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_DRUID_BIN/../extensions ]")
+    then 
+        COMMAND=$COMMAND" sudo mv $PATH_TO_DRUID_BIN/extensions $PATH_TO_DRUID_BIN/conf;"
+        COMMAND=$COMMAND" sudo mv $PATH_TO_DRUID_BIN/../extensions $PATH_TO_DRUID_BIN;"
+        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+            $COMMAND"
+    fi
+
+    if [ "$AWS" == "FALSE" ]
+    then
+        if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_DRUID_BIN/extensions/druid-s3-extensions ]")
+        then
+            COMMAND=$COMMAND" sudo sed -i '26s/.*/druid.extensions.loadList=[\"druid-kafka-eight\", \"druid-histogram\", \"druid-datasketches\", \"druid-namespace-lookup\", \"mysql-metadata-storage\"]/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+            COMMAND=$COMMAND" sudo mv $PATH_TO_DRUID_BIN/extensions/druid-s3-extensions $PATH_TO_DRUID_BIN;"
+        fi
+    elif [ "$AWS" == "TRUE" ]
+    then
+        if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_DRUID_BIN/druid-s3-extensions ]")
+        then
+            COMMAND=$COMMAND" sudo sed -i '26s/.*/druid.extensions.loadList=[\"druid-kafka-eight\", \"druid-s3-extensions\", \"druid-histogram\", \"druid-datasketches\", \"druid-namespace-lookup\", \"mysql-metadata-storage\"]/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+            COMMAND=$COMMAND" sudo mv $PATH_TO_DRUID_BIN/druid-s3-extensions $PATH_TO_DRUID_BIN/extensions;"
+        fi
+    fi
+
+    COMMAND=$COMMAND" sudo rm -rf $COMMON_LOG4J2/log4j2.xml;"
+
+    #ssh to node and run command
+        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+            $COMMAND"
+done
+echo ""
+
 for  node in ${NEW_ZOOKEEPER_NODES//,/ }
 do
 
+        #send log file over
+        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+            sudo mkdir $PATH_TO_DRUID_BIN/tempdir && sudo chmod 777 $PATH_TO_DRUID_BIN/tempdir;"
+        scp log4j2.xml $node:$PATH_TO_DRUID_BIN/tempdir;
         echo "Setting up $node ..."
         COMMAND=''
-
+        COMMAND=$COMMAND" sudo mv $PATH_TO_DRUID_BIN/tempdir/log4j2.xml $COMMON_LOG4J2;"
+        COMMAND=$COMMAND" sudo rm -rf $PATH_TO_DRUID_BIN/tempdir;"
+        COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/\${sys:logfilename}.log\">@' $COMMON_LOG4J2/log4j2.xml;"
+        COMMAND=$COMMAND" cd $PATH_TO_ZOOKEEPER;"
         COMMAND=$COMMAND" sudo sed -i '36s/.*/druid.zk.service.host=$ZOOKEEPER_NODE_HOST/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
-        COMMAND=$COMMAND" cd $PATH_TO_ZOOKEEPER && sudo ./bin/zkServer.sh start;"
+        COMMAND=$COMMAND" sudo ZOO_LOG_DIR=/proj/DCSQ/tkao4 ZOO_LOG4J_PROP='INFO,ROLLINGFILE' ./bin/zkServer.sh start;"
 
-        #if [ "$IP" == "TRUE" ]
-        #then
-        #    COMMAND=$COMMAND" --bind_ip $node;"
-        #fi
         echo "zookeeper node startup command is $COMMAND"
 
     #ssh to node and run command
@@ -206,12 +243,14 @@ do
 
         echo "Setting up $node ..."
         COMMAND=''
-        #COMMAND=$COMMAND" printf 'mysql-server mysql-server/root_password password ' | sudo debconf-set-selections;"
-        #COMMAND=$COMMAND" printf 'mysql-server mysql-server/root_password_again password ' | sudo debconf-set-selections;"
-        #COMMAND=$COMMAND" sudo apt-get -y install mysql-server;"
+        COMMAND=$COMMAND" sudo sed -i '72s@.*@general_log_file        = /proj/DCSQ/tkao4/mysql.log@' /etc/mysql/my.cnf;"
+        COMMAND=$COMMAND" sudo sed -i '47s/.*/#bind-address = 127.0.0.1/' /etc/mysql/my.cnf;"
         COMMAND=$COMMAND" sudo service mysql stop;"
         COMMAND=$COMMAND" sudo service mysql start;"
-        COMMAND=$COMMAND" sudo sed -i '47s/.*/#bind-address = 127.0.0.1/' /etc/mysql/my.cnf;"
+        COMMAND=$COMMAND" sudo sed -i '43s/.*/#druid.metadata.storage.type=derby/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+        COMMAND=$COMMAND" sudo sed -i '44s@.*@#druid.metadata.storage.connector.connectURI=jdbc:derby://metadata.store.ip:1527/var/druid/metadata.db;create=true@' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+        COMMAND=$COMMAND" sudo sed -i '45s/.*/#druid.metadata.storage.connector.host=metadata.store.ip/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+        COMMAND=$COMMAND" sudo sed -i '46s/.*/#druid.metadata.storage.connector.port=1527/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"        
         COMMAND=$COMMAND" sudo sed -i '49s/.*/druid.metadata.storage.type=mysql/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '50s@.*@druid.metadata.storage.connector.connectURI=jdbc:mysql://$MYSQL_NODE_HOST:$MYSQL_NODE_PORT/druid@' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '51s/.*/druid.metadata.storage.connector.user=druid/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
@@ -220,10 +259,6 @@ do
         COMMAND=$COMMAND" sudo /etc/init.d/mysql stop;"
         COMMAND=$COMMAND" sudo /etc/init.d/mysql start;"
 
-        #if [ "$IP" == "TRUE" ]
-        #then
-        #    COMMAND=$COMMAND" --bind_ip $node;"
-        #fi
         echo "mysql node startup command is $COMMAND"
 
     #ssh to node and run command
@@ -241,45 +276,10 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        NODE_HOST=''
-        if [ "$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
-        then
-            if [[ $NEW_OVERLORD_NODES == *","* ]]
-            then
-                AT="@"
-                SUBSTRING=${node#$USER_NAME}
-                SUBSTRING=${SUBSTRING#$AT}
-                NODE_NUMBER=$(echo $SUBSTRING| cut -d'.' -f 1)
-                arr=$(echo $OVERLORD_NODE_HOST | tr "," "\n")
-                for x in $arr
-                do
-                    if [[ $x == *$NODE_NUMBER* ]]
-                    then
-                        NODE_HOST=$x
-                    fi
-                done
-            else
-                NODE_HOST=$OVERLORD_NODE_HOST
-            fi
-        else
-            NODE_HOST=$node
-        fi
-
-        COMMAND=$COMMAND" sudo chsh -s /bin/bash $USER_NAME;"
+        #COMMAND=$COMMAND" sudo chsh -s /bin/bash $USER_NAME;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$OVERLORD_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/overlord/runtime.properties;"
-        COMMAND=$COMMAND" sudo sed -i '3s@.*@druid.host=$NODE_HOST@' $PATH_TO_DRUID_BIN/conf/druid/overlord/runtime.properties;"
-        COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/\${sys:logfilename}.log\">@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '8s@.*@            <PatternLayout>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '9s@.*@               <Pattern>%d %p %c{1.} [%t] %m%n</Pattern>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '10s@.*@           </PatternLayout>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '11s@.*@       </File>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '16s@.*@            <AppenderRef ref=\"File\" />@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -Duser.timezone=UTC -Dlogfilename=overlord-$counter -Dfile.encoding=UTF-8 -classpath conf/druid/_common:conf/druid/overlord:lib/* io.druid.cli.Main server overlord;"
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -Duser.timezone=UTC -Dlogfilename=overlord-$counter -Dfile.encoding=UTF-8 -classpath 'conf/druid/_common:conf/druid/overlord:lib/*' io.druid.cli.Main server overlord;"
 
-        #if [ "$IP" == "TRUE" ]
-        #then
-        #    COMMAND=$COMMAND" --bind_ip $node;"
-        #fi
         echo "overlord node startup command is $COMMAND"
 
         counter=counter+1
@@ -298,45 +298,10 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        NODE_HOST=''
-        if [ "$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
-        then
-            if [[ $NEW_MIDDLE_MANAGER_NODES == *","* ]]
-            then
-                AT="@"
-                SUBSTRING=${node#$USER_NAME}
-                SUBSTRING=${SUBSTRING#$AT}
-                NODE_NUMBER=$(echo $SUBSTRING| cut -d'.' -f 1)
-                arr=$(echo $MIDDLE_MANAGER_NODE_HOST | tr "," "\n")
-                for x in $arr
-                do
-                    if [[ $x == *$NODE_NUMBER* ]]
-                    then
-                        NODE_HOST=$x
-                    fi
-                done
-            else
-                NODE_HOST=$MIDDLE_MANAGER_NODE_HOST
-            fi
-        else
-            NODE_HOST=$node
-        fi
+        #COMMAND=$COMMAND" sudo chsh -s /bin/bash $USER_NAME;"
+        COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$MIDDLE_MANAGER_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/middleManager/runtime.properties;"     
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -Duser.timezone=UTC -Dlogfilename=middlemanager-$counter -Dfile.encoding=UTF-8 -classpath 'conf/druid/_common:conf/druid/middleManager:lib/*' io.druid.cli.Main server middleManager;"
 
-        COMMAND=$COMMAND" sudo chsh -s /bin/bash $USER_NAME;"
-        COMMAND=$COMMAND" sudo sed -i '3s@.*@druid.host=$NODE_HOST@' $PATH_TO_DRUID_BIN/conf/druid/middleManager/runtime.properties;"
-        COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$MIDDLE_MANAGER_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/middleManager/runtime.properties;"
-        COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/\${sys:logfilename}.log\">@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '8s@.*@            <PatternLayout>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '9s@.*@               <Pattern>%d %p %c{1.} [%t] %m%n</Pattern>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '10s@.*@           </PatternLayout>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '11s@.*@       </File>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '16s@.*@            <AppenderRef ref=\"File\" />@' $COMMON_LOG4J2;"        
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -Duser.timezone=UTC -Dlogfilename=middlemanager-$counter -Dfile.encoding=UTF-8 -classpath conf/druid/_common:conf/druid/middleManager:lib/* io.druid.cli.Main server middleManager;"
-
-        #if [ "$IP" == "TRUE" ]
-        #then
-        #    COMMAND=$COMMAND" --bind_ip $node;"
-        #fi
         echo "middle manager node startup command is $COMMAND"
 
         counter=counter+1
@@ -356,45 +321,11 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        NODE_HOST=''
-        if [ "$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
-        then
-            if [[ $NEW_COORDINATOR_NODES == *","* ]]
-            then
-                AT="@"
-                SUBSTRING=${node#$USER_NAME}
-                SUBSTRING=${SUBSTRING#$AT}
-                NODE_NUMBER=$(echo $SUBSTRING| cut -d'.' -f 1)
-                arr=$(echo $COORDINATOR_NODE_HOST | tr "," "\n")
-                for x in $arr
-                do
-                    if [[ $x == *$NODE_NUMBER* ]]
-                    then
-                        NODE_HOST=$x
-                    fi
-                done
-            else
-                NODE_HOST=$COORDINATOR_NODE_HOST
-            fi
-        else
-            NODE_HOST=$node
-        fi
 
-        COMMAND=$COMMAND" sudo chsh -s /bin/bash $USER_NAME;"
-        COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$COORDINATOR_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"
-        COMMAND=$COMMAND" sudo sed -i '3s@.*@druid.host=$NODE_HOST@' $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"
-        COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/\${sys:logfilename}.log\">@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '8s@.*@            <PatternLayout>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '9s@.*@               <Pattern>%d %p %c{1.} [%t] %m%n</Pattern>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '10s@.*@           </PatternLayout>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '11s@.*@       </File>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '16s@.*@            <AppenderRef ref=\"File\" />@' $COMMON_LOG4J2;"        
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Dlogfilename=coordinator-$counter -classpath conf/druid/_common:conf/druid/coordinator:lib/* io.druid.cli.Main server coordinator;"  
+        #COMMAND=$COMMAND" sudo chsh -s /bin/bash $USER_NAME;"
+        COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$COORDINATOR_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"   
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Dlogfilename=coordinator-$counter -classpath 'conf/druid/_common:conf/druid/coordinator:lib/*' io.druid.cli.Main server coordinator;"  
 
-        #if [ "$IP" == "TRUE" ]
-        #then
-        #    COMMAND=$COMMAND" --bind_ip $node;"
-        #fi
         echo "Coordinator node startup command is $COMMAND"
 
         counter=counter+1
@@ -413,45 +344,10 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        NODE_HOST=''
-        if [ "$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
-        then
-            if [[ $NEW_HISTORICAL_NODES == *","* ]]
-            then
-                AT="@"
-                SUBSTRING=${node#$USER_NAME}
-                SUBSTRING=${SUBSTRING#$AT}
-                NODE_NUMBER=$(echo $SUBSTRING| cut -d'.' -f 1)
-                arr=$(echo $HISTORICAL_NODE_HOST | tr "," "\n")
-                for x in $arr
-                do
-                    if [[ $x == *$NODE_NUMBER* ]]
-                    then
-                        NODE_HOST=$x
-                    fi
-                done
-            else
-                NODE_HOST=$HISTORICAL_NODE_HOST
-            fi
-        else
-            NODE_HOST=$node
-        fi
+        #COMMAND=$COMMAND" sudo chsh -s /bin/bash $USER_NAME;"
+        COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$HISTORICAL_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"       
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Dlogfilename=historical-$counter -classpath 'conf/druid/_common:conf/druid/historical:lib/*' io.druid.cli.Main server historical;"
 
-        COMMAND=$COMMAND" sudo chsh -s /bin/bash $USER_NAME;"
-        COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$HISTORICAL_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"
-        COMMAND=$COMMAND" sudo sed -i '3s@.*@#druid.host=$NODE_HOST@' $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"
-        COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/\${sys:logfilename}.log\">@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '8s@.*@            <PatternLayout>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '9s@.*@               <Pattern>%d %p %c{1.} [%t] %m%n</Pattern>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '10s@.*@           </PatternLayout>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '11s@.*@       </File>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '16s@.*@            <AppenderRef ref=\"File\" />@' $COMMON_LOG4J2;"        
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Dlogfilename=historical-$counter -classpath conf/druid/_common:conf/druid/historical:lib/* io.druid.cli.Main server historical;"
-
-        #if [ "$IP" == "TRUE" ]
-        #then
-        #    COMMAND=$COMMAND" --bind_ip $node;"
-        #fi
         echo "historical node startup command is $COMMAND"
         let counter=counter+1
 
@@ -470,45 +366,10 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        NODE_HOST=''
-        if [ "$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
-        then
-            if [[ $NEW_BROKER_NODES == *","* ]]
-            then
-                AT="@"
-                SUBSTRING=${node#$USER_NAME}
-                SUBSTRING=${SUBSTRING#$AT}
-                NODE_NUMBER=$(echo $SUBSTRING| cut -d'.' -f 1)
-                arr=$(echo $BROKER_NODE_HOST | tr "," "\n")
-                for x in $arr
-                do
-                    if [[ $x == *$NODE_NUMBER* ]]
-                    then
-                        NODE_HOST=$x
-                    fi
-                done
-            else
-                NODE_HOST=$BROKER_NODE_HOST
-            fi
-        else
-            NODE_HOST=$node
-        fi
-
-        COMMAND=$COMMAND" sudo chsh -s /bin/bash $USER_NAME;"
+        #COMMAND=$COMMAND" sudo chsh -s /bin/bash $USER_NAME;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$BROKER_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
-        COMMAND=$COMMAND" sudo sed -i '3s@.*@druid.host=$NODE_HOST@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
-        COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/\${sys:logfilename}.log\">@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '8s@.*@            <PatternLayout>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '9s@.*@               <Pattern>%d %p %c{1.} [%t] %m%n</Pattern>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '10s@.*@           </PatternLayout>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '11s@.*@       </File>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '16s@.*@            <AppenderRef ref=\"File\" />@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Duser.timezone=UTC -Dlogfilename=broker-$counter -Dfile.encoding=UTF-8 -classpath conf/druid/_common:conf/druid/broker:lib/* io.druid.cli.Main server broker;"
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Duser.timezone=UTC -Dlogfilename=broker-$counter -Dfile.encoding=UTF-8 -classpath 'conf/druid/_common:conf/druid/broker:lib/*' io.druid.cli.Main server broker;"
 
-        #if [ "$IP" == "TRUE" ]
-        #then
-        #    COMMAND=$COMMAND" --bind_ip $node;"
-        #fi
         echo "Broker node startup command is $COMMAND"
         counter=counter+1
 	#ssh to node and run command
@@ -533,20 +394,28 @@ do
         COMMAND=$COMMAND" sudo sed -i '33s@.*@advertised.host.name=$KAFKA_NODE_HOST@' $PATH_TO_KAFKA/config/server.properties;"
         COMMAND=$COMMAND" sudo sed -i '37s@.*@advertised.port=$KAFKA_NODE_PORT@' $PATH_TO_KAFKA/config/server.properties;"
         COMMAND=$COMMAND" sudo sed -i '118s@.*@zookeeper.connect=$KAFKA_NODE_HOST:$KAFKA_ZOOKEEPER_PORT@' $PATH_TO_KAFKA/config/server.properties;"
+        COMMAND=$COMMAND" sudo sed -i '58s@.*@log.dirs=$LOG_FILE/kafkalogs@' $PATH_TO_KAFKA/config/server.properties;"
         COMMAND=$COMMAND" sudo sed -i '18s@.*@clientPort=$KAFKA_ZOOKEEPER_PORT@' $PATH_TO_KAFKA/config/zookeeper.properties;"
         COMMAND=$COMMAND" screen -d -m sudo ./bin/zookeeper-server-start.sh config/zookeeper.properties;"
-        COMMAND=$COMMAND" sleep 5;"
         COMMAND=$COMMAND" screen -d -m sudo ./bin/kafka-server-start.sh config/server.properties;"
-        COMMAND=$COMMAND" screen -d -m sudo ./bin/kafka-topics.sh --create --zookeeper $KAFKA_NODE_HOST:$KAFKA_ZOOKEEPER_PORT --replication-factor 1 --partitions 1 --topic $KAFKA_TOPIC;"
+        COMMAND=$COMMAND" sleep 2;"
+        COMMAND=$COMMAND" ./bin/kafka-topics.sh --create --zookeeper $KAFKA_NODE_HOST:$KAFKA_ZOOKEEPER_PORT --replication-factor 1 --partitions 1 --topic $KAFKA_TOPIC;"
 
-        #if [ "$IP" == "TRUE" ]
-        #then
-        #    COMMAND=$COMMAND" --bind_ip $node;"
-        #fi
         echo "kafka node startup command is $COMMAND"
 
     #ssh to node and run command
         ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+            $COMMAND"
+done
+echo ""
+
+for  node in ${NEW_REALTIME_NODE//,/ }
+do
+    COMMAND=''
+    COMMAND=$COMMAND" sudo rm -rf $PATH_TO_DRUID_BIN/conf/druid/realtime;"
+    COMMAND=$COMMAND" mkdir $PATH_TO_DRUID_BIN/conf/druid/realtime;"
+        #ssh to node and run command
+    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
 echo ""
@@ -559,47 +428,11 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-
-
-       NODE_HOST=''
-        if [ "$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
-        then
-            if [[ $NEW_REALTIME_NODE == *","* ]]
-            then
-                AT="@"
-                SUBSTRING=${node#$USER_NAME}
-                SUBSTRING=${SUBSTRING#$AT}
-                NODE_NUMBER=$(echo $SUBSTRING| cut -d'.' -f 1)
-                arr=$(echo $REALTIME_NODE_HOST | tr "," "\n")
-                for x in $arr
-                do
-                    if [[ $x == *$NODE_NUMBER* ]]
-                    then
-                        NODE_HOST=$x
-                    fi
-                done
-            else
-                NODE_HOST=$REALTIME_NODE_HOST
-            fi
-        else
-            NODE_HOST=$node
-        fi
-
-        COMMAND=$COMMAND" sudo chsh -s /bin/bash $USER_NAME;"
+        #COMMAND=$COMMAND" sudo chsh -s /bin/bash $USER_NAME;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$REALTIME_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/realtime/runtime.properties;"
-        COMMAND=$COMMAND" sudo sed -i '3s@.*@druid.host=$NODE_HOST@' $PATH_TO_DRUID_BIN/conf/druid/realtime/runtime.properties;"
-        COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/\${sys:logfilename}.log\">@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '8s@.*@            <PatternLayout>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '9s@.*@               <Pattern>%d %p %c{1.} [%t] %m%n</Pattern>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '10s@.*@           </PatternLayout>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '11s@.*@       </File>@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo sed -i '16s@.*@            <AppenderRef ref=\"File\" />@' $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Dlogfilename=realtime-$counter -Ddruid.realtime.specFile=$SPEC_FILE -classpath conf/druid/_common:conf/druid/realtime:lib/* io.druid.cli.Main server realtime;"
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Dlogfilename=realtime-$counter -Ddruid.realtime.specFile=$SPEC_FILE -classpath 'conf/druid/_common:conf/druid/realtime:lib/*' io.druid.cli.Main server realtime;"
 
-        #if [ "$IP" == "TRUE" ]
-        #then
-        #    COMMAND=$COMMAND" --bind_ip $node;"
-        #fi
+        scp runtime.properties $node:$PATH_TO_DRUID_BIN/conf/druid/realtime;
         echo "Realtime node startup command is $COMMAND"
 
         counter=counter+1

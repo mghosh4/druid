@@ -4,16 +4,16 @@
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
         </Console>
-        <File name="File" fileName="/proj/DCSQ/tkao4/realtime.log">
+        <File name="File" fileName="/proj/DCSQ/lexu/realtime-0.log">
             <PatternLayout>
-                <Pattern>%d %p %c{1.} [%t] %m%n</Pattern>
-            </PatternLayout>
-        </File>
+               <Pattern>%d %p %c{1.} [%t] %m%n</Pattern>
+           </PatternLayout>
+       </File>
     </Appenders>
     <Loggers>
         <Root level="info">
             <AppenderRef ref="Console"/>
-            <AppenderRef ref="File"/>
+            <AppenderRef ref="File" />
         </Root>
     </Loggers>
 </Configuration>
