@@ -141,7 +141,7 @@ do
         then
             if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
             then
-                if [ -d $PATH_TO_BIN/extensions/druid-s3-extensions ]
+                if [ -d $PATH_TO_DRUID_BIN/extensions/druid-s3-extensions ]
                 then
                     echo "moving S3 file"
                     COMMAND=$COMMAND" sudo sed -i '26s/.*/druid.extensions.loadList=[\"druid-kafka-eight\", \"druid-histogram\", \"druid-datasketches\", \"druid-namespace-lookup\", \"mysql-metadata-storage\"]/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
@@ -149,7 +149,7 @@ do
                 fi
             elif ["$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
             then
-                if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_BIN/extensions/druid-s3-extensions ]")
+                if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_DRUID_BIN/extensions/druid-s3-extensions ]")
                 then
                     echo "moving S3 file"
                     COMMAND=$COMMAND" sudo sed -i '26s/.*/druid.extensions.loadList=[\"druid-kafka-eight\", \"druid-histogram\", \"druid-datasketches\", \"druid-namespace-lookup\", \"mysql-metadata-storage\"]/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
@@ -160,7 +160,7 @@ do
         then
             if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
             then
-                if [ -d $PATH_TO_BIN/extensions/druid-s3-extensions ]
+                if [ -d $PATH_TO_DRUID_BIN/extensions/druid-s3-extensions ]
                 then
                     echo "moving S3 file"
                     COMMAND=$COMMAND" sudo sed -i '26s/.*/druid.extensions.loadList=[\"druid-kafka-eight\", \"druid-s3-extensions\", \"druid-histogram\", \"druid-datasketches\", \"druid-namespace-lookup\", \"mysql-metadata-storage\"]/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
