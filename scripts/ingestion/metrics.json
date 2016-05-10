@@ -47,12 +47,11 @@
         },
         "feed": "metrics"
       },
-      },
       "plumber": {
         "type": "realtime"
       }
     },
-    "tuningConfig": {
+    "tuningConfig" : {
       "type" : "realtime",
       "maxRowsInMemory": 75000,
       "intermediatePersistPeriod": "PT10m",
