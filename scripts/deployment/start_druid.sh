@@ -153,7 +153,7 @@ do
             fi
         fi
 
-        COMMAND=$COMMAND" sudo cat log4j2.xml > $COMMON_LOG4J2/log4j2.xml;"
+        COMMAND=$COMMAND" sudo cat $PATH_TO_SOURCE/scripts/deployment/log4j2.xml > $COMMON_LOG4J2/log4j2.xml;"
         COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/\${sys:logfilename}.log\">@' $COMMON_LOG4J2/log4j2.xml;"
         COMMAND=$COMMAND" cd $PATH_TO_ZOOKEEPER;"
         COMMAND=$COMMAND" sudo sed -i '36s/.*/druid.zk.service.host=$ZOOKEEPER_NODE_HOST/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
@@ -395,7 +395,7 @@ do
 
         COMMAND=$COMMAND" sudo rm -rf $PATH_TO_DRUID_BIN/conf/druid/realtime;"
         COMMAND=$COMMAND" mkdir $PATH_TO_DRUID_BIN/conf/druid/realtime;"
-        COMMAND=$COMMAND" sudo cat runtime.properties > $PATH_TO_DRUID_BIN/conf/druid/realtime/runtime.properties;"
+        COMMAND=$COMMAND" sudo cat $PATH_TO_SOURCE/scripts/deployment/runtime.properties > $PATH_TO_DRUID_BIN/conf/druid/realtime/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$REALTIME_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/realtime/runtime.properties;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Dlogfilename=realtime-$counter -Ddruid.realtime.specFile=$SPEC_FILE -classpath 'conf/druid/_common:conf/druid/realtime:lib/*' io.druid.cli.Main server realtime;"
         echo "Realtime node startup command is $COMMAND"
