@@ -139,19 +139,41 @@ do
 
         if [ "$AWS" == "FALSE" ]
         then
-            if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d \"$PATH_TO_BIN/extensions/druid-s3-extensions\" ]")
+            if ["$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
             then
-                echo "moving S3 file"
-                COMMAND=$COMMAND" sudo sed -i '26s/.*/druid.extensions.loadList=[\"druid-kafka-eight\", \"druid-histogram\", \"druid-datasketches\", \"druid-namespace-lookup\", \"mysql-metadata-storage\"]/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
-                COMMAND=$COMMAND" sudo mv $PATH_TO_DRUID_BIN/extensions/druid-s3-extensions $PATH_TO_DRUID_BIN;"
+                if [ -d "$PATH_TO_BIN/extensions/druid-s3-extensions" ]
+                then
+                    echo "moving S3 file"
+                    COMMAND=$COMMAND" sudo sed -i '26s/.*/druid.extensions.loadList=[\"druid-kafka-eight\", \"druid-histogram\", \"druid-datasketches\", \"druid-namespace-lookup\", \"mysql-metadata-storage\"]/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+                    COMMAND=$COMMAND" sudo mv $PATH_TO_DRUID_BIN/extensions/druid-s3-extensions $PATH_TO_DRUID_BIN;"
+                fi
+            elif ["$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
+            then
+                if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_BIN/extensions/druid-s3-extensions ]")
+                then
+                    echo "moving S3 file"
+                    COMMAND=$COMMAND" sudo sed -i '26s/.*/druid.extensions.loadList=[\"druid-kafka-eight\", \"druid-histogram\", \"druid-datasketches\", \"druid-namespace-lookup\", \"mysql-metadata-storage\"]/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+                    COMMAND=$COMMAND" sudo mv $PATH_TO_DRUID_BIN/extensions/druid-s3-extensions $PATH_TO_DRUID_BIN;"
+                fi
             fi
         elif [ "$AWS" == "TRUE" ]
         then
-            if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d \"$PATH_TO_DRUID_BIN/druid-s3-extensions\" ]")
+            if ["$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
             then
-                echo "moving S3 file"
-                COMMAND=$COMMAND" sudo sed -i '26s/.*/druid.extensions.loadList=[\"druid-kafka-eight\", \"druid-s3-extensions\", \"druid-histogram\", \"druid-datasketches\", \"druid-namespace-lookup\", \"mysql-metadata-storage\"]/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
-                COMMAND=$COMMAND" sudo mv $PATH_TO_DRUID_BIN/druid-s3-extensions $PATH_TO_DRUID_BIN/extensions;"
+                if [ -d "$PATH_TO_BIN/extensions/druid-s3-extensions" ]
+                then
+                    echo "moving S3 file"
+                    COMMAND=$COMMAND" sudo sed -i '26s/.*/druid.extensions.loadList=[\"druid-kafka-eight\", \"druid-s3-extensions\", \"druid-histogram\", \"druid-datasketches\", \"druid-namespace-lookup\", \"mysql-metadata-storage\"]/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+                    COMMAND=$COMMAND" sudo mv $PATH_TO_DRUID_BIN/druid-s3-extensions $PATH_TO_DRUID_BIN/extensions;"
+                fi
+            elif ["$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
+            then
+                if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_DRUID_BIN/druid-s3-extensions ]")
+                then
+                    echo "moving S3 file"
+                    COMMAND=$COMMAND" sudo sed -i '26s/.*/druid.extensions.loadList=[\"druid-kafka-eight\", \"druid-s3-extensions\", \"druid-histogram\", \"druid-datasketches\", \"druid-namespace-lookup\", \"mysql-metadata-storage\"]/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+                    COMMAND=$COMMAND" sudo mv $PATH_TO_DRUID_BIN/druid-s3-extensions $PATH_TO_DRUID_BIN/extensions;"
+                fi
             fi
         fi
 
@@ -222,10 +244,20 @@ do
         COMMAND=''
 
         #LOAD MYSQL-METADATA-STORAGE EXTENSION
-        if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d \"$PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz\" ]")
+        if ["$IP" == "FALSE" -a "$FQDN" == "FALSE"]
         then
-            echo "untar mysql file"
-            COMMAND=$COMMAND" sudo tar -xvf $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz $PATH_TO_DRUID_BIN/extensions;"
+            if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz ]")
+            then
+                echo "untar mysql file"
+                COMMAND=$COMMAND" sudo tar -xvf $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz $PATH_TO_DRUID_BIN/extensions;"
+            fi
+        elif ["$IP" == "TRUE" -o "$FQDN" == "TRUE"]
+        then
+            if [ -d "$PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz" ]
+            then
+                echo "untar mysql file"
+                COMMAND=$COMMAND" sudo tar -xvf $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz $PATH_TO_DRUID_BIN/extensions;"
+            fi
         fi
 
         COMMAND=$COMMAND" sudo sed -i '72s@.*@general_log_file        = /proj/DCSQ/tkao4/mysql.log@' /etc/mysql/my.cnf;"
