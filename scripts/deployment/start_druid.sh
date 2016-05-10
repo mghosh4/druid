@@ -246,7 +246,8 @@ do
         #LOAD MYSQL-METADATA-STORAGE EXTENSION
         if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
         then
-            if [ -d $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz ]
+                echo "HELLOOOOOOOO"
+            if [ -f $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz ]
             then
                 echo "untar mysql file"
                 COMMAND=$COMMAND" sudo tar -xvf $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz $PATH_TO_DRUID_BIN/extensions;"
@@ -254,7 +255,7 @@ do
             fi
         elif [ "$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
         then
-            if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz ]")
+            if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -f $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz ]")
             then
                 echo "untar mysql file"
                 COMMAND=$COMMAND" sudo tar -xvf $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz $PATH_TO_DRUID_BIN/extensions;"
