@@ -250,7 +250,7 @@ do
             if [ -f $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz ]
             then
                 echo "untar mysql file"
-                COMMAND=$COMMAND" sudo tar -xvf $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz $PATH_TO_DRUID_BIN/extensions;"
+                COMMAND=$COMMAND" sudo tar xC $PATH_TO_DRUID_BIN/extensions -f $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz;"
                 COMMAND=$COMMAND" sudo rm -rf $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin;"
             fi
         elif [ "$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
