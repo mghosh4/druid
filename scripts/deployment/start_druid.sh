@@ -131,54 +131,29 @@ done
 
 ############################## SETUP ################################
 
-#clean up files
-counter=0
-for  node in ${NEW_ZOOKEEPER_NODES//,/ }
-do
-    COMMAND=''
-    if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_DRUID_BIN/../extensions ]")
-    then 
-        COMMAND=$COMMAND" sudo mv $PATH_TO_DRUID_BIN/extensions $PATH_TO_DRUID_BIN/conf;"
-        COMMAND=$COMMAND" sudo mv $PATH_TO_DRUID_BIN/../extensions $PATH_TO_DRUID_BIN;"
-        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
-            $COMMAND"
-    fi
-
-    if [ "$AWS" == "FALSE" ]
-    then
-        if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_DRUID_BIN/extensions/druid-s3-extensions ]")
-        then
-            COMMAND=$COMMAND" sudo sed -i '26s/.*/druid.extensions.loadList=[\"druid-kafka-eight\", \"druid-histogram\", \"druid-datasketches\", \"druid-namespace-lookup\", \"mysql-metadata-storage\"]/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
-            COMMAND=$COMMAND" sudo mv $PATH_TO_DRUID_BIN/extensions/druid-s3-extensions $PATH_TO_DRUID_BIN;"
-        fi
-    elif [ "$AWS" == "TRUE" ]
-    then
-        if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_DRUID_BIN/druid-s3-extensions ]")
-        then
-            COMMAND=$COMMAND" sudo sed -i '26s/.*/druid.extensions.loadList=[\"druid-kafka-eight\", \"druid-s3-extensions\", \"druid-histogram\", \"druid-datasketches\", \"druid-namespace-lookup\", \"mysql-metadata-storage\"]/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
-            COMMAND=$COMMAND" sudo mv $PATH_TO_DRUID_BIN/druid-s3-extensions $PATH_TO_DRUID_BIN/extensions;"
-        fi
-    fi
-
-    COMMAND=$COMMAND" sudo rm -rf $COMMON_LOG4J2/log4j2.xml;"
-
-    #ssh to node and run command
-        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
-            $COMMAND"
-done
-echo ""
-
 for  node in ${NEW_ZOOKEEPER_NODES//,/ }
 do
 
-        #send log file over
-        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
-            sudo mkdir $PATH_TO_DRUID_BIN/tempdir && sudo chmod 777 $PATH_TO_DRUID_BIN/tempdir;"
-        scp log4j2.xml $node:$PATH_TO_DRUID_BIN/tempdir;
         echo "Setting up $node ..."
         COMMAND=''
-        COMMAND=$COMMAND" sudo mv $PATH_TO_DRUID_BIN/tempdir/log4j2.xml $COMMON_LOG4J2;"
-        COMMAND=$COMMAND" sudo rm -rf $PATH_TO_DRUID_BIN/tempdir;"
+
+        if [ "$AWS" == "FALSE" ]
+        then
+            if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_BIN/extensions/druid-s3-extensions ]")
+            then
+            COMMAND=$COMMAND" sudo sed -i '26s/.*/druid.extensions.loadList=[\"druid-kafka-eight\", \"druid-histogram\", \"druid-datasketches\", \"druid-namespace-lookup\", \"mysql-metadata-storage\"]/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+            COMMAND=$COMMAND" sudo mv $PATH_TO_DRUID_BIN/extensions/druid-s3-extensions $PATH_TO_DRUID_BIN;"
+            fi
+        elif [ "$AWS" == "TRUE" ]
+        then
+            if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_DRUID_BIN/druid-s3-extensions ]")
+            then
+            COMMAND=$COMMAND" sudo sed -i '26s/.*/druid.extensions.loadList=[\"druid-kafka-eight\", \"druid-s3-extensions\", \"druid-histogram\", \"druid-datasketches\", \"druid-namespace-lookup\", \"mysql-metadata-storage\"]/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+            COMMAND=$COMMAND" sudo mv $PATH_TO_DRUID_BIN/druid-s3-extensions $PATH_TO_DRUID_BIN/extensions;"
+            fi
+        fi
+
+        COMMAND=$COMMAND" sudo cat log4j2.xml > $COMMON_LOG4J2/log4j2.xml;"
         COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/\${sys:logfilename}.log\">@' $COMMON_LOG4J2/log4j2.xml;"
         COMMAND=$COMMAND" cd $PATH_TO_ZOOKEEPER;"
         COMMAND=$COMMAND" sudo sed -i '36s/.*/druid.zk.service.host=$ZOOKEEPER_NODE_HOST/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
@@ -243,6 +218,13 @@ do
 
         echo "Setting up $node ..."
         COMMAND=''
+
+        #LOAD MYSQL-METADATA-STORAGE EXTENSION
+        if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz ]")
+        then
+            COMMAND=$COMMAND" sudo tar -xvf $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz $PATH_TO_DRUID_BIN/extensions;"
+        fi
+
         COMMAND=$COMMAND" sudo sed -i '72s@.*@general_log_file        = /proj/DCSQ/tkao4/mysql.log@' /etc/mysql/my.cnf;"
         COMMAND=$COMMAND" sudo sed -i '47s/.*/#bind-address = 127.0.0.1/' /etc/mysql/my.cnf;"
         COMMAND=$COMMAND" sudo service mysql stop;"
@@ -276,7 +258,6 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        #COMMAND=$COMMAND" sudo chsh -s /bin/bash $USER_NAME;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$OVERLORD_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/overlord/runtime.properties;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -Duser.timezone=UTC -Dlogfilename=overlord-$counter -Dfile.encoding=UTF-8 -classpath 'conf/druid/_common:conf/druid/overlord:lib/*' io.druid.cli.Main server overlord;"
 
@@ -298,7 +279,6 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        #COMMAND=$COMMAND" sudo chsh -s /bin/bash $USER_NAME;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$MIDDLE_MANAGER_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/middleManager/runtime.properties;"     
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -Duser.timezone=UTC -Dlogfilename=middlemanager-$counter -Dfile.encoding=UTF-8 -classpath 'conf/druid/_common:conf/druid/middleManager:lib/*' io.druid.cli.Main server middleManager;"
 
@@ -321,8 +301,6 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-
-        #COMMAND=$COMMAND" sudo chsh -s /bin/bash $USER_NAME;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$COORDINATOR_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"   
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Dlogfilename=coordinator-$counter -classpath 'conf/druid/_common:conf/druid/coordinator:lib/*' io.druid.cli.Main server coordinator;"  
 
@@ -344,7 +322,6 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        #COMMAND=$COMMAND" sudo chsh -s /bin/bash $USER_NAME;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$HISTORICAL_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"       
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Dlogfilename=historical-$counter -classpath 'conf/druid/_common:conf/druid/historical:lib/*' io.druid.cli.Main server historical;"
 
@@ -366,7 +343,6 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        #COMMAND=$COMMAND" sudo chsh -s /bin/bash $USER_NAME;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$BROKER_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Duser.timezone=UTC -Dlogfilename=broker-$counter -Dfile.encoding=UTF-8 -classpath 'conf/druid/_common:conf/druid/broker:lib/*' io.druid.cli.Main server broker;"
 
@@ -409,17 +385,6 @@ do
 done
 echo ""
 
-for  node in ${NEW_REALTIME_NODE//,/ }
-do
-    COMMAND=''
-    COMMAND=$COMMAND" sudo rm -rf $PATH_TO_DRUID_BIN/conf/druid/realtime;"
-    COMMAND=$COMMAND" mkdir $PATH_TO_DRUID_BIN/conf/druid/realtime;"
-        #ssh to node and run command
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
-            $COMMAND"
-done
-echo ""
-
 counter=0
 echo "Setting up realtime nodes:"
 for  node in ${NEW_REALTIME_NODE//,/ }
@@ -428,11 +393,11 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        #COMMAND=$COMMAND" sudo chsh -s /bin/bash $USER_NAME;"
+        COMMAND=$COMMAND" sudo rm -rf $PATH_TO_DRUID_BIN/conf/druid/realtime;"
+        COMMAND=$COMMAND" mkdir $PATH_TO_DRUID_BIN/conf/druid/realtime;"
+        COMMAND=$COMMAND" sudo cat runtime.properties > $PATH_TO_DRUID_BIN/conf/druid/realtime/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$REALTIME_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/realtime/runtime.properties;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Dlogfilename=realtime-$counter -Ddruid.realtime.specFile=$SPEC_FILE -classpath 'conf/druid/_common:conf/druid/realtime:lib/*' io.druid.cli.Main server realtime;"
-
-        scp runtime.properties $node:$PATH_TO_DRUID_BIN/conf/druid/realtime;
         echo "Realtime node startup command is $COMMAND"
 
         counter=counter+1

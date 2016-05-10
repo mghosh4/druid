@@ -196,7 +196,7 @@ do
     COMMAND=$COMMAND" sudo service mysql stop;"
     COMMAND=$COMMAND" sudo service mysql start;"
     MYSQL="DROP DATABASE druid;"
-    COMMAND=$COMMAND" mysql -u root -p -e \"$MYSQL\";"
+    COMMAND=$COMMAND" mysql -u root -e \"$MYSQL\";"
     COMMAND=$COMMAND" sudo service mysql stop;"
     #COMMAND=$COMMAND" sudo apt-get -y remove mysql-server;"
     echo "mysql server shutdown command is $COMMAND"
