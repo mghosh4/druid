@@ -148,15 +148,15 @@ for node in ${NEW_KAFKA_NODES//,/ }
 do
     echo "Shutting down $node ..."
     COMMAND=''
-    if [ $TYPE_OF_STOP -eq 1 ]
-    then
-        COMMAND=$COMMAND" sudo rm -r -f $LOG_FILE/kafkalogs;"
-    fi
     COMMAND=$COMMAND" cd $PATH_TO_KAFKA;"
     COMMAND=$COMMAND" sudo ./bin/kafka-topics.sh --zookeeper $KAFKA_NODE_HOST:2181 --delete --topic $KAFKA_TOPIC;"
     COMMAND=$COMMAND" sudo ./bin/kafka-server-stop.sh;"
     COMMAND=$COMMAND" sudo ./bin/zookeeper-server-stop.sh;"
     COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
+    if [ $TYPE_OF_STOP -eq 1 ]
+    then
+        COMMAND=$COMMAND" sudo rm -r -f $LOG_FILE/kafkalogs;"
+    fi
     echo "kafka server shutdown command is $COMMAND"
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
         $COMMAND"
