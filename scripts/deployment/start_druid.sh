@@ -181,7 +181,7 @@ do
         COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/\${sys:logfilename}.log\">@' $COMMON_LOG4J2/log4j2.xml;"
         COMMAND=$COMMAND" cd $PATH_TO_ZOOKEEPER;"
         COMMAND=$COMMAND" sudo sed -i '36s/.*/druid.zk.service.host=$ZOOKEEPER_NODE_HOST/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
-        COMMAND=$COMMAND" sudo ZOO_LOG_DIR=/proj/DCSQ/tkao4 ZOO_LOG4J_PROP='INFO,ROLLINGFILE' ./bin/zkServer.sh start;"
+        COMMAND=$COMMAND" sudo ZOO_LOG_DIR=$LOG_FILE ZOO_LOG4J_PROP='INFO,ROLLINGFILE' ./bin/zkServer.sh start;"
 
         echo "zookeeper node startup command is $COMMAND"
 
