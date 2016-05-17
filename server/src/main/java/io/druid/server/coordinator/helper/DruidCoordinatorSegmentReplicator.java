@@ -19,14 +19,26 @@
 
 package io.druid.server.coordinator.helper;
 
+import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
+import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.Request;
+import com.metamx.http.client.response.StatusResponseHandler;
+import com.metamx.http.client.response.StatusResponseHolder;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.client.util.Charsets;
+import com.google.common.base.Throwables;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Multiset.Entry;
-import com.google.common.collect.Ordering;
 
+import io.druid.client.selector.Server;
+import io.druid.curator.discovery.ServerDiscoveryFactory;
+import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.coordinator.BalancerStrategy;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCoordinator;
@@ -36,7 +48,12 @@ import io.druid.server.coordinator.ReplicationThrottler;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
 import io.druid.server.coordinator.helper.Tuple;
+import io.druid.server.router.TieredBrokerConfig;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -45,7 +62,14 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.TreeMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 
 public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
@@ -55,12 +79,21 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 	private static final EmittingLogger log = new EmittingLogger(DruidCoordinatorSegmentReplicator.class);
 	private static final String assignedCount = "assignedCount";
 	private static final String droppedCount = "droppedCount";
+	private final ObjectMapper jsonMapper = new DefaultObjectMapper();
+	private final StatusResponseHandler responseHandler = new StatusResponseHandler(Charsets.UTF_8);
+	private final HttpClient httpClient;
+	private final ServerDiscoveryFactory serverDiscoveryFactory;
 
 	private static final double MIN_THRESHOLD = 5;
 
-	public DruidCoordinatorSegmentReplicator(DruidCoordinator coordinator)
+	public DruidCoordinatorSegmentReplicator(
+			DruidCoordinator coordinator, 
+			HttpClient httpClient,
+			ServerDiscoveryFactory factory)
 	{
 		this.coordinator = coordinator;
+		this.httpClient = httpClient;
+		this.serverDiscoveryFactory = factory;
 	}
 
 	@Override
@@ -76,14 +109,23 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		calculateSegmentCounts(segments);
 
 		// Calculate the popularity map
-		//TODO: Implement getSegmentPopularityMap
 		HashMap<DataSegment, Number> weightedAccessCounts = coordinator.getWeightedAccessCounts();
 		calculateWeightedAccessCounts(params, segments, weightedAccessCounts, removeList);
 		coordinator.setWeightedAccessCounts(weightedAccessCounts);
 
 		// Calculate replication based on popularity
-		calculateAdaptiveReplication(params, weightedAccessCounts, insertList, removeList);
+		//calculateAdaptiveReplication(params, weightedAccessCounts, insertList, removeList);
 		calculateBestFitReplication(params, weightedAccessCounts, insertList, removeList);
+		
+		for (Map.Entry<DataSegment, Number> entry : insertList.entrySet())
+		{
+			log.info("Insert Segment [%s] [%d]", entry.getKey().getIdentifier(), entry.getValue());
+		}
+		
+		for (Map.Entry<DataSegment, Number> entry : removeList.entrySet())
+		{
+			log.info("Remove Segment [%s] [%d]", entry.getKey().getIdentifier(), entry.getValue());
+		}
 
 		// Manage replicas
 		manageReplicas(params, insertList, removeList, stats);
@@ -92,10 +134,129 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 				.withCoordinatorStats(stats) 
 				.build();
 	}
+	
+	private List<String> getBrokerURLs()
+	{
+		String brokerservice = TieredBrokerConfig.DEFAULT_BROKER_SERVICE_NAME;
+		ServerDiscoverySelector selector = serverDiscoveryFactory.createSelector(brokerservice);
+		try {
+			selector.start();
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		Collection<Server> brokers = selector.getAll();
+		
+		List<String> uris = new ArrayList<String>(brokers.size());
+		for (Server broker : brokers)
+		{
+			// Should use threads to fetch in parallel from all brokers
+			URI uri = null;
+			try {
+				uri = new URI(
+						broker.getScheme(),
+						null,
+						broker.getAddress(),
+						broker.getPort(),
+						"/druid/broker/v1/segments",
+						null,
+						null);
+			} catch (URISyntaxException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			log.info("URI [%s]", uri.toString());
+			
+			uris.add(uri.toString());
+		}
 
-	private void calculateSegmentCounts(Multiset<DataSegment> segments)
+		log.info("Number of Broker Servers [%d]", brokers.size());
+
+		return uris;
+  	}
+
+	private void calculateSegmentCounts(Multiset<DataSegment> segmentCounts)
 	{
 		log.info("Starting replication. Getting Segment Popularity");
+		List<String> urls = getBrokerURLs();
+		
+		ExecutorService pool = Executors.newFixedThreadPool(urls.size());
+		List<Future<List<DataSegment>>> futures = new ArrayList<Future<List<DataSegment>>>();
+			
+		for (final String url: urls)
+		{
+			futures.add(pool.submit(new Callable<List<DataSegment>> (){
+				@Override
+				public List<DataSegment> call()
+				{
+					List<DataSegment> segments = new ArrayList<DataSegment>();
+				    try {
+				    	StatusResponseHolder response = httpClient.go(
+				            new Request(
+				                HttpMethod.GET,
+				                new URL(url)
+				            ),
+				            responseHandler
+				        ).get();
+
+				        if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+				          throw new ISE(
+				              "Error while querying[%s] status[%s] content[%s]",
+				              url,
+				              response.getStatus(),
+				              response.getContent()
+				          );
+				        }
+				        
+				        log.info("Response Length [%d] %s", response.getContent().length(), response.getContent());
+				        
+				        segments = jsonMapper.readValue(
+				            response.getContent(), new TypeReference<List<DataSegment>>()
+				            {
+				            }
+				        );
+				      }
+				      catch (Exception e) {
+				    	e.printStackTrace();
+				        throw Throwables.propagate(e);
+				      }
+				    
+				    /*for (DataSegment segment:segments)
+				    {
+				        log.info("Segment Received [%s]", segment.getIdentifier());
+				    }*/
+				    
+				    return segments;
+				}
+			}));
+		}
+		
+		List<DataSegment> segments = new ArrayList<DataSegment>();
+		for (Future<List<DataSegment>> future: futures)
+		{
+			try {
+				segments = future.get();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (ExecutionException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			for (DataSegment segment : segments)
+			{
+				if (segment != null)
+					segmentCounts.add(segment);
+			}
+		}
+		
+		for (Entry<DataSegment> entry : segmentCounts.entrySet())
+		{
+			if (entry != null)
+				log.info("Segment Received [%s] Count [%d]", entry.getElement().getIdentifier(), entry.getCount());
+		}
 	}
 
 	private void calculateWeightedAccessCounts(DruidCoordinatorRuntimeParams params, Multiset<DataSegment> segments, HashMap<DataSegment, Number> weightedAccessCounts, HashMap<DataSegment, Number> removeList)
@@ -120,10 +281,12 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 				weightedAccessCounts.put(segment, (double)segmentCount + 0.5 * popularity);
 			}
 		}
-
+		
 		// Remove segments with counts less than a threshold from weightedAccessCounts. Also add it to removeList
 		for (Map.Entry<DataSegment, Number> entry : weightedAccessCounts.entrySet())
 		{
+			log.info("Segment Received [%s] Count [%f]", entry.getKey().getIdentifier(), entry.getValue().doubleValue());
+
 			if (entry.getValue().doubleValue() < MIN_THRESHOLD)
 			{
 				DataSegment segment = entry.getKey();
@@ -133,8 +296,6 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		}
 	}
 
-	// Implemented Adaptive Strategy
-	// TODO: Best Fit Strategy
 	private void calculateAdaptiveReplication(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, Number> weightedAccessCounts, HashMap<DataSegment, Number> insertList, HashMap<DataSegment, Number> removeList)
 	{
 		log.info("Calculating Replication for Segments");
@@ -173,6 +334,8 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		for (Number number : weightedAccessCounts.values())
 			totalWeightCount += number.doubleValue();
 
+		log.info("Total Weight Count [%f]", totalWeightCount);
+		
 		int slotsperhn = (int) Math.ceil((double)totalWeightCount / historicalNodeCount);
 
 		int[] nodeCapacities = new int[historicalNodeCount];
@@ -193,11 +356,13 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		{
 			maxheap.add(new Tuple(entry.getKey(), entry.getValue().doubleValue()));
 		}
-
+		
 		Multiset<DataSegment> expectedCount = HashMultiset.create();
 		while(maxheap.peek() != null)
 		{
 			Tuple candidate = maxheap.poll();
+			log.info("Chosen Segment [%s] [%f]", candidate.segment.getIdentifier(), candidate.weight);
+			
 			int valleft = bestFit(candidate.weight, nodeCapacities);
 			expectedCount.add(candidate.segment);
 			if(valleft > 0)
@@ -210,6 +375,8 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		{
 			int totalReplicantsInCluster = params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier());
 			int newReplicationFactor = expectedCount.count(segment);
+			
+			log.info("Replication Decision for [%s]: Current [%d] Required [%d]", segment.getIdentifier(), totalReplicantsInCluster, newReplicationFactor);
 
 			if (newReplicationFactor < totalReplicantsInCluster)
 				removeList.put(segment, totalReplicantsInCluster - newReplicationFactor);
