@@ -170,12 +170,12 @@ for node in ${NEW_ZOOKEEPER_NODES//,/ }
 do
     echo "Shutting down $node ..."
     COMMAND=''
+    COMMAND=$COMMAND" cd $PATH_TO_ZOOKEEPER && sudo bin/zkServer.sh stop;"
     if [ $TYPE_OF_STOP -eq 1 ]
     then
         COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/zookeeper.log;"
         COMMAND=$COMMAND" sudo rm -rf $LOG_FILE/zookeeper.out;"
     fi
-    COMMAND=$COMMAND" cd $PATH_TO_ZOOKEEPER && sudo bin/zkServer.sh stop;"
     echo "zookeeper server shutdown command is $COMMAND"
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"

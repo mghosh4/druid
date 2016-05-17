@@ -401,6 +401,11 @@ do
         COMMAND=''
 
         COMMAND=$COMMAND" cd $PATH_TO_KAFKA;"
+        COMMAND=$COMMAND" sudo sed -i '26s@.*@log4j.appender.kafkaAppender.File=$LOG_FILE/kafkalogs/server.log@' $PATH_TO_KAFKA/config/log4j.properties;"
+        COMMAND=$COMMAND" sudo sed -i '32s@.*@log4j.appender.stateChangeAppender.File=$LOG_FILE/kafkalogs/state-change.log@' $PATH_TO_KAFKA/config/log4j.properties;"
+        COMMAND=$COMMAND" sudo sed -i '38s@.*@log4j.appender.requestAppender.File=$LOG_FILE/kafkalogs/kafka-request.log@' $PATH_TO_KAFKA/config/log4j.properties;"
+        COMMAND=$COMMAND" sudo sed -i '44s@.*@log4j.appender.cleanerAppender.File=$LOG_FILE/kafkalogs/log-cleaner.log@' $PATH_TO_KAFKA/config/log4j.properties;"
+        COMMAND=$COMMAND" sudo sed -i '50s@.*@log4j.appender.controllerAppender.File=$LOG_FILE/kafkalogs/controller.log@' $PATH_TO_KAFKA/config/log4j.properties;"
         COMMAND=$COMMAND" sudo sed -i '39s@.*@          \"zookeeper.connect\": \"$KAFKA_NODE_HOST:$KAFKA_ZOOKEEPER_PORT\",@' $SPEC_FILE;"
         COMMAND=$COMMAND" sudo sed -i '25s@.*@port=$KAFKA_NODE_PORT@' $PATH_TO_KAFKA/config/server.properties;"
         COMMAND=$COMMAND" sudo sed -i '28s@.*@host.name=$KAFKA_NODE_HOST@' $PATH_TO_KAFKA/config/server.properties;"
