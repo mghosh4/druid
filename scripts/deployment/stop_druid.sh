@@ -149,7 +149,7 @@ do
     echo "Shutting down $node ..."
     COMMAND=''
     COMMAND=$COMMAND" cd $PATH_TO_KAFKA;"
-    COMMAND=$COMMAND" sudo ./bin/kafka-topics.sh --zookeeper $KAFKA_NODE_HOST:2181 --delete --topic $KAFKA_TOPIC;"
+    COMMAND=$COMMAND" sudo ./bin/kafka-topics.sh --zookeeper $KAFKA_NODE_HOST:$KAFKA_ZOOKEEPER_PORT --delete --topic $KAFKA_TOPIC;"
     COMMAND=$COMMAND" sudo ./bin/kafka-server-stop.sh;"
     COMMAND=$COMMAND" sudo ./bin/zookeeper-server-stop.sh;"
     COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
