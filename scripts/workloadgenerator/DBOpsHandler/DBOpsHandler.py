@@ -1,7 +1,9 @@
 from pydruid.client import *
-#from pylab import plt
 from Query import Query
 from datetime import datetime, date
+import ast
+import logging
+from pydruid.utils import *
 
 class DBOpsHandler:
 
@@ -19,7 +21,7 @@ class DBOpsHandler:
 		t2 = datetime.combine(date.today(),datetime.now().time()) - datetime.combine(datetime.today(),t1)
 		#x = newquery.export_pandas()
 
-		print json.dumps(newquery.query_dict, indent=2)
+		#print json.dumps(newquery.query_dict, indent=2)
 		#if(x is not None):
 		#	print x
 		print t2
@@ -34,7 +36,7 @@ class DBOpsHandler:
 		t2 = datetime.combine(date.today(),datetime.now().time()) - datetime.combine(datetime.today(),t1)
 		#x = newquery.export_pandas()
 
-		print json.dumps(newquery.query_dict, indent=2)
+		#print json.dumps(newquery.query_dict, indent=2)
 		#if(x is not None):
 		#	print x
 		print t2
@@ -47,43 +49,37 @@ class DBOpsHandler:
 		config = self.getConfig()
 		newquery = PyDruid(config.getBrokerNodeUrl(), config.getBrokerEndpoint())
 		t1 = datetime.now().time()
-		tn = newquery.topn(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, aggregations={'count': doublesum('count')}, dimension=config.getDimension(), metric=config.getMetric(), threshold=config.getThreshold())
+		tn = newquery.topn(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, aggregations=ast.literal_eval(config.getAggregations), dimension=config.getDimension(), metric=config.getMetric(), threshold=config.getThreshold())
 		t2 = datetime.combine(date.today(),datetime.now().time()) - datetime.combine(datetime.today(),t1)
 		x = newquery.export_pandas()
 
 		print json.dumps(newquery.query_dict, indent=2)
 		if(x is not None):
-			print x
-			print t2
+			#print x
+			print "Succesful:" + t2
 		else:
-			print "Query Failed"
+			print "Failed:" + t2
 
 
 			#FILTER AND POST_AGGREGATIONS ARE OPTIONAL
-	def timeseries(self, query):
+	def timeseries(self, query, logger):
 		config = self.getConfig()
 		newquery = PyDruid(config.getBrokerNodeUrl(), config.getBrokerEndpoint())
-		postaggregatearg = ""
-		filterarg = ""
-
-		if(config.getPostAggregations() != ""):
-			postaggregatearg = ", post_aggregations=" + config.getPostAggregations()
-
-		if(config.getFilter() != ""):
-			filterarg = ", filter=" + config.getFilter()
-		argstring = "datasource=" + config.getDataSource()  + ", granularity="+ config.getGranularity() + ", intervals=" + query.interval + ", aggregations=" + config.getAggregations() + postaggregatearg + filterarg
-		args = dict(tuple(e.split('=')) for e in argstring.split(', '))
 		t1 = datetime.now().time()
-		ts = newquery.timeseries(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, aggregations={'count': doublesum('count')})
+		ts = newquery.timeseries(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, aggregations={"count": doublesum("count")})#aggregations=ast.literal_eval(config.getAggregations))
 		t2 = datetime.combine(date.today(),datetime.now().time()) - datetime.combine(datetime.today(),t1)
 		x = newquery.export_pandas()
 		
-		print json.dumps(newquery.query_dict, indent=2)
+		#print json.dumps(newquery.query_dict, indent=2)
 		if(x is not None):
-			print x
-			print t2
+			#print x
+			message = "Successful:" + `t2.total_seconds()`
+			logger.info("Successful:" + `t2.total_seconds()`)
+			return [message,x]
 		else:
-			print "Query Failed"
+			message = "Failed:" + `t2.total_seconds()`
+			logger.info("Failed:" + `t2.total_seconds()`)
+			return message
 
 
 			#FILTER AND POST_AGGREGATIONS ARE OPTIONAL
@@ -91,13 +87,13 @@ class DBOpsHandler:
 		config = self.getConfig()
 		newquery = PyDruid(config.getBrokerNodeUrl(), config.getBrokerEndpoint())
 		t1 = datetime.now().time()
-		gb = newquery.groupby(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, dimensions=['name','value'], aggregations={'count': doublesum('count')})
+		gb = newquery.groupby(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, dimensions=(config.getDimension()).split(","), aggregations=ast.literal_eval(config.getAggregations))
 		t2 = datetime.combine(date.today(),datetime.now().time()) - datetime.combine(datetime.today(),t1)
 		x = newquery.export_pandas()
 		
 		print json.dumps(newquery.query_dict, indent=2)
 		if(x is not None):
-			print x
-			print t2
+			#print x
+			print "Succesful:" + t2
 		else:
-			print "Query Failed"
+			print "Failed:" + t2
