@@ -129,13 +129,13 @@ def threadoperation(start, time, numqueries, timeAccessGenerator, minqueryperiod
 		line = applyOperation(newquerylist[0], config,logger)
 
 		#print line[0:10]
-		if (line[0][0:10] == "Successful"):
+		if ("Successful" in line[0]):
 			print line[1].count
 			successfulquerytime += float(line[0][12:])
 			successfulquerycount += 1
 			totalquerytime += float(line[0][12:])
 			totalquerycount += 1
-		elif (line[0][0:6] == "Failed"):
+		elif ("Failed" in line[0]):
 			failedquerytime += float(line[0][8:])
 			failedquerycount += 1
 			totalquerytime += float(line[0][8:])
@@ -193,8 +193,9 @@ thread2successfulquerylatency = thread2results[0]/float(thread2results[1])
 successfulquerylatency = float((thread1successfulquerylatency + thread2successfulquerylatency)/2)
 totalsuccessfulqueries = thread1results[1] + thread2results[1]
 
-thread1failedquerylatency = thread1results[2]/float(thread1results[3])
-thread2failedquerylatency = thread2results[2]/float(thread2results[3])
+if(thread1results[3] != 0 and thread2results[3] != 0):
+	thread1failedquerylatency = thread1results[2]/float(thread1results[3])
+	thread2failedquerylatency = thread2results[2]/float(thread2results[3])
 failedquerylatency = float((thread1failedquerylatency + thread2failedquerylatency)/2)
 totalfailedqueries = thread1results[3] + thread2results[3]
 
