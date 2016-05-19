@@ -9,6 +9,8 @@ class DistributionFactory(object):
 			return ScrambledZipfian()
 		elif distribution == "latest":
 			return Latest()
+		elif distribution == "dynamiczip":
+			return DynamicZipf()
 	
 	@staticmethod
 	def createSizeDistribution(distribution):

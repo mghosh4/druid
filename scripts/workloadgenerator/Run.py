@@ -6,6 +6,7 @@ import logging
 import random
 import Queue
 import threading
+import numpy
 from pydruid.client import *
 #from Query import Query
 from datetime import datetime, date
@@ -103,6 +104,7 @@ minqueryperiod = 0
 maxqueryperiod = time-start
 x = maxqueryperiod.total_seconds()
 maxqueryperiod = int(x)
+
 #while time.time() < t_end:
 	#newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator);
 
@@ -122,15 +124,34 @@ def threadoperation(start, time, numqueries, timeAccessGenerator, minqueryperiod
 	totalquerytime = 0
 	totalquerycount = 0
 	endtime = datetime.now() + timedelta(minutes=runtime)
+	currentSegRank = []
+	oldest_timestamp = start.total_seconds()
+	
 	while True:
 		if datetime.now() >= endtime:
 			break
 		time = datetime.now(timezone('UTC'))
 		#newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator);
-		if(filename!=""):
-			newquerylist = QueryGenerator.generateQueriesFromFile(start, time, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator, filename);
+		if(len(currentSegRank)==0):
+			y = time - start
+			z = y.total_seconds()
+			x = datetime.timedelta(seconds = z)
+			distance = x.total_seconds()
+			for i in range(0, distance):
+				currentSegRank.append(i)
 		else:
-			newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator);
+			y = time.total_seconds()
+			z = start.total_seconds()
+			for i in range(z, y):
+				samples = randZipf(1+len(currentSegRank), 1.2, 1)
+				currentSegRank.insert(samples[0], z)
+				
+		if(filename!=""):
+			newquerylist = QueryGenerator.generateQueriesFromFile(start, time, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator, filename)
+		#elif(accessdistribution == "dynamiczip"):
+			#newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator, currentSegRank)
+		else:
+			newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator, currentSegRank)
 		line = applyOperation(newquerylist[0], config,logger)
 
 		#print line[0:10]
@@ -233,3 +254,12 @@ f.write("Total Queries : " + `totalqueries` + "\n")
 
 #for i in xrange(numthreads):
 #	threadarray[i].join()
+
+def randZipf(self, n, alpha, numSamples): 
+		tmp = numpy.power( numpy.arange(1, n+1), -alpha )
+		zeta = numpy.r_[0.0, numpy.cumsum(tmp)]
+		distMap = [x / zeta[-1] for x in zeta]
+		u = numpy.random.random(numSamples)
+		v = numpy.searchsorted(distMap, u)
+		samples = [t-1 for t in v]
+		return samples

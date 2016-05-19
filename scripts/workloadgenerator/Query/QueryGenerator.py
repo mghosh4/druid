@@ -10,14 +10,13 @@ class QueryGenerator(object):
 	queryRunningCount = 0
 
 	@staticmethod
-	def generateQueries(start, time, numQueries, accessGenerator, minPeriod, maxPeriod, periodGenerator):
+	def generateQueries(start, time, numQueries, accessGenerator, minPeriod, maxPeriod, periodGenerator, currentSegRank):
 		querylist = list()
 		y = time - start
 		z = y.total_seconds()
 		x = datetime.timedelta(seconds = z)
 		elapsed = x.total_seconds()
-		accesslist = accessGenerator.generateDistribution(0, elapsed, numQueries)
-
+		accesslist = accessGenerator.generateDistribution(0, elapsed, numQueries, currentSegRank)
 		periodlist = periodGenerator.generateDistribution(minPeriod, maxPeriod, numQueries)
 
 		for i in xrange(numQueries):
