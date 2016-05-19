@@ -36,12 +36,10 @@ for node in ${REALTIME_NODE//,/ }
 do
     if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
     then
-        REALTIME_NODE_FQDN=$node
+        NEW_REALTIME_NODE=$NEW_REALTIME_NODE$node,
     else
-        REALTIME_NODE_FQDN=$node.$EXPERIMENT.$PROJ.$ENV
+        NEW_REALTIME_NODE=$NEW_REALTIME_NODE$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV,
     fi
- 
-    NEW_REALTIME_NODE=$NEW_REALTIME_NODE$USER_NAME@$REALTIME_NODE_FQDN
 done
 
 #construct broker FQDN
@@ -52,7 +50,7 @@ do
     then
         NEW_BROKER_NODES=$NEW_BROKER_NODES$node,
     else
-        NEW_BROKER_NODES=$NEW_BROKER_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV
+        NEW_BROKER_NODES=$NEW_BROKER_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV,
     fi
 done
 
@@ -76,7 +74,7 @@ do
     then
         NEW_COORDINATOR_NODES=$NEW_COORDINATOR_NODES$node,
     else
-        NEW_COORDINATOR_NODES=$NEW_COORDINATOR_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV
+        NEW_COORDINATOR_NODES=$NEW_COORDINATOR_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV,
     fi
 done
 
@@ -88,7 +86,7 @@ do
     then
         NEW_ZOOKEEPER_NODES=$NEW_ZOOKEEPER_NODES$node,
     else
-        NEW_ZOOKEEPER_NODES=$NEW_ZOOKEEPER_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV
+        NEW_ZOOKEEPER_NODES=$NEW_ZOOKEEPER_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV,
     fi
 done
 
@@ -100,7 +98,7 @@ do
     then
         NEW_MYSQL_NODES=$NEW_MYSQL_NODES$node,
     else
-        NEW_MYSQL_NODES=$NEW_MYSQL_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV
+        NEW_MYSQL_NODES=$NEW_MYSQL_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV,
     fi
 done
 
@@ -112,7 +110,7 @@ do
     then
         NEW_OVERLORD_NODES=$NEW_OVERLORD_NODES$node,
     else
-        NEW_OVERLORD_NODES=$NEW_OVERLORD_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV
+        NEW_OVERLORD_NODES=$NEW_OVERLORD_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV,
     fi
 done
 
@@ -124,7 +122,7 @@ do
     then
         NEW_MIDDLE_MANAGER_NODES=$NEW_MIDDLE_MANAGER_NODES$node,
     else
-        NEW_MIDDLE_MANAGER_NODES=$NEW_MIDDLE_MANAGER_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV
+        NEW_MIDDLE_MANAGER_NODES=$NEW_MIDDLE_MANAGER_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV,
     fi
 done
 
@@ -140,100 +138,25 @@ do
     fi
 done
 
-#construct broker FQDN
-NEW_REDIS_NODES=''
-for node in ${REDIS_NODE//,/ }
-do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
-    then
-        NEW_REDIS_NODES=$NEW_REDIS_NODES$node,
-    else
-        NEW_REDIS_NODES=$NEW_REDIS_NODES$USER_NAME@$node.$EXPERIMENT.$PROJ.$ENV,
-    fi
-done
 
 ############################ SHUTDOWN ##########################################
-
-#generate keys for passwordless ssh
-#echo -ne '\n' | ssh-keygen;
-#for node in ${NEW_COORDINATOR_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_HISTORICAL_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_BROKER_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_REALTIME_NODE//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_ZOOKEEPER_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_OVERLORD_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_MIDDLE_MANAGER_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_MYSQL_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-#for node in ${NEW_KAFKA_NODES//,/ }
-#do
-#    ssh-copy-id -i ~/.ssh/id_rsa.pub $node;
-#done
-
-#shutdown redis
-#counter=0
-#echo "Shutting down redis nodes:"
-#for  node in ${NEW_REDIS_NODES//,/ }
-#do
-
-#        echo "Setting up $node ..."
-#        COMMAND=''
-
-#        COMMAND=$COMMAND" cd $PATH_TO_REDIS_BIN && ./create-cluster stop"
-
-#        if [ "$IP" == "TRUE" ]
-#        then
-#            COMMAND=$COMMAND" --bind_ip $node;"
-#        else
-#            COMMAND=$COMMAND";"
-#        fi
-#        echo "redis node shutdown command is $COMMAND"
-
-    #ssh to node and run command
-#        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
-#            $COMMAND"
-#done
-#echo ""
 
 #shutdown the kafka server
 echo "Shutting down kafka server:"
 counter=0
-for node in ${NEW_KAFKA_NODES//;/ }
+for node in ${NEW_KAFKA_NODES//,/ }
 do
     echo "Shutting down $node ..."
     COMMAND=''
+    COMMAND=$COMMAND" cd $PATH_TO_KAFKA;"
+    COMMAND=$COMMAND" sudo ./bin/kafka-topics.sh --zookeeper $KAFKA_NODE_HOST:$KAFKA_ZOOKEEPER_PORT --delete --topic $KAFKA_TOPIC;"
+    COMMAND=$COMMAND" sudo ./bin/kafka-server-stop.sh;"
+    COMMAND=$COMMAND" sudo ./bin/zookeeper-server-stop.sh;"
+    COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-        COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
+        COMMAND=$COMMAND" sudo rm -r -f $LOG_FILE/kafkalogs;"
     fi
-    COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN;"
-    COMMAND=$COMMAND" cd kafka_2.10-0.8.2.1;"
-    COMMAND=$COMMAND" ./bin/kafka-topics.sh --zookeeper $KAFKA_NODE-big-lan:2181 --delete --topic metrics;"
-    COMMAND=$COMMAND" ./bin/kafka-server-stop.sh;"
-    COMMAND=$COMMAND" ./bin/zookeeper-server-stop.sh;"
     echo "kafka server shutdown command is $COMMAND"
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
         $COMMAND"
@@ -243,15 +166,16 @@ echo""
 #shutdown the zookeeper server
 echo "Shutting down zookeeper server:"
 counter=0
-for node in ${NEW_ZOOKEEPER_NODES//;/ }
+for node in ${NEW_ZOOKEEPER_NODES//,/ }
 do
     echo "Shutting down $node ..."
     COMMAND=''
+    COMMAND=$COMMAND" cd $PATH_TO_ZOOKEEPER && sudo bin/zkServer.sh stop;"
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-        COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
+        COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/zookeeper.log;"
+        COMMAND=$COMMAND" sudo rm -rf $LOG_FILE/zookeeper.out;"
     fi
-    COMMAND=$COMMAND" cd $PATH_TO_ZOOKEEPER && sudo bin/zkServer.sh stop;"
     echo "zookeeper server shutdown command is $COMMAND"
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
@@ -261,19 +185,20 @@ echo""
 #shutdown the mysql server
 echo "Shutting down mysql server:"
 counter=0
-for node in ${NEW_MYSQL_NODES//;/ }
+for node in ${NEW_MYSQL_NODES//,/ }
 do
     echo "Shutting down $node ..."
     COMMAND=''
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-        COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
+        COMMAND=$COMMAND" sudo rm -r -f $LOG_FILE/mysql.log;"
     fi
-    COMMAND=$COMMAND" sudo service mysql stop"
-    COMMAND=$COMMAND" sudo service mysql start"
+    COMMAND=$COMMAND" sudo service mysql stop;"
+    COMMAND=$COMMAND" sudo service mysql start;"
     MYSQL="DROP DATABASE druid;"
-    COMMAND=$COMMAND" mysql -u root -p -e \"$MYSQL\";"
-    COMMAND=$COMMAND" sudo apt-get -y remove mysql-server;"
+    COMMAND=$COMMAND" mysql -u root -e \"$MYSQL\";"
+    COMMAND=$COMMAND" sudo service mysql stop;"
+    #COMMAND=$COMMAND" sudo apt-get -y remove mysql-server;"
     echo "mysql server shutdown command is $COMMAND"
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
@@ -283,16 +208,18 @@ echo""
 #shutdown the middle manager server
 echo "Shutting down middle manager server:"
 counter=0
-for node in ${NEW_MIDDLE_MANAGER_NODES//;/ }
+for node in ${NEW_MIDDLE_MANAGER_NODES//,/ }
 do
     echo "Shutting down $node ..."
     COMMAND=''
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-        COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
+        COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/middlemanager-$counter.log;"
     fi
-    COMMAND=$COMMAND" pkill -9 "screen";"
+    COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
+    COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "middle manager server shutdown command is $COMMAND"
+    let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 done
@@ -301,16 +228,18 @@ echo""
 #shutdown the overlord server
 echo "Shutting down overlord server:"
 counter=0
-for node in ${NEW_OVERLORD_NODES//;/ }
+for node in ${NEW_OVERLORD_NODES//,/ }
 do
     echo "Shutting down $node ..."
     COMMAND=''
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-        COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
+        COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/overlord-$counter.log;"
     fi
-    COMMAND=$COMMAND" pkill -9 "screen";"
+    COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
+    COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "overlord server shutdown command is $COMMAND"
+    let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 done
@@ -319,16 +248,18 @@ echo""
 #shutdown the broker server
 echo "Shutting down broker server:"
 counter=0
-for node in ${NEW_BROKER_NODES//;/ }
+for node in ${NEW_BROKER_NODES//,/ }
 do
     echo "Shutting down $node ..."
     COMMAND=''
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-        COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
+        COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/broker-$counter.log;"
     fi
-    COMMAND=$COMMAND" pkill -9 "screen";"
+    COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
+    COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "Broker server shutdown command is $COMMAND"
+    let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 done
@@ -337,16 +268,18 @@ echo""
 #shutdown the realtime server
 echo "Shutting down realtime server:"
 counter=0
-for node in ${NEW_REALTIME_NODE//;/ }
+for node in ${NEW_REALTIME_NODE//,/ }
 do
     echo "Shutting down $node ..."
     COMMAND=''
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-    COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
+    COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/realtime-$counter.log;"
     fi
-    COMMAND=$COMMAND" pkill -9 "screen";"
+    COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
+    COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "Realtime server shutdown command is $COMMAND"
+    let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 
@@ -360,7 +293,12 @@ for  node in ${NEW_COORDINATOR_NODES//,/ }
 do
         echo "Shutting down $node ..."
         COMMAND=''
-        COMMAND=$COMMAND"pkill -9 "screen";"
+        if [ $TYPE_OF_STOP -eq 1 ]
+        then
+        COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/coordinator-$counter.log;"
+        fi
+        COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
+        COMMAND=$COMMAND" sudo pkill -9 \"java\";"
         echo "Config server shutdown command is $COMMAND"
 		ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
 			$COMMAND"
@@ -370,16 +308,19 @@ echo ""
 
 #shutdown the historical server
 echo "Shutting down historical servers:"
+counter=0
 for  node in ${NEW_HISTORICAL_NODES//,/ }
 do
         echo "Shutting down $node ..."
         COMMAND=''
         if [ $TYPE_OF_STOP -eq 1 ]
         then
-        	COMMAND=$COMMAND"sudo rm -r -f $LOG_FOLDER;"
+        	COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/historical-$counter.log;"
         fi
-	COMMAND=$COMMAND"pkill -9 "screen";"
+	    COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
+        COMMAND=$COMMAND" sudo pkill -9 \"java\";"
         echo "Historical server shutdown command is $COMMAND"
+        let counter=counter+1
         ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
         	$COMMAND"
 done
