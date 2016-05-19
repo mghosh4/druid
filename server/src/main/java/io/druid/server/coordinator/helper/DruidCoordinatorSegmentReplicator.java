@@ -57,6 +57,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -283,15 +284,17 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		}
 		
 		// Remove segments with counts less than a threshold from weightedAccessCounts. Also add it to removeList
-		for (Map.Entry<DataSegment, Number> entry : weightedAccessCounts.entrySet())
+        Iterator it = weightedAccessCounts.entrySet().iterator();
+		while (it.hasNext())
 		{
+            Map.Entry<DataSegment, Number> entry = (Map.Entry<DataSegment, Number>)it.next();
 			log.info("Segment Received [%s] Count [%f]", entry.getKey().getIdentifier(), entry.getValue().doubleValue());
 
 			if (entry.getValue().doubleValue() < MIN_THRESHOLD)
 			{
 				DataSegment segment = entry.getKey();
 				removeList.put(segment, params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier()));
-				weightedAccessCounts.remove(segment);
+				it.remove();
 			}
 		}
 	}
