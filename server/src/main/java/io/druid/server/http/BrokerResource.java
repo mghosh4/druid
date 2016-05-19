@@ -47,4 +47,12 @@ public class BrokerResource
   {
     return Response.ok(ImmutableMap.of("inventoryInitialized", brokerServerView.isInitialized())).build();
   }
+  
+  @GET
+  @Path("/segments")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getSegments()
+  {
+    return Response.ok(SegmentCollector.getSerializedSegmentList()).build();
+  }
 }

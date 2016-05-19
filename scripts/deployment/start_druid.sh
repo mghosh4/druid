@@ -181,7 +181,7 @@ do
         COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/\${sys:logfilename}.log\">@' $COMMON_LOG4J2/log4j2.xml;"
         COMMAND=$COMMAND" cd $PATH_TO_ZOOKEEPER;"
         COMMAND=$COMMAND" sudo sed -i '36s/.*/druid.zk.service.host=$ZOOKEEPER_NODE_HOST/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
-        COMMAND=$COMMAND" sudo ZOO_LOG_DIR=/proj/DCSQ/tkao4 ZOO_LOG4J_PROP='INFO,ROLLINGFILE' ./bin/zkServer.sh start;"
+        COMMAND=$COMMAND" sudo ZOO_LOG_DIR=$LOG_FILE ZOO_LOG4J_PROP='INFO,ROLLINGFILE' ./bin/zkServer.sh start;"
 
         echo "zookeeper node startup command is $COMMAND"
 
@@ -401,6 +401,11 @@ do
         COMMAND=''
 
         COMMAND=$COMMAND" cd $PATH_TO_KAFKA;"
+        COMMAND=$COMMAND" sudo sed -i '26s@.*@log4j.appender.kafkaAppender.File=$LOG_FILE/kafkalogs/server.log@' $PATH_TO_KAFKA/config/log4j.properties;"
+        COMMAND=$COMMAND" sudo sed -i '32s@.*@log4j.appender.stateChangeAppender.File=$LOG_FILE/kafkalogs/state-change.log@' $PATH_TO_KAFKA/config/log4j.properties;"
+        COMMAND=$COMMAND" sudo sed -i '38s@.*@log4j.appender.requestAppender.File=$LOG_FILE/kafkalogs/kafka-request.log@' $PATH_TO_KAFKA/config/log4j.properties;"
+        COMMAND=$COMMAND" sudo sed -i '44s@.*@log4j.appender.cleanerAppender.File=$LOG_FILE/kafkalogs/log-cleaner.log@' $PATH_TO_KAFKA/config/log4j.properties;"
+        COMMAND=$COMMAND" sudo sed -i '50s@.*@log4j.appender.controllerAppender.File=$LOG_FILE/kafkalogs/controller.log@' $PATH_TO_KAFKA/config/log4j.properties;"
         COMMAND=$COMMAND" sudo sed -i '39s@.*@          \"zookeeper.connect\": \"$KAFKA_NODE_HOST:$KAFKA_ZOOKEEPER_PORT\",@' $SPEC_FILE;"
         COMMAND=$COMMAND" sudo sed -i '25s@.*@port=$KAFKA_NODE_PORT@' $PATH_TO_KAFKA/config/server.properties;"
         COMMAND=$COMMAND" sudo sed -i '28s@.*@host.name=$KAFKA_NODE_HOST@' $PATH_TO_KAFKA/config/server.properties;"

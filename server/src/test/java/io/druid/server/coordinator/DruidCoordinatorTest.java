@@ -27,6 +27,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
+import com.metamx.http.client.HttpClient;
+
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.ImmutableDruidDataSource;
@@ -37,6 +39,7 @@ import io.druid.common.config.JacksonConfigManager;
 import io.druid.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
 import io.druid.curator.discovery.NoopServiceAnnouncer;
+import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.inventory.InventoryManagerConfig;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.metadata.MetadataRuleManager;
@@ -48,6 +51,7 @@ import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
+
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
@@ -93,6 +97,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private ObjectMapper objectMapper;
   private JacksonConfigManager configManager;
   private DruidNode druidNode;
+  private HttpClient httpClient;
+  private ServerDiscoveryFactory factory;
   private static final String LOADPATH = "/druid/loadqueue/localhost:1234";
   private static final long COORDINATOR_START_DELAY = 1;
   private static final long COORDINATOR_PERIOD = 100;
@@ -186,6 +192,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
           }
         },
         druidNode,
+        httpClient,
+        factory,
         loadManagementPeons
     );
   }
