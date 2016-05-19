@@ -6,7 +6,7 @@ import json
 import random
 import subprocess
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import sys
 
@@ -65,7 +65,10 @@ producer = subprocess.Popen(
 
 # Generate random query metrics
 if(datatype == "randomstream"):
-  for n in xrange(0, args.n):
+  endtime = datetime.now() + timedelta(minutes=args.n)
+  while True:
+    if datetime.now() >= endtime:
+      break
     metric = {
       'timestamp': long(time.time() * 1000),
       'name': 'query/time',

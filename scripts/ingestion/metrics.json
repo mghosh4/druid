@@ -36,7 +36,7 @@
       "firehose": {
         "type": "kafka-0.8",
         "consumerProps": {
-          "zookeeper.connect": "localhost:2181",
+          "zookeeper.connect": "node-8-big-lan:2181",
           "zookeeper.connection.timeout.ms" : "15000",
           "zookeeper.session.timeout.ms" : "15000",
           "zookeeper.sync.time.ms" : "5000",
