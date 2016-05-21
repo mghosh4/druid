@@ -43,6 +43,7 @@ import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.EmittingLogger;
+
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.selector.QueryableDruidServer;
@@ -62,10 +63,12 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.MetricManipulatorFns;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.http.SegmentCollector;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.partition.PartitionChunk;
+
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -228,6 +231,9 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         );
 
         segments.add(Pair.of(selector, descriptor));
+        
+        SegmentCollector.addSegment(selector.getSegment());
+        log.info("Adding Segment ID [%s]", selector.getSegment().getIdentifier());
       }
     }
 

@@ -47,6 +47,7 @@ import io.druid.server.ClientQuerySegmentWalker;
 import io.druid.server.QueryResource;
 import io.druid.server.coordination.broker.DruidBroker;
 import io.druid.server.http.BrokerResource;
+import io.druid.server.http.SegmentCollector;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.MetricsModule;
 import io.druid.server.router.TieredBrokerConfig;
@@ -87,6 +88,7 @@ public class CliBroker extends ServerRunnable
 
             binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
             binder.bind(BrokerServerView.class).in(LazySingleton.class);
+            binder.bind(SegmentCollector.class).in(LazySingleton.class);
             binder.bind(TimelineServerView.class).to(BrokerServerView.class).in(LazySingleton.class);
 
             JsonConfigProvider.bind(binder, "druid.broker.cache", CacheConfig.class);

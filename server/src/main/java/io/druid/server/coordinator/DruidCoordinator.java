@@ -41,6 +41,7 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import com.metamx.http.client.HttpClient;
 
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
@@ -51,8 +52,10 @@ import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.collections.CountingMap;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.concurrent.Execs;
+import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServiceAnnouncer;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Self;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataSegmentManager;
@@ -71,6 +74,7 @@ import io.druid.server.coordinator.helper.DruidCoordinatorSegmentReplicator;
 import io.druid.server.coordinator.rules.LoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
+import io.druid.server.router.TieredBrokerHostSelector;
 import io.druid.timeline.DataSegment;
 
 import org.apache.curator.framework.CuratorFramework;
@@ -114,6 +118,7 @@ public class DruidCoordinator
 					.compound(Ordering.<DataSegment>natural())
 					.reverse();
 
+	public static HttpClient httpClient;
 	private static final EmittingLogger log = new EmittingLogger(DruidCoordinator.class);
 	private final Object lock = new Object();
 	private final DruidCoordinatorConfig config;
@@ -131,6 +136,7 @@ public class DruidCoordinator
 	private final AtomicReference<LeaderLatch> leaderLatch;
 	private final ServiceAnnouncer serviceAnnouncer;
 	private final DruidNode self;
+	public final ServerDiscoveryFactory serverDiscoveryFactory;
 	private volatile boolean started = false;
 	private volatile int leaderCounter = 0;
 	private volatile boolean leader = false;
@@ -151,7 +157,9 @@ public class DruidCoordinator
 			IndexingServiceClient indexingServiceClient,
 			LoadQueueTaskMaster taskMaster,
 			ServiceAnnouncer serviceAnnouncer,
-			@Self DruidNode self
+			@Self DruidNode self,
+			@Global HttpClient httpClient,
+			ServerDiscoveryFactory factory
 			)
 	{
 		this(
@@ -168,6 +176,8 @@ public class DruidCoordinator
 				taskMaster,
 				serviceAnnouncer,
 				self,
+				httpClient,
+				factory,
 				Maps.<String, LoadQueuePeon>newConcurrentMap()
 				);
 	}
@@ -186,6 +196,8 @@ public class DruidCoordinator
 			LoadQueueTaskMaster taskMaster,
 			ServiceAnnouncer serviceAnnouncer,
 			DruidNode self,
+			HttpClient httpClient,
+			ServerDiscoveryFactory factory,
 			ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap
 			)
 			{
@@ -203,6 +215,8 @@ public class DruidCoordinator
 		this.taskMaster = taskMaster;
 		this.serviceAnnouncer = serviceAnnouncer;
 		this.self = self;
+		this.httpClient = httpClient;
+		this.serverDiscoveryFactory = factory;
 
 		this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
 
@@ -891,7 +905,7 @@ public class DruidCoordinator
 							new DruidCoordinatorCleanupUnneeded(DruidCoordinator.this),
 							new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),
 							new DruidCoordinatorBalancer(DruidCoordinator.this),
-							new DruidCoordinatorSegmentReplicator(DruidCoordinator.this),
+							new DruidCoordinatorSegmentReplicator(DruidCoordinator.this, DruidCoordinator.httpClient, DruidCoordinator.this.serverDiscoveryFactory),
 							new DruidCoordinatorLogger()
 							),
 							startingLeaderCounter
