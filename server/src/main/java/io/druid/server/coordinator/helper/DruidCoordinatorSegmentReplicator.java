@@ -374,17 +374,17 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 			}
 		}
 
-		for (DataSegment segment : expectedCount)
+		for (Entry<DataSegment> entry : expectedCount.entrySet())
 		{
-			int totalReplicantsInCluster = params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier());
-			int newReplicationFactor = expectedCount.count(segment);
+			int totalReplicantsInCluster = params.getSegmentReplicantLookup().getTotalReplicants(entry.getElement().getIdentifier());
+			int newReplicationFactor = entry.getCount();
 			
-			log.info("Replication Decision for [%s]: Current [%d] Required [%d]", segment.getIdentifier(), totalReplicantsInCluster, newReplicationFactor);
+			log.info("Replication Decision for [%s]: Current [%d] Required [%d]", entry.getElement().getIdentifier(), totalReplicantsInCluster, newReplicationFactor);
 
 			if (newReplicationFactor < totalReplicantsInCluster)
-				removeList.put(segment, totalReplicantsInCluster - newReplicationFactor);
+				removeList.put(entry.getElement(), totalReplicantsInCluster - newReplicationFactor);
 			else if (newReplicationFactor > totalReplicantsInCluster)
-				insertList.put(segment, newReplicationFactor - totalReplicantsInCluster);
+				insertList.put(entry.getElement(), newReplicationFactor - totalReplicantsInCluster);
 		}
 	}
 
