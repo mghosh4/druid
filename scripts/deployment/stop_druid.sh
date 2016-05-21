@@ -153,6 +153,7 @@ do
     COMMAND=$COMMAND" sudo ./bin/kafka-server-stop.sh;"
     COMMAND=$COMMAND" sudo ./bin/zookeeper-server-stop.sh;"
     COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
+    COMMAND=$COMMAND" sudo screen -wipe;"
     if [ $TYPE_OF_STOP -eq 1 ]
     then
         COMMAND=$COMMAND" sudo rm -r -f $LOG_FILE/kafkalogs;"
@@ -218,6 +219,7 @@ do
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
+    COMMAND=$COMMAND" sudo screen -wipe;"
     echo "middle manager server shutdown command is $COMMAND"
     let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
@@ -238,6 +240,7 @@ do
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
+    COMMAND=$COMMAND" sudo screen -wipe;"
     echo "overlord server shutdown command is $COMMAND"
     let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
@@ -258,6 +261,7 @@ do
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
+    COMMAND=$COMMAND" sudo screen -wipe;"
     echo "Broker server shutdown command is $COMMAND"
     let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
@@ -278,6 +282,7 @@ do
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
+    COMMAND=$COMMAND" sudo screen -wipe;"
     echo "Realtime server shutdown command is $COMMAND"
     let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
@@ -299,6 +304,7 @@ do
         fi
         COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
         COMMAND=$COMMAND" sudo pkill -9 \"java\";"
+        COMMAND=$COMMAND" sudo screen -wipe;"
         echo "Config server shutdown command is $COMMAND"
 		ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
 			$COMMAND"
@@ -319,6 +325,7 @@ do
         fi
 	    COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
         COMMAND=$COMMAND" sudo pkill -9 \"java\";"
+        COMMAND=$COMMAND" sudo screen -wipe;"
         echo "Historical server shutdown command is $COMMAND"
         let counter=counter+1
         ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "

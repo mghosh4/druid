@@ -196,7 +196,7 @@ totalsuccessfulqueries = thread1results[1] + thread2results[1]
 if(thread1results[3] != 0 and thread2results[3] != 0):
 	thread1failedquerylatency = thread1results[2]/float(thread1results[3])
 	thread2failedquerylatency = thread2results[2]/float(thread2results[3])
-failedquerylatency = float((thread1failedquerylatency + thread2failedquerylatency)/2)
+	failedquerylatency = float((thread1failedquerylatency + thread2failedquerylatency)/2)
 totalfailedqueries = thread1results[3] + thread2results[3]
 
 thread1totalquerylatency = thread1results[4]/float(thread1results[5])
