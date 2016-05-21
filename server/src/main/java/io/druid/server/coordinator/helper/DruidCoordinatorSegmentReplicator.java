@@ -210,7 +210,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 				          );
 				        }
 				        
-				        log.info("Response Length [%d] %s", response.getContent().length(), response.getContent());
+				        log.info("Response Length [%d]", response.getContent().length());
 				        
 				        segments = jsonMapper.readValue(
 				            response.getContent(), new TypeReference<List<DataSegment>>()

@@ -48,7 +48,7 @@ public final class SegmentCollector {
 		String result = null;
 		try {
 			result = mapper.writeValueAsString(segmentList);
-	        log.info("Serializing Segment List [%d] %s", result.length(), result);
+	        log.info("Serializing Segment List [%d]", result.length());
 			segmentList.clear();
 		} catch (JsonProcessingException e) {
 			// TODO Auto-generated catch block
