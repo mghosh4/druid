@@ -447,7 +447,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		final List<String> tierNameList = Lists.newArrayList(params.getDruidCluster().getTierNames());
 		if (tierNameList.size() == 0) {
 			log.makeAlert("Cluster has multiple tiers! Check your cluster configuration!").emit();
-			return;     
+			return;
 		}
 		final String tier = tierNameList.get(0);
 
@@ -456,7 +456,20 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 
 		for (Map.Entry<DataSegment, Number> entry : insertList.entrySet())
 		{
-			DataSegment segment = entry.getKey();
+			String id = entry.getKey().getIdentifier();
+            DataSegment segment = null;
+            for (DataSegment candidate : coordinator.getAvailableDataSegments())
+            {
+                if (candidate.getIdentifier() == id)
+                {
+                    segment = candidate;
+                    break;
+                }
+            }
+
+            if (segment == null)
+                continue;
+
 			CoordinatorStats assignStats = assign(
 					params.getReplicationManager(),
 					tier,
@@ -470,7 +483,20 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 
 		for (Map.Entry<DataSegment, Number> entry : removeList.entrySet())
 		{
-			DataSegment segment = entry.getKey();
+			String id = entry.getKey().getIdentifier();
+            DataSegment segment = null;
+            for (DataSegment candidate : coordinator.getAvailableDataSegments())
+            {
+                if (candidate.getIdentifier() == id)
+                {
+                    segment = candidate;
+                    break;
+                }
+            }
+
+            if (segment == null)
+                continue;
+
 			int totalReplicantsInCluster = params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier());
 			if (totalReplicantsInCluster <= 0) {
 				continue;
