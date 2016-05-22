@@ -117,7 +117,7 @@ time = datetime.now(timezone('UTC'))
 #start = startdict['result']['minTime']
 #start = datetime.strptime(start, '%Y-%m-%dT%H:%M:%S.%fZ')
 #start = utc.localize(start)
-start = dt.datetime(2016,5 , 21, 23, 21, 0)
+start = dt.datetime(2016,5 , 22, 9, 24, 0)
 start = utc.localize(start)
 
 minqueryperiod = 0
@@ -148,9 +148,9 @@ def threadoperation(start, time, numqueries, timeAccessGenerator, minqueryperiod
 	#oldest_timestamp = start.total_seconds()
 	break_flag =0
 	
-	while True:
-	#while break_flag ==0:
-		break_flag =1
+	#while True:
+	while break_flag ==10:
+		break_flag =break_flag+1
 		print "1"
 		#if datetime.now() >= endtime:
 			#break
@@ -164,20 +164,30 @@ def threadoperation(start, time, numqueries, timeAccessGenerator, minqueryperiod
 			x = dt.timedelta(seconds = z)
 			distance = x.total_seconds()
 			for i in range(0, int(round(distance))):
-				currentSegRank.append(i)
+				timepoint = start + dt.timedelta(0, i)
+				currentSegRank.append(timepoint)
 		else:
 			#y = time.total_seconds()
 			#z = start.total_seconds()
 			print "2"
 			new_interval = (time-start).total_seconds()
+			print "time"
+			print time
+			print "start"
+			print start
 			print new_interval
 			for i in range(0, int(round(new_interval))):
 				samples = randZipf(1+len(currentSegRank), 1.2, 1)
 				timepoint = start + dt.timedelta(0, i)
-				currentSegRank.insert(samples[0], timepoint)
-				#print currentSegRank
+				print "add to rank: index"
+				print samples[0]
 				print "timepoint"
 				print timepoint
+				print "list seg size %d " % len(currentSegRank)
+				#len(currentSegRank)
+				currentSegRank.insert(samples[0], timepoint)
+				print currentSegRank
+				
 		
 		print filename
 		

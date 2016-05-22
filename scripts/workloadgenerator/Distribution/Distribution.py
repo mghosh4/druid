@@ -37,7 +37,7 @@ class DynamicZipf(object):
 		#print "Zipf List"
 		#Utils.printlist(zipfsample)
 		
-		return [ segRankList[x] + minSample for x in zipfsample ]
+		return [ x + minSample for x in zipfsample ]
 	
 	def randZipf(self, n, alpha, numSamples): 
 		tmp = numpy.power( numpy.arange(1, n+1), -alpha )

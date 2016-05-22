@@ -22,7 +22,14 @@ class QueryGenerator(object):
 		for i in xrange(numQueries):
 			q = Query(QueryGenerator.queryRunningCount, elapsed)
 			QueryGenerator.queryRunningCount += 1
-			starttime = accesslist[i]
+			starttime=(currentSegRank[i]-start).total_seconds()
+			print "segment rank"
+			print currentSegRank[i]
+			print "start"
+			print start
+			print "starttime"
+			print starttime
+			#starttime = accesslist[i]
 			#if (starttime + periodlist[i] - 1 > elapsed):
 			#	starttime = starttime - (periodlist[i] - (elapsed - starttime + 1)
 			newstart = start + dt.timedelta(0, starttime)
