@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import os, sys
-from datetime import datetime, timedelta
+#from datetime import datetime, timedelta
+import datetime as dt
 from pytz import *
 import logging
 import random
@@ -9,7 +10,8 @@ import threading
 import numpy
 from pydruid.client import *
 #from Query import Query
-from datetime import datetime, date
+from datetime import * 
+#from datetime import datetime, date
 sys.path.append(os.path.abspath('Distribution'))
 sys.path.append(os.path.abspath('Query'))
 sys.path.append(os.path.abspath('Config'))
@@ -47,6 +49,19 @@ def getConfig(configFile):
 	configFilePath = configFile
 	return ParseConfig(configFilePath)
 
+
+
+def randZipf(n, alpha, numSamples): 
+		tmp = numpy.power( numpy.arange(1, n+1), -alpha )
+		zeta = numpy.r_[0.0, numpy.cumsum(tmp)]
+		distMap = [x / zeta[-1] for x in zeta]
+		u = numpy.random.random(numSamples)
+		v = numpy.searchsorted(distMap, u)
+		samples = [t-1 for t in v]
+		print "sample"
+		print samples
+		return samples
+
 #def applyWorkload(self, numQueries, newquerylist = []):
 #	for i in xrange(numQueries):
 #		self.applyOperation(newquerylist[i])
@@ -81,10 +96,13 @@ queryruntime = config.getQueryRuntime()
 numcores = config.getNumCores()
 runtime = config.getRunTime()
 filename = config.getfilename()
+print filename
+
+
 
 numthreads = int(opspersecond * queryruntime)
-if(numthreads > numcores - 1):
-	print >> sys.stderr, "Cannot achieve desired throughput."
+#if(numthreads > numcores - 1):
+	#print >> sys.stderr, "Cannot achieve desired throughput."
   	#sys.exit(1)
 
 timeAccessGenerator = DistributionFactory.createSegmentDistribution(accessdistribution)
@@ -92,12 +110,14 @@ timeAccessGenerator = DistributionFactory.createSegmentDistribution(accessdistri
 periodAccessGenerator = DistributionFactory.createSegmentDistribution(perioddistribution)
 
 newquery = PyDruid(config.getBrokerNodeUrl(), config.getBrokerEndpoint())
-tb = newquery.time_boundary(datasource=config.getDataSource())
+#tb = newquery.time_boundary(datasource=config.getDataSource())
 
 time = datetime.now(timezone('UTC'))
-startdict = tb[0]
-start = startdict['result']['minTime']
-start = datetime.strptime(start, '%Y-%m-%dT%H:%M:%S.%fZ')
+#startdict = tb[0]
+#start = startdict['result']['minTime']
+#start = datetime.strptime(start, '%Y-%m-%dT%H:%M:%S.%fZ')
+#start = utc.localize(start)
+start = dt.datetime(2016,5 , 21, 23, 21, 0)
 start = utc.localize(start)
 
 minqueryperiod = 0
@@ -123,36 +143,53 @@ def threadoperation(start, time, numqueries, timeAccessGenerator, minqueryperiod
 	failedquerycount = 0
 	totalquerytime = 0
 	totalquerycount = 0
-	endtime = datetime.now() + timedelta(minutes=runtime)
+	endtime = datetime.now() + dt.timedelta(minutes=runtime)
 	currentSegRank = []
-	oldest_timestamp = start.total_seconds()
+	#oldest_timestamp = start.total_seconds()
+	break_flag =0
 	
 	while True:
-		if datetime.now() >= endtime:
-			break
+	#while break_flag ==0:
+		break_flag =1
+		print "1"
+		#if datetime.now() >= endtime:
+			#break
+
 		time = datetime.now(timezone('UTC'))
 		#newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator);
 		if(len(currentSegRank)==0):
+			print "4"
 			y = time - start
 			z = y.total_seconds()
-			x = datetime.timedelta(seconds = z)
+			x = dt.timedelta(seconds = z)
 			distance = x.total_seconds()
-			for i in range(0, distance):
+			for i in range(0, int(round(distance))):
 				currentSegRank.append(i)
 		else:
-			y = time.total_seconds()
-			z = start.total_seconds()
-			for i in range(z, y):
+			#y = time.total_seconds()
+			#z = start.total_seconds()
+			print "2"
+			new_interval = (time-start).total_seconds()
+			print new_interval
+			for i in range(0, int(round(new_interval))):
 				samples = randZipf(1+len(currentSegRank), 1.2, 1)
-				currentSegRank.insert(samples[0], z)
-				
+				timepoint = start + dt.timedelta(0, i)
+				currentSegRank.insert(samples[0], timepoint)
+				#print currentSegRank
+				print "timepoint"
+				print timepoint
+		
+		print filename
+		
 		if(filename!=""):
+			#break_flag = 1
 			newquerylist = QueryGenerator.generateQueriesFromFile(start, time, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator, filename)
 		#elif(accessdistribution == "dynamiczip"):
 			#newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator, currentSegRank)
 		else:
+			print "3"
 			newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator, currentSegRank)
-		line = applyOperation(newquerylist[0], config,logger)
+		"""line = applyOperation(newquerylist[0], config,logger)
 
 		#print line[0:10]
 		if (line[0][0:10] == "Successful"):
@@ -168,7 +205,8 @@ def threadoperation(start, time, numqueries, timeAccessGenerator, minqueryperiod
 			totalquerycount += 1
 
 	datastructure = [successfulquerytime, successfulquerycount, failedquerytime, failedquerycount, totalquerytime, totalquerycount]
-	values.put(datastructure)
+	values.put(datastructure)"""
+
 
 values = Queue.Queue(maxsize=0)
 for i in xrange(numthreads):
@@ -255,11 +293,3 @@ f.write("Total Queries : " + `totalqueries` + "\n")
 #for i in xrange(numthreads):
 #	threadarray[i].join()
 
-def randZipf(self, n, alpha, numSamples): 
-		tmp = numpy.power( numpy.arange(1, n+1), -alpha )
-		zeta = numpy.r_[0.0, numpy.cumsum(tmp)]
-		distMap = [x / zeta[-1] for x in zeta]
-		u = numpy.random.random(numSamples)
-		v = numpy.searchsorted(distMap, u)
-		samples = [t-1 for t in v]
-		return samples

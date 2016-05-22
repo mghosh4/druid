@@ -1,7 +1,7 @@
 import numpy
 class Uniform(object):
 
-	def generateDistribution(self, minSample, maxSample, numSamples):
+	def generateDistribution(self, minSample, maxSample, numSamples, currentSegRank):
 		# start and end is inclusive
 		return numpy.random.random_integers(minSample, maxSample, numSamples)
 
@@ -33,7 +33,7 @@ class DynamicZipf(object):
 	
 	def generateDistribution(self, minSample, maxSample, numSamples, segRankList):
 		shape = 1.2   # the distribution shape parameter, also known as `a` or `alpha`
-		zipfsample = self.randZipf(maxSample - minSample + 1, shape, numSamples, segRankList)
+		zipfsample = self.randZipf(maxSample - minSample + 1, shape, numSamples)
 		#print "Zipf List"
 		#Utils.printlist(zipfsample)
 		

@@ -64,7 +64,7 @@ class ParseConfig:
 				elif key == "brokerendpoint":
 					self.brokerendpoint = value
 				elif key =="filename":
-					self.filname = value
+					self.filename = value
 				elif key == "numqueries":
 					self.numqueries = int(value)
 				elif key == "opspersecond":

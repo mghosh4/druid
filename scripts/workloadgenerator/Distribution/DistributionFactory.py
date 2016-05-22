@@ -9,7 +9,7 @@ class DistributionFactory(object):
 			return ScrambledZipfian()
 		elif distribution == "latest":
 			return Latest()
-		elif distribution == "dynamiczip":
+		elif distribution == "dynamiczipf":
 			return DynamicZipf()
 	
 	@staticmethod
