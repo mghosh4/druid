@@ -72,7 +72,7 @@ class QueryGenerator(object):
 		x = dt.timedelta(seconds = z)
 		elapsed = x.total_seconds()
 		#json loads file			
-	   	with open('response2.json') as data_file:
+	   	with open(filename) as data_file:
 	   		data = json.load(data_file)
    		numQueries = len(data)
 		#accesslist = accessGenerator.generateDistribution(0, elapsed, numQueries)
@@ -90,6 +90,7 @@ class QueryGenerator(object):
 			startstring = newstart.strftime('%Y-%m-%dT%H:%M:%S')  
 			#get the query length
 			period_interval_str = data[i]["event"]["interval"]
+			print period_interval_str
 			period_count = data[i]["event"]["count"]
 			period_pair = period_interval_str.split("/")
 			print period_pair

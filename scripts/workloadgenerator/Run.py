@@ -98,28 +98,29 @@ runtime = config.getRunTime()
 filename = config.getfilename()
 print filename
 
-
+print "11"
 
 numthreads = int(opspersecond * queryruntime)
-#if(numthreads > numcores - 1):
-	#print >> sys.stderr, "Cannot achieve desired throughput."
-  	#sys.exit(1)
-
+#numthreads = 1
+if(numthreads > numcores - 1):
+	print >> sys.stderr, "Cannot achieve desired throughput."
+  	sys.exit(1)
+print "12"
 timeAccessGenerator = DistributionFactory.createSegmentDistribution(accessdistribution)
-
+print "13"
 periodAccessGenerator = DistributionFactory.createSegmentDistribution(perioddistribution)
-
+print "14"
 newquery = PyDruid(config.getBrokerNodeUrl(), config.getBrokerEndpoint())
-#tb = newquery.time_boundary(datasource=config.getDataSource())
+tb = newquery.time_boundary(datasource=config.getDataSource())
 
 time = datetime.now(timezone('UTC'))
-#startdict = tb[0]
-#start = startdict['result']['minTime']
-#start = datetime.strptime(start, '%Y-%m-%dT%H:%M:%S.%fZ')
-#start = utc.localize(start)
-start = dt.datetime(2016,5 , 22, 9, 24, 0)
+startdict = tb[0]
+start = startdict['result']['minTime']
+start = datetime.strptime(start, '%Y-%m-%dT%H:%M:%S.%fZ')
 start = utc.localize(start)
-
+#start = dt.datetime(2016,5 , 23, 9, 24, 0)
+start = utc.localize(start)
+print "15"
 minqueryperiod = 0
 maxqueryperiod = time-start
 x = maxqueryperiod.total_seconds()
@@ -147,9 +148,9 @@ def threadoperation(start, time, numqueries, timeAccessGenerator, minqueryperiod
 	currentSegRank = []
 	#oldest_timestamp = start.total_seconds()
 	break_flag =0
-	
-	#while True:
-	while break_flag ==10:
+	print "16"
+	while True:
+	#while break_flag <1:
 		break_flag =break_flag+1
 		print "1"
 		#if datetime.now() >= endtime:
@@ -199,9 +200,9 @@ def threadoperation(start, time, numqueries, timeAccessGenerator, minqueryperiod
 		else:
 			print "3"
 			newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator, currentSegRank)
-		"""line = applyOperation(newquerylist[0], config,logger)
+		line = applyOperation(newquerylist[0], config,logger)
 
-		#print line[0:10]
+		print line[0:10]
 		if (line[0][0:10] == "Successful"):
 			print line[1].count
 			successfulquerytime += float(line[0][12:])
@@ -215,7 +216,7 @@ def threadoperation(start, time, numqueries, timeAccessGenerator, minqueryperiod
 			totalquerycount += 1
 
 	datastructure = [successfulquerytime, successfulquerycount, failedquerytime, failedquerycount, totalquerytime, totalquerycount]
-	values.put(datastructure)"""
+	values.put(datastructure)
 
 
 values = Queue.Queue(maxsize=0)
