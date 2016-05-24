@@ -131,14 +131,14 @@ def threadoperation(start, time, numqueries, timeAccessGenerator, minqueryperiod
 		#print line[0:10]
 		if ("Successful" in line[0]):
 			print line[1].count
-			successfulquerytime += float(line[0][12:])
+			successfulquerytime += float(line[0][24:])
 			successfulquerycount += 1
-			totalquerytime += float(line[0][12:])
+			totalquerytime += float(line[0][24:])
 			totalquerycount += 1
 		elif ("Failed" in line[0]):
-			failedquerytime += float(line[0][8:])
+			failedquerytime += float(line[0][20:])
 			failedquerycount += 1
-			totalquerytime += float(line[0][8:])
+			totalquerytime += float(line[0][20:])
 			totalquerycount += 1
 
 	datastructure = [successfulquerytime, successfulquerycount, failedquerytime, failedquerycount, totalquerytime, totalquerycount]
@@ -193,10 +193,17 @@ thread2successfulquerylatency = thread2results[0]/float(thread2results[1])
 successfulquerylatency = float((thread1successfulquerylatency + thread2successfulquerylatency)/2)
 totalsuccessfulqueries = thread1results[1] + thread2results[1]
 
-if(thread1results[3] != 0 and thread2results[3] != 0):
+if(thread1results[3] != 0):
 	thread1failedquerylatency = thread1results[2]/float(thread1results[3])
+else:
+	thread1failedquerylatency = 0
+
+if(thread2results[3] != 0):
 	thread2failedquerylatency = thread2results[2]/float(thread2results[3])
-	failedquerylatency = float((thread1failedquerylatency + thread2failedquerylatency)/2)
+else:
+	thread2failedquerylatency = 0
+
+failedquerylatency = float((thread1failedquerylatency + thread2failedquerylatency)/2)
 totalfailedqueries = thread1results[3] + thread2results[3]
 
 thread1totalquerylatency = thread1results[4]/float(thread1results[5])
@@ -213,8 +220,7 @@ f = open('querymetrics.log', 'a')
 f.write("Total Completion Time : " + `maxcompletiontime` + "\n")
 f.write("Number of Successful Queries : " + `totalsuccessfulqueries` + "\n")
 f.write("Successful Query Latency : " + `successfulquerylatency` + "\n")
-if (thread1results[3] != 0 and thread2results[3] != 0):
-	f.write("Failed Query Latency : " + `failedquerylatency` + "\n")
+f.write("Failed Query Latency : " + `failedquerylatency` + "\n")
 f.write("Number of Failed Queries : " + `totalfailedqueries` + "\n")
 f.write("Total Query Latency : " + `totalquerylatency` + "\n")
 f.write("Total Queries : " + `totalqueries` + "\n")
