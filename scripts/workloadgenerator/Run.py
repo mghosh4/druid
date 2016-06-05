@@ -127,18 +127,16 @@ def threadoperation(start, time, numqueries, timeAccessGenerator, minqueryperiod
 		time = datetime.now(timezone('UTC'))
 		newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator);
 		line = applyOperation(newquerylist[0], config,logger)
-
-		#print line[0:10]
 		if ("Successful" in line[0]):
 			print line[1].count
-			successfulquerytime += float(line[0][24:])
+			successfulquerytime += float(line[0][11:])
 			successfulquerycount += 1
-			totalquerytime += float(line[0][24:])
+			totalquerytime += float(line[0][11:])
 			totalquerycount += 1
-		elif ("Failed" in line[0]):
-			failedquerytime += float(line[0][20:])
+		else:
+			failedquerytime += float(line[7:])
 			failedquerycount += 1
-			totalquerytime += float(line[0][20:])
+			totalquerytime += float(line[7:])
 			totalquerycount += 1
 
 	datastructure = [successfulquerytime, successfulquerycount, failedquerytime, failedquerycount, totalquerytime, totalquerycount]
