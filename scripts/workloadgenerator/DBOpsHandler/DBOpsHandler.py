@@ -66,7 +66,7 @@ class DBOpsHandler:
 		config = self.getConfig()
 		newquery = PyDruid(config.getBrokerNodeUrl(), config.getBrokerEndpoint())
 		t1 = datetime.now().time()
-		ts = newquery.timeseries(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, aggregations={"count": doublesum("count")})#aggregations=ast.literal_eval(config.getAggregations))
+		ts = newquery.timeseries(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, aggregations={"count": aggregators.doublesum("count")})#aggregations=ast.literal_eval(config.getAggregations))
 		t2 = datetime.combine(date.today(),datetime.now().time()) - datetime.combine(datetime.today(),t1)
 		x = newquery.export_pandas()
 		
