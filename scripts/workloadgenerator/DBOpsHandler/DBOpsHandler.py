@@ -79,6 +79,7 @@ class DBOpsHandler:
 		else:
 			message = "Failed:" + `t2.total_seconds()`
 			logger.info("Failed:" + `t2.total_seconds()`)
+			print message
 			return message
 
 
