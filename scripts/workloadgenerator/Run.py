@@ -183,37 +183,37 @@ for t in threading.enumerate():
 #		maxcompletiontime = currentmaxcompletiontime
 #	currentmaxcompletiontime = 0
 
-thread1results = values.get()
-thread2results = values.get()
 
-thread1successfulquerylatency = thread1results[0]/float(thread1results[1])
-thread2successfulquerylatency = thread2results[0]/float(thread2results[1])
-successfulquerylatency = float((thread1successfulquerylatency + thread2successfulquerylatency)/2)
-totalsuccessfulqueries = thread1results[1] + thread2results[1]
 
-if(thread1results[3] != 0):
-	thread1failedquerylatency = thread1results[2]/float(thread1results[3])
-else:
-	thread1failedquerylatency = 0
+threadresults = []
+index = 0
+while(values.empty() == False):
+	threadresults.append(values.get())
 
-if(thread2results[3] != 0):
-	thread2failedquerylatency = thread2results[2]/float(thread2results[3])
-else:
-	thread2failedquerylatency = 0
-
-failedquerylatency = float((thread1failedquerylatency + thread2failedquerylatency)/2)
-totalfailedqueries = thread1results[3] + thread2results[3]
-
-thread1totalquerylatency = thread1results[4]/float(thread1results[5])
-thread2totalquerylatency = thread2results[4]/float(thread2results[5])
-totalquerylatency = float((thread1totalquerylatency + thread2totalquerylatency)/2)
-totalqueries = thread1results[5] + thread2results[5]
-
+threadsuccessfulquerylatency = []
+threadfailedquerylatency = []
+threadtotalquerylatency = []
 maxcompletiontime = 0
-if(thread1results[4] >= thread2results[4]):
-	maxcompletiontime = thread1results[4]
-else:
-	maxcompletiontime = thread2results[4]
+for i in xrange(threadresults):
+	threadsuccessfulquerylatency[i] = threadresults[i][0]/float(threadresults[i][1])
+	if(threadresults[i][3] != 0):
+		threadfailedquerylatency[i] = threadresults[i][2]/float(threadresults[i][3])
+	else:
+		threadfailedquerylatency[i] = 0
+	threadtotalquerylatency[i] = threadresults[i][4]/float(threadresults[i][5])
+	if(threadresults[i][4] >= maxcompletiontime):
+		maxcompletiontime = threadresults[i][4]
+successfulquerylatency = float(sum(threadsuccessfulquerylatency)/len(threadsuccessfulquerylatency))
+totalsuccessfulqueries = 0
+failedquerylatency = float(sum(threadfailedquerylatency)/len(threadfailedquerylatency))
+totalfailedqueries = 0
+totalquerylatency = float(sum(threadtotalquerylatency)/len(threadtotalquerylatency))
+totalqueries = 0
+for i in xrange(threadresults):
+	totalsuccessfulqueries += threadresults[i][1]
+	totalfailedqueries += threadresults[i][3]
+	totalqueries += threadresults[i][5]
+
 f = open('querymetrics.log', 'a')
 f.write("Total Completion Time : " + `maxcompletiontime` + "\n")
 f.write("Number of Successful Queries : " + `totalsuccessfulqueries` + "\n")
