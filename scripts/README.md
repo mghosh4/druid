@@ -13,7 +13,7 @@ The configurations can be set in the file, common.conf.
 ##README FOR INGESTION SCRIPT
 This script will navigate to the kafka directory and feed in data to the kafka producer. The user can specify if they want randomly generated data to be ingested or their own custom data. If they choose their own custom data, then they must include the path to the data file in the configuration file.
 
-run the ingestion script with the command, ./ingestion.py -n <#-of-data segments> <path-to-config-file>. The script will open a new kafka producer and feed in data.
+run the ingestion script with the command, python ingestion.py -n<#-of-data segments> <path-to-config-file>. The script will open a new kafka producer and feed in data.
 
 The ingestion script can be changed so that other data sources can be used, however the user must also provide a corresponding json file for the realtime node. This can be included in the start script.
 
@@ -22,6 +22,6 @@ The workload generator will generate a distribution of access times, as well as 
 
 The user can also decide which type of query to run on the data, such as TopN or Timeseries. This can also be specified in the configuraiton file.
 
-To run the workload generator, issue the command: ./Run.py -n<number-of-data-entries> <path-to-config-file>. 
+To run the workload generator, issue the command: python Run.py -n<number-of-data-entries> <path-to-config-file>. 
 
 The configurations can be set in the file, query.conf.
