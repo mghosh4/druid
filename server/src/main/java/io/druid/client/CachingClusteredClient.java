@@ -43,7 +43,6 @@ import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.EmittingLogger;
-
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.selector.QueryableDruidServer;
@@ -68,7 +67,6 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.partition.PartitionChunk;
-
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -87,6 +85,8 @@ import java.util.concurrent.ExecutorService;
 public class CachingClusteredClient<T> implements QueryRunner<T>
 {
   private static final EmittingLogger log = new EmittingLogger(CachingClusteredClient.class);
+  private static final String REALTIME_NODE_TYPE = "realtime";
+
   private final QueryToolChestWarehouse warehouse;
   private final TimelineServerView serverView;
   private final Cache cache;
@@ -231,9 +231,11 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         );
 
         segments.add(Pair.of(selector, descriptor));
-        
-        SegmentCollector.addSegment(selector.getSegment());
-        log.info("Adding Segment ID [%s]", selector.getSegment().getIdentifier());
+
+        if (!REALTIME_NODE_TYPE.equals(selector.pick().getServer().getType())) {
+          SegmentCollector.addSegment(selector.getSegment());
+          log.info("Adding Segment ID [%s]", selector.getSegment().getIdentifier());
+        }
       }
     }
 
