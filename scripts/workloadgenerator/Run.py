@@ -46,6 +46,17 @@ def getConfig(configFile):
 	configFilePath = configFile
 	return ParseConfig(configFilePath)
 
+
+def randZipf(n, alpha, numSamples): 
+		tmp = numpy.power( numpy.arange(1, n+1), -alpha )
+		zeta = numpy.r_[0.0, numpy.cumsum(tmp)]
+		distMap = [x / zeta[-1] for x in zeta]
+		u = numpy.random.random(numSamples)
+		v = numpy.searchsorted(distMap, u)
+		samples = [t-1 for t in v]
+		print "sample"
+		print samples
+		return sampless
 #def applyWorkload(self, numQueries, newquerylist = []):
 #	for i in xrange(numQueries):
 #		self.applyOperation(newquerylist[i])
@@ -79,6 +90,7 @@ opspersecond = config.getOpsPerSecond()
 queryruntime = config.getQueryRuntime()
 numcores = config.getNumCores()
 runtime = config.getRunTime()
+filename = config.getfilename()
 
 numthreads = int(opspersecond * queryruntime)
 if(numthreads > numcores - 1):
@@ -126,7 +138,12 @@ def threadoperation(start, time, numqueries, timeAccessGenerator, minqueryperiod
 			break
 		time = datetime.now(timezone('UTC'))
 		newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator);
+        if(filename!=""):
+            newquerylist = QueryGenerator.generateQueriesFromFile(start, time, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator, filename)
+        else:
+        	newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator, currentSegRank)        
 		line = applyOperation(newquerylist[0], config,logger)
+        
 		if ("Successful" in line[0]):
 			print line[1].count
 			successfulquerytime += float(line[0][11:])
