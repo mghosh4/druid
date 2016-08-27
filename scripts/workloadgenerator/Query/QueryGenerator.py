@@ -34,23 +34,23 @@ class QueryGenerator(object):
 				if(periodlist[i] < 2592000):
 					if(periodlist[i] < 604800):
 						if(periodlist[i] < 86400):
-							duration = periodlist[i]%3600
+							duration = periodlist[i]/3600
 							q.setInterval(startstring + "/pt" + str(duration) + "h")
 							
 						else:
-							duration = periodlist[i]%86400
+							duration = periodlist[i]/86400
 							q.setInterval(startstring + "/p" + str(duration) + "d")
 
 					else:
-						duration = periodlist[i]%604800
+						duration = periodlist[i]/604800
 						q.setInterval(startstring + "/p" + str(duration) + "w")
 
 				else:
-					duration = periodlist[i]%2592000
+					duration = periodlist[i]/2592000
 					q.setInterval(startstring + "/p" + str(duration) + "m")
 
 			else:
-				duration = periodlist[i]%31536000
+				duration = periodlist[i]/31536000
 				q.setInterval(startstring + "/p" + str(duration) + "y")
 			
 			querylist.append(q)
