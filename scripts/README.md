@@ -22,6 +22,9 @@ The workload generator will generate a distribution of access times, as well as 
 
 The user can also decide which type of query to run on the data, such as TopN or Timeseries. This can also be specified in the configuraiton file.
 
-To run the workload generator, issue the command: python Run.py -n<number-of-data-entries> <path-to-config-file>. 
+To run the workload generator, issue the command: python Run.py <path-to-config-file>. 
 
 The configurations can be set in the file, query.conf.
+
+##NOTE FOR RUNNING TIERED EXPERIMENTS
+When running experiments in tiered mode, the user must first specify which tags belong to which historical nodes (e.g. node-1 is "hot", node-2 is "warm", etc.). This can be done in the runtime.properties file of each historical node. In order to set the tag, add the line "druid.server.tier=<label>".
