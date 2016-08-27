@@ -137,13 +137,13 @@ def threadoperation(start, time, numqueries, timeAccessGenerator, minqueryperiod
 		if datetime.now() >= endtime:
 			break
 		time = datetime.now(timezone('UTC'))
-		newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator);
+		#newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator);
         if(filename!=""):
-            newquerylist = QueryGenerator.generateQueriesFromFile(start, time, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator, filename)
+            newquerylist = QueryGenerator.generateQueriesFromFile(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator, filename)
         else:
         	newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator, currentSegRank)        
-		line = applyOperation(newquerylist[0], config,logger)
-        
+		print newquerylist
+		line = applyOperation(newquerylist[0], config,logger)     
 		if ("Successful" in line[0]):
 			print line[1].count
 			successfulquerytime += float(line[0][11:])
