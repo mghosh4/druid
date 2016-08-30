@@ -1,54 +1,29 @@
-#from Utils import Utils
+from Utils import Utils
 from Query import Query
 import time
-import datetime
+from datetime import datetime, timedelta
 
 class QueryGenerator(object):
 	queryRunningCount = 0
 
 	@staticmethod
-	def generateQueries(start, time, numQueries, accessGenerator, minPeriod, maxPeriod, periodGenerator):
+	def generateQueries(startTime, endTime, numQueries, accessGenerator, periodGenerator):
 		querylist = list()
-		y = time - start
-		z = y.total_seconds()
-		x = datetime.timedelta(seconds = z)
-		elapsed = x.total_seconds()
+		elapsed = (endTime - startTime).total_seconds()
 		accesslist = accessGenerator.generateDistribution(0, elapsed, numQueries)
 
-		periodlist = periodGenerator.generateDistribution(minPeriod, maxPeriod, numQueries)
+		periodlist = periodGenerator.generateDistribution(1, elapsed, numQueries)
 
 		for i in xrange(numQueries):
 			q = Query(QueryGenerator.queryRunningCount, elapsed)
 			QueryGenerator.queryRunningCount += 1
-			starttime = accesslist[i]
+			sttime = accesslist[i]
 			#if (starttime + periodlist[i] - 1 > elapsed):
 			#	starttime = starttime - (periodlist[i] - (elapsed - starttime + 1)
-			newstart = start + datetime.timedelta(0, starttime)
+			newstart = startTime + timedelta(0, sttime)
 			startstring = newstart.strftime('%Y-%m-%dT%H:%M:%S')
-
-			if(periodlist[i] < 31536000):
-				if(periodlist[i] < 2592000):
-					if(periodlist[i] < 604800):
-						if(periodlist[i] < 86400):
-							duration = periodlist[i]%3600
-							q.setInterval(startstring + "/pt" + str(duration) + "h")
-							
-						else:
-							duration = periodlist[i]%86400
-							q.setInterval(startstring + "/p" + str(duration) + "d")
-
-					else:
-						duration = periodlist[i]%604800
-						q.setInterval(startstring + "/p" + str(duration) + "w")
-
-				else:
-					duration = periodlist[i]%2592000
-					q.setInterval(startstring + "/p" + str(duration) + "m")
-
-			else:
-				duration = periodlist[i]%31536000
-				q.setInterval(startstring + "/p" + str(duration) + "y")
-			
+			#print(periodlist[i], Utils.iso8601(timedelta(seconds=periodlist[i])))
+			q.setInterval(startstring + "/" + Utils.iso8601(timedelta(seconds=periodlist[i])))
 			querylist.append(q)
 
 		return querylist

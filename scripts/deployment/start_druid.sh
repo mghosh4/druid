@@ -246,7 +246,6 @@ do
         #LOAD MYSQL-METADATA-STORAGE EXTENSION
         if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
         then
-                echo "HELLOOOOOOOO"
             if [ -f $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz ]
             then
                 echo "untar mysql file"

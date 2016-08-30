@@ -1,235 +1,188 @@
 #!/usr/bin/python
 import os, sys
+from pydruid.client import *
 from datetime import datetime, timedelta
 from pytz import *
 import logging
 import random
 import Queue
 import threading
-from pydruid.client import *
-#from Query import Query
+import math
+import time as tm
+
+from timeit import default_timer as timer
 from datetime import datetime, date
+from tornado import gen
+from tornado.httpclient import AsyncHTTPClient
+from tornado.ioloop import IOLoop
+from logging.config import dictConfig
+
 sys.path.append(os.path.abspath('Distribution'))
 sys.path.append(os.path.abspath('Query'))
 sys.path.append(os.path.abspath('Config'))
 sys.path.append(os.path.abspath('DBOpsHandler'))
-
+sys.path.append(os.path.abspath('External'))
+sys.path.append(os.path.abspath('Utils'))
 from ParseConfig import ParseConfig
-from DBOpsHandler import DBOpsHandler
+from AsyncDBOpsHandler import AsyncDBOpsHandler
 from QueryGenerator import QueryGenerator
 from DistributionFactory import DistributionFactory
 
-#class FuncThread(threading.Thread):
-#	def __init__(self, target, *args):
-#		self._target = target
-#		self._args = args
-#		threading.Thread.__init__(self)
-#	def run(self):
-#		self._target(*self._args)
-
 def getConfigFile(args):
-	return args[1]
+    return args[1]
 
 def checkAndReturnArgs(args):
-	requiredNumOfArgs = 2
-	if len(args) < requiredNumOfArgs:
-		print "Usage: python " + args[0] + " <config_file>"
-		exit()
+    requiredNumOfArgs = 2
+    if len(args) < requiredNumOfArgs:
+        print "Usage: python " + args[0] + " <config_file>"
+        exit()
 
-	configFile = getConfigFile(args)
-	return configFile
+    configFile = getConfigFile(args)
+    return configFile
 
 def getConfigFilePath(configFile):
-	return os.path.abspath("../Configs/" + configFile) 
+    return os.path.abspath("../Configs/" + configFile) 
 
 def getConfig(configFile):
-	configFilePath = configFile
-	return ParseConfig(configFilePath)
-
-#def applyWorkload(self, numQueries, newquerylist = []):
-#	for i in xrange(numQueries):
-#		self.applyOperation(newquerylist[i])
+    configFilePath = configFile
+    return ParseConfig(configFilePath)
 
 def applyOperation(query, config, logger):
-		dbOpsHandler = DBOpsHandler(config)
-		if querytype == "timeseries":
+    dbOpsHandler = AsyncDBOpsHandler(config)
+    if querytype == "timeseries":
+        return dbOpsHandler.timeseries(query, logger)
+    elif querytype == "topn":
+        return dbOpsHandler.topn(query, logger)
+    elif querytype == "groupby":
+        return dbOpsHandler.groupby(query, logger)
+    elif querytype == "segmentmetadata":
+        return dbOpsHandler.segmentmetadata(query, logger)
+    elif querytype == "timeboundary":
+        return dbOpsHandler.timeboundary(query, logger)
 
-			return dbOpsHandler.timeseries(query, logger)
-		elif querytype == "topn":
-			return dbOpsHandler.topn(query, logger)
-		elif querytype == "groupby":
-			return dbOpsHandler.groupby(query, logger)
-		elif querytype == "segmentmetadata":
-			return dbOpsHandler.segmentmetadata(query, logger)
-		elif querytype == "timeboundary":
-			return dbOpsHandler.timeboundary(query, logger)
+def threadoperation(dataStartTime, dataEndTime, runTime, isbatch, queryPerSec, timeAccessGenerator, periodAccessGenerator, config, logger):
+    @gen.coroutine
+    def printresults():
+        logger.info('{} {} {} {}'.format(dataStartTime.strftime("%Y-%m-%d %H:%M:%S"), dataEndTime.strftime("%Y-%m-%d %H:%M:%S"), runTime, queryPerSec))
+        line = list()
+        querypermin = queryPerSec * 60
+        endtime = datetime.now(timezone('UTC')) + timedelta(minutes=runtime)
+        while True:
+            time = datetime.now(timezone('UTC'))
+            logger.info("Time: {}".format(time.strftime("%Y-%m-%d %H:%M:%S")))
+            if time >= endtime:
+                break
 
-def applyOperations(querylist, config, logger):
-	for i in xrange(len(querylist)):
-		applyOperation(querylist[i], config, logger)
+            #Query generated every minute. This is to optimize the overhead of query generation and also because segment granularity is minute
+            newquerylist = list()
+            if isbatch == True:
+                newquerylist = QueryGenerator.generateQueries(dataStartTime, dataEndTime, querypermin, timeAccessGenerator, periodAccessGenerator)
+            else:
+                newquerylist = QueryGenerator.generateQueries(dataStartTime, time, querypermin, timeAccessGenerator, periodAccessGenerator)
 
+            for query in newquerylist:
+                try:
+                    line.append(applyOperation(query, config, logger))
+                except Exception as inst:
+                    logger.info(type(inst))     # the exception instance
+                    logger.info(inst.args)      # arguments stored in .args
+                    logger.info(inst)           # __str__ allows args to be printed directly
+                    x, y = inst.args
+                    logger.info('x =', x)
+                    logger.info('y =', y)
+        
+
+            nextminute = time + timedelta(minutes=1)
+            timediff = (nextminute - datetime.now(timezone('UTC'))).total_seconds()
+            if timediff > 0:
+                tm.sleep(timediff)
+
+        wait_iterator = gen.WaitIterator(*line)
+        while not wait_iterator.done():
+            try:
+                result = yield wait_iterator.next()
+            except Exception as e:
+                logger.info("Error {} from {}".format(e, wait_iterator.current_future))
+            else:
+                logger.info("Result {} received from {} at {}".format(
+                    result, wait_iterator.current_future,
+                    wait_iterator.current_index))
+    
+    IOLoop().run_sync(printresults)
+    
+## Main Code
 configFile = checkAndReturnArgs(sys.argv)
 config = getConfig(configFile)
 
 accessdistribution = config.getAccessDistribution()
 perioddistribution = config.getPeriodDistribution()
 querytype = config.getQueryType()
-numqueries = config.getNumQueries()
 opspersecond = config.getOpsPerSecond()
-queryruntime = config.getQueryRuntime()
-numcores = config.getNumCores()
-runtime = config.getRunTime()
+runtime = config.getRunTime() # in minutes
+isbatch = config.getBatchExperiment()
 
-numthreads = int(opspersecond * queryruntime)
-if(numthreads > numcores - 1):
-	print >> sys.stderr, "Cannot achieve desired throughput."
-  	sys.exit(1)
+SINGLE_THREAD_THROUGHPUT = 4000
+values = Queue.Queue(maxsize=0)
 
+numthreads = int(math.ceil(float(opspersecond) / SINGLE_THREAD_THROUGHPUT))
+lastthreadthroughput = opspersecond % SINGLE_THREAD_THROUGHPUT
 timeAccessGenerator = DistributionFactory.createSegmentDistribution(accessdistribution)
-
 periodAccessGenerator = DistributionFactory.createSegmentDistribution(perioddistribution)
 
 newquery = PyDruid(config.getBrokerNodeUrl(), config.getBrokerEndpoint())
 tb = newquery.time_boundary(datasource=config.getDataSource())
 
-time = datetime.now(timezone('UTC'))
 startdict = tb[0]
 start = startdict['result']['minTime']
 start = datetime.strptime(start, '%Y-%m-%dT%H:%M:%S.%fZ')
 start = utc.localize(start)
+end = startdict['result']['maxTime']
+end = datetime.strptime(end, '%Y-%m-%dT%H:%M:%S.%fZ')
+end = utc.localize(end)
 
 minqueryperiod = 0
-maxqueryperiod = time-start
-x = maxqueryperiod.total_seconds()
-maxqueryperiod = int(x)
-#while time.time() < t_end:
-	#newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator);
+maxqueryperiod = int((end - start).total_seconds())
 
+logging_config = dict(
+    version = 1,
+    formatters = {
+        'f': {'format':
+              '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'}
+        },
+    handlers = {
+        'h': {'class': 'logging.StreamHandler',
+              'formatter': 'f',
+              'level': logging.DEBUG}
+        },
+    loggers = {
+        'tornado.general': {'handlers': ['h'],
+                 'level': logging.DEBUG}
+        }
+)
 
-#querylistsegment = len(newquerylist)/numthreads
-#querylistsegmentremainder = len(newquerylist)%numthreads
+dictConfig(logging_config)
 
-#threadarray = []
+AsyncHTTPClient.configure(None, max_clients=100)
 
-
-def threadoperation(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator, config, logger, x, values):
-	
-	successfulquerytime = 0
-	successfulquerycount = 0
-	failedquerytime = 0
-	failedquerycount = 0
-	totalquerytime = 0
-	totalquerycount = 0
-	endtime = datetime.now() + timedelta(minutes=runtime)
-	while True:
-		if datetime.now() >= endtime:
-			break
-		time = datetime.now(timezone('UTC'))
-		newquerylist = QueryGenerator.generateQueries(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator);
-		line = applyOperation(newquerylist[0], config,logger)
-		if ("Successful" in line[0]):
-			print line[1].count
-			successfulquerytime += float(line[0][11:])
-			successfulquerycount += 1
-			totalquerytime += float(line[0][11:])
-			totalquerycount += 1
-		else:
-			failedquerytime += float(line[7:])
-			failedquerycount += 1
-			totalquerytime += float(line[7:])
-			totalquerycount += 1
-
-	datastructure = [successfulquerytime, successfulquerycount, failedquerytime, failedquerycount, totalquerytime, totalquerycount]
-	values.put(datastructure)
-
-values = Queue.Queue(maxsize=0)
 for i in xrange(numthreads):
-	logger = logging.getLogger('thread-%s' % i)
-	logger.setLevel(logging.DEBUG)
+    logger = logging.getLogger('thread-%s' % i)
+    logger.setLevel(logging.DEBUG)
 
-	file_handler = logging.FileHandler('thread-%s.log' % i)
+    file_handler = logging.FileHandler('thread-%s.log' % i)
 
-	formatter = logging.Formatter('(%(threadName)-10s) %(message)s')
-	file_handler.setFormatter(formatter)
+    formatter = logging.Formatter('(%(threadName)-10s) %(message)s')
+    file_handler.setFormatter(formatter)
 
-	logger.addHandler(file_handler)
-	delay = random.random()
-	t = threading.Thread(target=threadoperation, args=(start, time, numqueries, timeAccessGenerator, minqueryperiod, maxqueryperiod, periodAccessGenerator, config, logger, i, values))
-	t.start()
+    logger.addHandler(file_handler)
+    delay = random.random()
+    time = datetime.now(timezone('UTC'))
+    numqueries = SINGLE_THREAD_THROUGHPUT
+    if i == numthreads - 1:
+        numqueries = lastthreadthroughput
+    t = threading.Thread(target=threadoperation, args=(start, end, runtime, isbatch, numqueries, timeAccessGenerator, periodAccessGenerator, config, logger))
+    t.start()
 
 main_thread = threading.currentThread()
 for t in threading.enumerate():
-	if t is not main_thread:
-		t.join()
-
-#for i in xrange(numthreads):
-#	f = open('thread-%s.log' % i, 'r')
-#	for line in f:
-#		print line[13:23]
-#		if (line[13:23] == "Successful"):
-#			successfulquerytime += float(line[25:])
-#			successfulquerycount += 1
-#			totalquerytime += float(line[25:])
-#			totalquerycount += 1
-#			currentmaxcompletiontime += float(line[25:])
-#		else:
-#			print line[20:]
-#			failedquerytime += float(line[20:])
-#			failedquerycount += 1
-#			totalquerytime += float(line[20:])
-#			totalquerycount += 1
-#			currentmaxcompletiontime += float(line[20:])
-#	if(currentmaxcompletiontime > maxcompletiontime):
-#		maxcompletiontime = currentmaxcompletiontime
-#	currentmaxcompletiontime = 0
-
-
-
-threadresults = []
-index = 0
-while(values.empty() == False):
-	threadresults.append(values.get())
-
-threadsuccessfulquerylatency = []
-threadfailedquerylatency = []
-threadtotalquerylatency = []
-maxcompletiontime = 0
-for i in xrange(threadresults):
-	threadsuccessfulquerylatency[i] = threadresults[i][0]/float(threadresults[i][1])
-	if(threadresults[i][3] != 0):
-		threadfailedquerylatency[i] = threadresults[i][2]/float(threadresults[i][3])
-	else:
-		threadfailedquerylatency[i] = 0
-	threadtotalquerylatency[i] = threadresults[i][4]/float(threadresults[i][5])
-	if(threadresults[i][4] >= maxcompletiontime):
-		maxcompletiontime = threadresults[i][4]
-successfulquerylatency = float(sum(threadsuccessfulquerylatency)/len(threadsuccessfulquerylatency))
-totalsuccessfulqueries = 0
-failedquerylatency = float(sum(threadfailedquerylatency)/len(threadfailedquerylatency))
-totalfailedqueries = 0
-totalquerylatency = float(sum(threadtotalquerylatency)/len(threadtotalquerylatency))
-totalqueries = 0
-for i in xrange(threadresults):
-	totalsuccessfulqueries += threadresults[i][1]
-	totalfailedqueries += threadresults[i][3]
-	totalqueries += threadresults[i][5]
-
-f = open('querymetrics.log', 'a')
-f.write("Total Completion Time : " + `maxcompletiontime` + "\n")
-f.write("Number of Successful Queries : " + `totalsuccessfulqueries` + "\n")
-f.write("Successful Query Latency : " + `successfulquerylatency` + "\n")
-f.write("Failed Query Latency : " + `failedquerylatency` + "\n")
-f.write("Number of Failed Queries : " + `totalfailedqueries` + "\n")
-f.write("Total Query Latency : " + `totalquerylatency` + "\n")
-f.write("Total Queries : " + `totalqueries` + "\n")
-
-#for i in xrange(numthreads):
-#	try:
-		#thread.start_new_thread(applyOperations, (newquerylist[i:i+querylistsegment], config))
-#		threadarray.append(FuncThread(applyOperations, newquerylist[i:i+querylistsegment], config))
-#		threadarray[i].start()
-#	except:
-#		print "Error: unable to start thread"
-
-#for i in xrange(numthreads):
-#	threadarray[i].join()
+    if t is not main_thread:
+        t.join()

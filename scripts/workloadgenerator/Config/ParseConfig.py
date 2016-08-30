@@ -15,11 +15,9 @@ class ParseConfig:
 		self.querytype = ""
 		self.brokernodeurl = ""
 		self.brokerendpoint = ""
-		self.numqueries = 0
 		self.opspersecond = 0
-		self.queryruntime = 0
-		self.numcores = 0
 		self.runtime = 0
+		self.isbatch = 0
 
 		if configFilePath is not  None:
 			self.parseConfigFile(configFilePath)
@@ -62,16 +60,12 @@ class ParseConfig:
 					self.brokernodeurl = value
 				elif key == "brokerendpoint":
 					self.brokerendpoint = value
-				elif key == "numqueries":
-					self.numqueries = int(value)
 				elif key == "opspersecond":
 					self.opspersecond = int(value)
-				elif key == "queryruntime":
-					self.queryruntime = float(value)
-				elif key == "numcores":
-					self.numcores = int(value)
 				elif key == "runtime":
 					self.runtime = int(value)
+				elif key == "isbatch":
+					self.isbatch = int(value)
 
 	def getDataSource(self):
 		return self.datasource
@@ -115,20 +109,14 @@ class ParseConfig:
 	def getBrokerEndpoint(self):
 		return self.brokerendpoint
 
-	def getNumQueries(self):
-		return self.numqueries
-
 	def getOpsPerSecond(self):
 		return self.opspersecond
 
-	def getQueryRuntime(self):
-		return self.queryruntime
-
-	def getNumCores(self):
-		return self.numcores
-
 	def getRunTime(self):
 		return self.runtime
+
+	def getBatchExperiment(self):
+		return self.isbatch > 0
 
 	def printConfig(self):
 		print "Config details"
@@ -146,8 +134,6 @@ class ParseConfig:
 		print "Query Type : " + self.getQueryType()
 		print "Broker Node Url : " + self.getBrokerNodeUrl()
 		print "Broker Endpoint : " + self.getBrokerEndpoint()
-		print "Num Queries : " + self.getNumQueries()
 		print "Operations per second : " + self.getOpsPerSecond()
-		print "Query Runtime : " + self.getQueryType()
-		print "Number of Cores : " + self.getNumCores()
 		print "Runtime : " + self.getRunTime()
+		print "IsBatchExperiment : " + self.getBatchExperiment()
