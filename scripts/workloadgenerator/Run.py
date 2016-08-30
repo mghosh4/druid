@@ -60,7 +60,7 @@ def applyOperation(query, config, logger):
     elif querytype == "timeboundary":
         return dbOpsHandler.timeboundary(query, logger)
 
-def threadoperation(dataStartTime, dataEndTime, runTime, isbatch, queryPerSec, timeAccessGenerator, periodAccessGenerator, config, logger):
+def threadoperation(dataStartTime, dataEndTime, runTime, isbatch, queryPerSec, timeAccessGenerator, periodAccessGenerator, filename, config, logger):
     @gen.coroutine
     def printresults():
         logger.info('{} {} {} {}'.format(dataStartTime.strftime("%Y-%m-%d %H:%M:%S"), dataEndTime.strftime("%Y-%m-%d %H:%M:%S"), runTime, queryPerSec))
@@ -75,7 +75,9 @@ def threadoperation(dataStartTime, dataEndTime, runTime, isbatch, queryPerSec, t
 
             #Query generated every minute. This is to optimize the overhead of query generation and also because segment granularity is minute
             newquerylist = list()
-            if isbatch == True:
+            if filename != "":
+                newquerylist = QueryGenerator.generateQueriesFromFile(dataStartTime, dataEndTime, querypermin, timeAccessGenerator, periodAccessGenerator, filename)
+            elif isbatch == True:
                 newquerylist = QueryGenerator.generateQueries(dataStartTime, dataEndTime, querypermin, timeAccessGenerator, periodAccessGenerator)
             else:
                 newquerylist = QueryGenerator.generateQueries(dataStartTime, time, querypermin, timeAccessGenerator, periodAccessGenerator)
@@ -120,6 +122,7 @@ querytype = config.getQueryType()
 opspersecond = config.getOpsPerSecond()
 runtime = config.getRunTime() # in minutes
 isbatch = config.getBatchExperiment()
+filename = config.getFileName()
 
 SINGLE_THREAD_THROUGHPUT = 4000
 values = Queue.Queue(maxsize=0)
@@ -179,7 +182,7 @@ for i in xrange(numthreads):
     numqueries = SINGLE_THREAD_THROUGHPUT
     if i == numthreads - 1:
         numqueries = lastthreadthroughput
-    t = threading.Thread(target=threadoperation, args=(start, end, runtime, isbatch, numqueries, timeAccessGenerator, periodAccessGenerator, config, logger))
+    t = threading.Thread(target=threadoperation, args=(start, end, runtime, isbatch, numqueries, timeAccessGenerator, periodAccessGenerator, filename, config, logger))
     t.start()
 
 main_thread = threading.currentThread()

@@ -29,6 +29,26 @@ class Zipfian(object):
 	    	samples = [t-1 for t in v]
 	    	return samples
 
+class DynamicZipf(object):
+	
+	def generateDistribution(self, minSample, maxSample, numSamples, segRankList):
+		shape = 1.2   # the distribution shape parameter, also known as `a` or `alpha`
+		zipfsample = self.randZipf(maxSample - minSample + 1, shape, numSamples)
+		#print "Zipf List"
+		#Utils.printlist(zipfsample)
+		
+		return [ x + minSample for x in zipfsample ]
+	
+	def randZipf(self, n, alpha, numSamples): 
+		tmp = numpy.power( numpy.arange(1, n+1), -alpha )
+		zeta = numpy.r_[0.0, numpy.cumsum(tmp)]
+		distMap = [x / zeta[-1] for x in zeta]
+		u = numpy.random.random(numSamples)
+		v = numpy.searchsorted(distMap, u)
+		samples = [t-1 for t in v]
+		return samples
+
+
 class Latest(Zipfian):
 
 	def generateDistribution(self, minSample, maxSample, numSamples):

@@ -18,6 +18,7 @@ class ParseConfig:
 		self.opspersecond = 0
 		self.runtime = 0
 		self.isbatch = 0
+		self.filename = ""
 
 		if configFilePath is not  None:
 			self.parseConfigFile(configFilePath)
@@ -66,6 +67,8 @@ class ParseConfig:
 					self.runtime = int(value)
 				elif key == "isbatch":
 					self.isbatch = int(value)
+				elif key == "filename":
+					self.filename = value
 
 	def getDataSource(self):
 		return self.datasource
@@ -118,6 +121,9 @@ class ParseConfig:
 	def getBatchExperiment(self):
 		return self.isbatch > 0
 
+	def getFileName(self):
+		return self.filename
+
 	def printConfig(self):
 		print "Config details"
 		print "Data Source : " + self.getDataSource()
@@ -136,4 +142,5 @@ class ParseConfig:
 		print "Broker Endpoint : " + self.getBrokerEndpoint()
 		print "Operations per second : " + self.getOpsPerSecond()
 		print "Runtime : " + self.getRunTime()
-		print "IsBatchExperiment : " + self.getBatchExperiment()
+		print "Is Batch Experiment : " + self.getBatchExperiment()
+		print "File Name : " + self.getFileName()
