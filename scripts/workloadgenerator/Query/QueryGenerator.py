@@ -65,7 +65,7 @@ class QueryGenerator(object):
 	    			
     		dateaccessed.sort()
     		originallength = (dateaccessed[len(dateaccessed)-1]-dateaccessed[0]).total_seconds()
-    		truelength = (time-start).total_seconds()
+    		truelength = (endTime-startTime).total_seconds()
     		#accesslist = accessGenerator.generateDistribution(0, elapsed, numQueries)
     		fullcount=len(fullist)
     		print "fullcount: ", fullcount
