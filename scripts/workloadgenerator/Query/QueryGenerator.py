@@ -83,7 +83,7 @@ class QueryGenerator(object):
     			q = Query(QueryGenerator.queryRunningCount, elapsed)
     			originalstart = originallist[i][0]
     			position = (float)((originalstart-dateaccessed[0]).total_seconds())/originallength
-    			truestart = start+relativedelta(seconds=int(round(position*truelength)))
+    			truestart = startTime+relativedelta(seconds=int(round(position*truelength)))
     			
     			#QueryGenerator.queryRunningCount += 1
     			#starttime = accesslist[i]
