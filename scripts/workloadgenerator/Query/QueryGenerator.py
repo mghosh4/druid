@@ -108,7 +108,7 @@ class QueryGenerator(object):
     			period_interval_inSec = int(round(period_interval_inSec/(originallength/truelength)))
     			print "final period in seconds", period_interval_inSec
 			
-    			if(period_interval_inSec < 31536000):
+    			'''if(period_interval_inSec < 31536000):
     				if(period_interval_inSec < 2592000):
     					if(period_interval_inSec < 604800):
     						if(period_interval_inSec < 86400):
@@ -136,11 +136,11 @@ class QueryGenerator(object):
     			else:
     				duration = period_interval_inSec/31536000
     				q.setInterval(startstring + "/p" + str(duration) + "y")
-				
+			'''	
     			#for count1 in range(0, period_count):
     			#	querylist.append(q)
     				#print "interval: " + q.interval			
-			
+			q.setInterval(startstring + "/" + Utils.iso8601(dt.timedelta(seconds=period_interval_inSec)))
     			querylist.append(q)
     			print "interval: " + q.interval
     			print "index: " , q.index
