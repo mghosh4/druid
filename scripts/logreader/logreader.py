@@ -31,6 +31,8 @@ config = getConfig(configFile)
 
 parameterforbroker = config.getParameterForBroker()
 parameterforhistorical = config.getParameterForHistorical()
+parameterforcoordinator = config.getParameterForCoordinator()
+pathforcoordinator = config.getPathForCoordinator()
 pathforhistorical = config.getPathForHistorical()
 pathforbroker = config.getPathForBroker()
 timerangeforhistorical = config.getTimeRangeForHistorical()
@@ -76,31 +78,20 @@ def RunLogReaderWithTimeRange(parameter, logfile, filename, timerange1, timerang
 		f.close()
 
 def getMemoryUsed(parameter,logfile):
-	RunLogReader(parameter, logfile, "datametrics.log")
+	RunLogReader(parameter, logfile, "historicalmetrics.log")
 
+def getSegmentCount(parameter, logfile):
+	RunLogReader(parameter, logfile, "coordinatormetrics.log")
 
 def getAverageLatency(parameter, logfile):
-		theFile = open(logfile,'r')
-		FILE = theFile.readlines()
-		theFile.close()
+	RunLogReader(parameter, logfile, "averagelatency.log")
+def plotMemoryUsed():
+	plt.plotfile('historicalmetrics.log', delimiter='~', cols=(0, 1), 
+			 names=('times', 'values'))
+	plt.show()
 
-		f = open("averagelatency.log", 'a')
-		count = 0
-		totaltime = 0
-		for line in FILE:
-			if (parameter in line):
-					eventindex = line.find("Event")
-					event = line[eventindex+6:]
-					y = json.loads(event)
-					count += 1
-					totaltime += y[0]['value']
-		f.write(totaltime)
-		f.write(count)
-		f.write(totaltime/count)
-		f.close()
-
-def plotMemoryUsed(file):
-	plt.plotfile('datametrics.log', delimiter='~', cols=(0, 1), 
+def plotSegmentCount():
+	plt.plotfile('coordinatormetrics.log', delimiter='~', cols=(0, 1), 
 			 names=('times', 'values'))
 	plt.show()
 
@@ -120,9 +111,11 @@ def getAreaUnderCurve(logfile):
 	f.close()
 
 getMemoryUsed(parameterforhistorical, pathforhistorical)
-plotMemoryUsed("datametrics.log")
+getSegmentCount(parameterforcoordinator, pathforcoordinator)
+plotMemoryUsed()
+plotSegmentCount()
 getAverageLatency(parameterforbroker, pathforbroker)
-getAreaUnderCurve("datametrics.log")
+getAreaUnderCurve("historicalmetrics.log")
 
 
 

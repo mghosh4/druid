@@ -3,6 +3,8 @@ class ParseConfig:
 	def __init__(self, configFilePath):
 		self.parameterforbroker = ""
 		self.parameterforhistorical = ""
+		self.parameterforcoordinator = ""
+		self.pathforcoordinator = ""
 		self.pathforhistorical = ""
 		self.pathforbroker = ""
 		self.timerangeforhistorical = ""
@@ -26,6 +28,10 @@ class ParseConfig:
 					self.parameterforbroker = value
 				elif key == "parameterforhistorical":
 					self.parameterforhistorical = value
+				elif key == "parameterforcoordinator":
+					self.parameterforcoordinator = value
+				elif key == "pathforcoordinator":
+					self.pathforcoordinator = value
 				elif key == "pathforhistorical":
 					self.pathforhistorical = value
 				elif key == "pathforbroker":
@@ -43,6 +49,12 @@ class ParseConfig:
 
 	def getPathForHistorical(self):
 		return self.pathforhistorical
+
+	def getParameterForCoordinator(self):
+		return self.parameterforcoordinator
+
+	def getPathForCoordinator(self):
+		return self.pathforcoordinator
 
 	def getPathForBroker(self):
 		return self.pathforbroker
