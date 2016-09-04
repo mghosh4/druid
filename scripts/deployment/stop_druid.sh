@@ -322,6 +322,9 @@ do
         if [ $TYPE_OF_STOP -eq 1 ]
         then
         	COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/historical-$counter.log;"
+		COMMAND=$COMMAND" sudo rm -rf $LOG_FILE/kafkalogs;"
+           	COMMAND=$COMMAND" sudo rm -rf $PATH_TO_DRUID_BIN/var;"
+            	COMMAND=$COMMAND" sudo rm -rf /tmp/;" 
         fi
 	    #COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
         COMMAND=$COMMAND" sudo pkill -9 \"java\";"
