@@ -152,6 +152,7 @@ do
     COMMAND=$COMMAND" sudo ./bin/kafka-topics.sh --zookeeper $KAFKA_NODE_HOST:$KAFKA_ZOOKEEPER_PORT --delete --topic $KAFKA_TOPIC;"
     COMMAND=$COMMAND" sudo ./bin/kafka-server-stop.sh;"
     COMMAND=$COMMAND" sudo ./bin/zookeeper-server-stop.sh;"
+    COMMAND=$COMMAND" sudo rm -rf /tmp/;" 
     #COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
     #COMMAND=$COMMAND" sudo screen -wipe;"
     if [ $TYPE_OF_STOP -eq 1 ]
@@ -324,7 +325,6 @@ do
         	COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/historical-$counter.log;"
 		COMMAND=$COMMAND" sudo rm -rf $LOG_FILE/kafkalogs;"
            	COMMAND=$COMMAND" sudo rm -rf $PATH_TO_DRUID_BIN/var;"
-            	COMMAND=$COMMAND" sudo rm -rf /tmp/;" 
         fi
 	    #COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
         COMMAND=$COMMAND" sudo pkill -9 \"java\";"
