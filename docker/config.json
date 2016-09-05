@@ -1,0 +1,70 @@
+{
+  "experiment": "druidxiaoyao",
+  "is_server_ip": false,
+  "is_server_aws": false,
+  "is_server_fqdn": false,
+  "env": "emulab.net",
+  "project": "dcsq",
+  "username": "xiaoyao",
+  "kafka_topic": "metrics",
+  "druid_ver": "0.9.0-SNAPSHOT",
+
+  "druid_dir": "/proj/DCSQ/xiaoyao/druid",
+  "dependencies_dir": "/proj/DCSQ/dependencies",
+  "zk_dir": "/proj/DCSQ/dependencies/zookeeper",
+  "kafka_dir": "/proj/DCSQ/dependencies/kafka",
+  "spec_file": "/proj/DCSQ/xiaoyao/druid/docker/generated/conf/ingestion/metrics.json",
+
+  "max_direct_memory_size": 34359738368,
+
+  "log_path": "/proj/DCSQ/xiaoyao",
+  "common_log4j2": "$PATH_TO_DRUID_BIN/conf/druid/_common",
+  "deep_storage_dir": "/proj/DCSQ/xiaoyao-druid-segments",
+  "overlay_net": "p-my-net",
+
+  "coordinator_nodes": ["node-1"],
+  "coordinator_node_hosts": ["node-1-lan"],
+  "coordinator_node_port": 8080,
+  "coordinator_node_aliases": ["coordinator"],
+
+  "historical_nodes": ["node-2", "node-3", "node-4"],
+  "historical_node_hosts": ["node-2-lan", "node-3-lan", "node-4-lan"],
+  "historical_node_port": 8081,
+  "historical_node_aliases": ["historical1", "historical2", "historical3"],
+
+  "broker_nodes": ["node-5"],
+  "broker_node_hosts": ["node-5-lan"],
+  "broker_node_port": 8082,
+  "broker_node_aliases": ["broker"],
+  "broker_cache_size_in_bytes": 20000,
+
+  "realtime_nodes": ["node-6"],
+  "realtime_node_hosts": ["node-6-lan"],
+  "realtime_node_port": 8083,
+  "realtime_node_aliases": ["realtime"],
+
+  "overlord_nodes": ["node-9"],
+  "overlord_node_hosts": ["node-9-lan"],
+  "overlord_node_port": 8084,
+  "overlord_node_aliases": ["overlord"],
+
+  "middle_manager_nodes": ["node-10"],
+  "middle_manager_node_hosts": ["node-10-lan"],
+  "middle_manager_node_port": 8085,
+  "middle_manager_node_aliases": ["middlemanager"],
+
+  "zookeeper_node": "node-7",
+  "zookeeper_node_host": "node-7-lan",
+  "zookeeper_node_port": 2181,
+  "zookeeper_node_alias": "zookeeper",
+
+  "mysql_node": "node-8",
+  "mysql_node_host": "node-8-lan",
+  "mysql_node_port": 3306,
+
+  "kafka_node": "node-8",
+  "kafka_node_host": "node-8-lan",
+  "kafka_node_port": 9092,
+  "kafka_node_alias": "kafka",
+  "kafka_zookeeper_port": 2181
+}

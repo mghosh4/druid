@@ -1,0 +1,17 @@
+FROM xiaoyao1991/druid-base:latest
+
+RUN echo "[supervisord]\n\
+nodaemon=true\n\
+loglevel=debug\n\
+[program:druid-broker]\n\
+user=root\n\
+command=java\n\
+  -Xmx256m\n\
+  -XX:MaxDirectMemorySize={{ max_direct_memory_size }}\n\
+  -Duser.timezone=UTC\n\
+  -Dfile.encoding=UTF-8\n\
+  -classpath 'conf/druid/_common:conf/druid/broker:lib/*'\n\
+  io.druid.cli.Main server broker\n\
+priority=1" > /etc/supervisor/conf.d/supervisord.conf
+
+ENTRYPOINT export HOSTIP="$(resolveip -s $HOSTNAME)" && exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

@@ -1,0 +1,16 @@
+FROM xiaoyao1991/ubuntu-java8
+
+RUN mkdir -p {{ dependencies_dir }}
+WORKDIR {{ dependencies_dir }}
+RUN wget http://www-eu.apache.org/dist/zookeeper/stable/zookeeper-3.4.9.tar.gz \
+      && tar -xf {{ dependencies_dir }}/zookeeper-3.4.9.tar.gz \
+      && mv {{ dependencies_dir }}/zookeeper-3.4.9 {{ zk_dir }}
+WORKDIR {{ zk_dir }}
+RUN cp conf/zoo_sample.cfg conf/zoo.cfg
+
+RUN echo "#!/bin/bash\n\
+ZOO_LOG4J_PROP='INFO,ROLLINGFILE' ./bin/zkServer.sh start && top" > run.sh \
+  && chmod +x run.sh
+
+ENTRYPOINT ["./run.sh"]
+EXPOSE 2181 2888 3888

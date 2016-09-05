@@ -16,3 +16,5 @@ target
 _site
 *.pyc
 druid-0.9.0-SNAPSHOT/*
+*.python-version
+docker/generated/*

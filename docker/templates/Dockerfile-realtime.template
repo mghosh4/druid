@@ -1,0 +1,18 @@
+FROM xiaoyao1991/druid-base:latest
+
+RUN echo "[supervisord]\n\
+nodaemon=true\n\
+loglevel=debug\n\
+[program:druid-realtime]\n\
+user=root\n\
+command=java\n\
+  -Xmx512m\n\
+  -Duser.timezone=UTC\n\
+  -Dfile.encoding=UTF-8\n\
+  -XX:MaxDirectMemorySize={{ max_direct_memory_size }}\n\
+  -Ddruid.realtime.specFile={{ spec_file }}\n\
+  -classpath 'conf/druid/_common:conf/druid/realtime:lib/*'\n\
+  io.druid.cli.Main server realtime\n\
+priority=1" > /etc/supervisor/conf.d/supervisord.conf
+
+ENTRYPOINT export HOSTIP="$(resolveip -s $HOSTNAME)" && exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
