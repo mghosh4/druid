@@ -419,11 +419,11 @@ do
         COMMAND=$COMMAND" sudo sed -i '35s@.*@advertised.host.name=$KAFKA_NODE_HOST@' $PATH_TO_KAFKA/config/server.properties;"
         COMMAND=$COMMAND" sudo sed -i '39s@.*@advertised.port=$KAFKA_NODE_PORT@' $PATH_TO_KAFKA/config/server.properties;"
         COMMAND=$COMMAND" sudo sed -i '116s@.*@zookeeper.connect=$KAFKA_NODE_HOST:$KAFKA_ZOOKEEPER_PORT@' $PATH_TO_KAFKA/config/server.properties;"
-        COMMAND=$COMMAND" sudo sed -i '60s@.*@log.dirs=$LOG_FILE/kafkalogs@' $PATH_TO_KAFKA/config/server.properties;"
+        COMMAND=$COMMAND" sudo sed -i '60s@.*@log.dirs=/mnt/kafkalogs@' $PATH_TO_KAFKA/config/server.properties;"
         COMMAND=$COMMAND" sudo sed -i '18s@.*@clientPort=$KAFKA_ZOOKEEPER_PORT@' $PATH_TO_KAFKA/config/zookeeper.properties;"
         COMMAND=$COMMAND" screen -d -m sudo ./bin/zookeeper-server-start.sh config/zookeeper.properties;"
         COMMAND=$COMMAND" screen -d -m sudo ./bin/kafka-server-start.sh config/server.properties;"
-        COMMAND=$COMMAND" ./bin/kafka-topics.sh --create --zookeeper $KAFKA_NODE_HOST:$KAFKA_ZOOKEEPER_PORT --replication-factor 1 --partitions 1 --topic $KAFKA_TOPIC;"
+        COMMAND=$COMMAND" ./bin/kafka-topics.sh --create --zookeeper $KAFKA_NODE_HOST:$KAFKA_ZOOKEEPER_PORT/kafka --replication-factor 1 --partitions 1 --topic $KAFKA_TOPIC;"
 
         echo "kafka node startup command is $COMMAND"
 
