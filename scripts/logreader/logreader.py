@@ -29,16 +29,16 @@ def getConfig(configFile):
 configFile = checkAndReturnArgs(sys.argv)
 config = getConfig(configFile)
 
-parameterforbroker = config.getParameterForBroker()
-parameterforhistorical = config.getParameterForHistorical()
-parameterforcoordinator = config.getParameterForCoordinator()
-pathforcoordinator = config.getPathForCoordinator()
-pathforhistorical = config.getPathForHistorical()
-pathforbroker = config.getPathForBroker()
-timerangeforhistorical = config.getTimeRangeForHistorical()
-timerangeforbroker = config.getTimeRangeForBroker()
+historicalmetrics = config.getHistoricalMetric()
+coordinatormetrics = config.getCoordinatorMetric()
+brokermetrics = config.getBrokerMetric()
+logpath = config.getLogPath()
+num_h_nodes = config.getNumHistoricalNodes()
+num_b_nodes = config.getNumBrokerNodes()
+num_c_nodes = config.getNumCoordinatorNodes()
+resultfolder = config.getResultFolder()
 
-def RunLogReader(parameter, logfile, filename):
+def RunLogReader(parameter, logfile):
 		#logfile = getLogFile(sys.argv)
 		#parameter = getParameter(sys.argv)
 		#timerange = getTimeRange(sys.argv)
@@ -47,15 +47,23 @@ def RunLogReader(parameter, logfile, filename):
 		FILE = theFile.readlines()
 		theFile.close()
 
-		f = open(filename, 'a')
+		return_dict = dict()
+
 		for line in FILE:
 				if (parameter in line):
 						eventindex = line.find("Event")
 						event = line[eventindex+6:]
 						y = json.loads(event)
-						f.write(y[0]['timestamp'] + "~" + str(y[0]['value']) + "\n")
-		f.close()
-def RunLogReaderWithTimeRange(parameter, logfile, filename, timerange1, timerange2):
+						return_dict[y[0]['timestamp']] = y[0]['value']
+		return return_dict
+
+def Writer(dict,filename):
+	f = open(filename, 'a')
+	for key,value in dict.iteritems():
+		f.write(key + "~" + str(value) + "\n")
+	f.close()
+		
+def RunLogReaderWithTimeRange(parameter, logfile, timerange1, timerange2):
 		#logfile = getLogFile(sys.argv)
 		#parameter = getParameter(sys.argv)
 		#timerange = getTimeRange(sys.argv)
@@ -64,7 +72,7 @@ def RunLogReaderWithTimeRange(parameter, logfile, filename, timerange1, timerang
 		FILE = theFile.readlines()
 		theFile.close()
 
-		f = open(filename, 'a')
+		return_dict = dict()
 		for line in FILE:
 				if (parameter in line):
 						eventindex = line.find("Event")
@@ -73,49 +81,58 @@ def RunLogReaderWithTimeRange(parameter, logfile, filename, timerange1, timerang
 						timestamp = datetime.strptime(y[0]['timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ')
 						firsttimerange = datetime.strptime(timerange[0], '%Y-%m-%d:%H:%M:%S')
 						secondtimerange = datetime.strptime(timerange[1], '%Y-%m-%d:%H:%M:%S')
-						if(timestamp > firsttimerange and timestamp < secondtimerange):
-										f.write(y[0]['timestamp'] + "~" + str(y[0]['value']) + "\n")
-		f.close()
+						if(timestamp > firsttimerange):
+							if(timestamp < secondtimerange):
+								return_dict[y[0]['timestamp']] = y[0]['value']
+							else:
+								break
+		return return_dict
 
 def getMemoryUsed(parameter,logfile):
-	RunLogReader(parameter, logfile, "historicalmetrics.log")
+	Writer(RunLogReader(parameter, logfile), "historicalmetrics.log")
 
 def getSegmentCount(parameter, logfile):
-	RunLogReader(parameter, logfile, "coordinatormetrics.log")
+	Writer(RunLogReader(parameter, logfile), "coordinatormetrics.log")
 
-def getAverageLatency(parameter, logfile):
-	RunLogReader(parameter, logfile, "averagelatency.log")
-def plotMemoryUsed():
-	plt.plotfile('historicalmetrics.log', delimiter='~', cols=(0, 1), 
-			 names=('times', 'values'))
-	plt.show()
+def getAverageLatency():
+	dictionary = dict()
+	theFile = open("broker-0-query-time.log",'r')
+        FILE = theFile.readlines()
+        theFile.close() 
 
-def plotSegmentCount():
-	plt.plotfile('coordinatormetrics.log', delimiter='~', cols=(0, 1), 
-			 names=('times', 'values'))
-	plt.show()
-
-def getAreaUnderCurve(logfile):
-	theFile = open(logfile, 'r')
-	FILE = theFile.readlines()
-	theFile.close()
-
-	x = []
+	totaltime = 0
+	count = 0
 	for line in FILE:
-			x.append(int(line.split('~')[1].strip()))
-	y = np.array(x)
-	area = trapz(y, dx=5)
+		totaltime += int(line.split("~")[1].strip())
+		count += 1
+	f = open("averagelatency.log", 'a')
+        f.write(str(totaltime/count))
+        f.close()
 
-	f = open("area.log", 'a')
-	f.write(area)
-	f.close()
+for i in xrange(len(historicalmetrics)):
+	for j in xrange(len(num_h_nodes)):
+		if "/" in historicalmetrics[i]:
+			newmetrics = historicalmetrics[i].replace("/", "-")
+		else:
+			newmetrics = historicalmetrics[i]
+		Writer(RunLogReader(historicalmetrics[i], logpath + "historical-" + str(j) + ".log"), "historical-" + str(j) + "-" + newmetrics + ".log")
 
-getMemoryUsed(parameterforhistorical, pathforhistorical)
-getSegmentCount(parameterforcoordinator, pathforcoordinator)
-plotMemoryUsed()
-plotSegmentCount()
-getAverageLatency(parameterforbroker, pathforbroker)
-getAreaUnderCurve("historicalmetrics.log")
+for i in xrange(len(brokermetrics)):
+        for j in xrange(len(num_b_nodes)):
+                if "/" in brokermetrics[i]:
+                        newmetrics = brokermetrics[i].replace("/", "-")
+                else:
+                        newmetrics = brokermetrics[i]
+                Writer(RunLogReader(brokermetrics[i], logpath + "broker-" + str(j) + ".log"), "broker-" + str(j) + "-" + newmetrics + ".log")
+
+for i in xrange(len(coordinatormetrics)):
+        for j in xrange(len(num_c_nodes)):
+                if "/" in coordinatormetrics[i]:
+                        newmetrics = coordinatormetrics[i].replace("/", "-")
+                else:
+                        newmetrics = coordinatormetrics[i]
+                Writer(RunLogReader(coordinatormetrics[i], logpath + "coordinator-" + str(j) + ".log"), "coordinator-" + str(j) + "-" + newmetrics + ".log")
+getAverageLatency()
 
 
 
