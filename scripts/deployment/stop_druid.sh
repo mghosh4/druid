@@ -152,13 +152,13 @@ do
     COMMAND=$COMMAND" sudo ./bin/kafka-topics.sh --zookeeper $KAFKA_NODE_HOST:$KAFKA_ZOOKEEPER_PORT --delete --topic $KAFKA_TOPIC;"
     COMMAND=$COMMAND" sudo ./bin/kafka-server-stop.sh;"
     COMMAND=$COMMAND" sudo ./bin/zookeeper-server-stop.sh;"
-    COMMAND=$COMMAND" sudo rm -rf /tmp/;" 
     #COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
     #COMMAND=$COMMAND" sudo screen -wipe;"
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-        COMMAND=$COMMAND" sudo rm -rf $LOG_FILE/kafkalogs;"
-        COMMAND=$COMMAND" sudo rm -rf $PATH_TO_DRUID_BIN/var;" 
+        COMMAND=$COMMAND" sudo rm -rf /mnt/kafkalogs;"
+        COMMAND=$COMMAND" sudo rm -rf $PATH_TO_DRUID_BIN/var;"
+        COMMAND=$COMMAND" sudo rm -rf /tmp/*;" 
     fi
     echo "kafka server shutdown command is $COMMAND"
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
@@ -324,14 +324,7 @@ do
         if [ $TYPE_OF_STOP -eq 1 ]
         then
             COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/historical-$counter.log;"
-<<<<<<< HEAD
-            COMMAND=$COMMAND" sudo rm -rf $LOG_FILE/kafkalogs;"
-            COMMAND=$COMMAND" sudo rm -rf $PATH_TO_DRUID_BIN/var;"
-            COMMAND=$COMMAND" sudo rm -rf /tmp/;" 
-=======
-        COMMAND=$COMMAND" sudo rm -rf $LOG_FILE/kafkalogs;"
-            COMMAND=$COMMAND" sudo rm -rf $PATH_TO_DRUID_BIN/var;"
->>>>>>> a6befb84633332fafff1a7a299a9e1ffe7edd0e7
+
         fi
         #COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
         COMMAND=$COMMAND" sudo pkill -9 \"java\";"

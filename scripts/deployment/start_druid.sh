@@ -380,7 +380,7 @@ do
         COMMAND=''
 
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN/lib;"
-        if [ -e sigar-1.6.5.132.jar ]
+        if [ -e $PATH_TO_DRUID_BIN/lib/sigar-1.6.5.132.jar ]
             then
                 continue
             else
