@@ -167,6 +167,7 @@ dictConfig(logging_config)
 
 AsyncHTTPClient.configure(None, max_clients=100)
 
+t1 = datetime.now()
 for i in xrange(numthreads):
     logger = logging.getLogger('thread-%s' % i)
     logger.setLevel(logging.DEBUG)
@@ -177,7 +178,6 @@ for i in xrange(numthreads):
     file_handler.setFormatter(formatter)
 
     logger.addHandler(file_handler)
-    delay = random.random()
     time = datetime.now(timezone('UTC'))
     numqueries = SINGLE_THREAD_THROUGHPUT
     if i == numthreads - 1:
@@ -189,3 +189,10 @@ main_thread = threading.currentThread()
 for t in threading.enumerate():
     if t is not main_thread:
         t.join()
+
+totaltime = (datetime.now() - t1).total_seconds()
+totalqueries = opspersecond * 60 * runtime
+throughput = float(totalqueries) / totaltime
+print "Total Time Taken: " + str(totaltime)
+print "Total Number of Queries: " + str(totalqueries)
+print "Overall Throughput: " + str(throughput)
