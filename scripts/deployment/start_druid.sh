@@ -380,10 +380,7 @@ do
         COMMAND=''
 
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN/lib;"
-        if [ -e $PATH_TO_DRUID_BIN/lib/sigar-1.6.5.132.jar ]
-            then
-                continue
-            else
+        if [ ! -e $PATH_TO_DRUID_BIN/lib/sigar-1.6.5.132.jar ]; then
                 COMMAND=$COMMAND" wget https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/org/hyperic/sigar/1.6.5.132/sigar-1.6.5.132.jar;"
         fi
         COMMAND=$COMMAND" sudo sed -i '105s@.*@druid.monitoring.monitors=[\"com.metamx.metrics.SysMonitor\",\"com.metamx.metrics.JvmMonitor\"]@' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
