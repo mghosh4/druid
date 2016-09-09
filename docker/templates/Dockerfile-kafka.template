@@ -1,5 +1,7 @@
 FROM xiaoyao1991/druid-base
 
+ENV CONTAINER_NAME kafka
+
 RUN mkdir -p {{ dependencies_dir }}
 WORKDIR {{ dependencies_dir }}
 RUN wget http://www-us.apache.org/dist/kafka/0.8.2.1/kafka_2.11-0.8.2.1.tgz \

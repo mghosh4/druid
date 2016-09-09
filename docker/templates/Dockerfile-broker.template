@@ -1,5 +1,7 @@
 FROM xiaoyao1991/druid-base:latest
 
+ENV CONTAINER_NAME broker
+
 RUN echo "[supervisord]\n\
 nodaemon=true\n\
 loglevel=debug\n\
@@ -8,6 +10,7 @@ user=root\n\
 command=java\n\
   -Xmx256m\n\
   -XX:MaxDirectMemorySize={{ max_direct_memory_size }}\n\
+  -Dlogfilename=broker\n\
   -Duser.timezone=UTC\n\
   -Dfile.encoding=UTF-8\n\
   -classpath 'conf/druid/_common:conf/druid/broker:lib/*'\n\

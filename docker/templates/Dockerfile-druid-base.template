@@ -28,7 +28,7 @@ RUN mv extensions/druid-s3-extensions .
 #Load druid configs
 RUN rm -rf conf/druid/ && cp -r {{ druid_dir }}/docker/generated/conf/druid conf/
 
-# EXPOSE"
+# EXPOSE
 # coordinator_node_port: 8080,
 # historical_node_port: 8081,
 # broker_node_port: 8082,

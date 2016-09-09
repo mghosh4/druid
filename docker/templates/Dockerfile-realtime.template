@@ -1,5 +1,7 @@
 FROM xiaoyao1991/druid-base:latest
 
+ENV CONTAINER_NAME realtime
+
 RUN echo "[supervisord]\n\
 nodaemon=true\n\
 loglevel=debug\n\
@@ -7,6 +9,7 @@ loglevel=debug\n\
 user=root\n\
 command=java\n\
   -Xmx512m\n\
+  -Dlogfilename=realtime\n\
   -Duser.timezone=UTC\n\
   -Dfile.encoding=UTF-8\n\
   -XX:MaxDirectMemorySize={{ max_direct_memory_size }}\n\
