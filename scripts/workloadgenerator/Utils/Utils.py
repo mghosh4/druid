@@ -26,12 +26,13 @@ class Utils(object):
         if bigger_exists:
           time += '{:02}M'.format(minutes)
         # seconds
-        if seconds.is_integer():
-            seconds = '{:02}'.format(int(seconds))
-        else:
-            # 9 chars long w/leading 0, 6 digits after decimal
-            seconds = '%09.6f' % seconds
-        # remove trailing zeros
-        seconds = seconds.rstrip('0')
-        time += '{}S'.format(seconds)
+        if seconds > 0:
+            if seconds.is_integer():
+                seconds = '{:02}'.format(int(seconds))
+            else:
+                # 9 chars long w/leading 0, 6 digits after decimal
+                seconds = '%09.6f' % seconds
+            # remove trailing zeros
+            seconds = seconds.rstrip('0')
+            time += '{}S'.format(seconds)
         return u'P' + date + time

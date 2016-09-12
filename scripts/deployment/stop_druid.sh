@@ -5,20 +5,20 @@
 REQUIRED_NUMBER_OF_ARGUMENTS=2
 if [ $# -lt $REQUIRED_NUMBER_OF_ARGUMENTS ]
 then
-	echo "Usage: $0 <type_of_stop> <path_to_config_file>"
-	echo "Type of stop: -h for hard, -s for soft"
-	exit 1
+    echo "Usage: $0 <type_of_stop> <path_to_config_file>"
+    echo "Type of stop: -h for hard, -s for soft"
+    exit 1
 fi
 
 if [ "$1" == "-h" ]
 then
-	TYPE_OF_STOP=1
+    TYPE_OF_STOP=1
 elif [ "$1" == "-s" ]
 then
-	TYPE_OF_STOP=0
+    TYPE_OF_STOP=0
 else
-	echo "Unrecongized stop type: -h for hard, -s for soft"
-	exit 1
+    echo "Unrecongized stop type: -h for hard, -s for soft"
+    exit 1
 fi
 
 CONFIG_FILE=$2
@@ -156,7 +156,8 @@ do
     #COMMAND=$COMMAND" sudo screen -wipe;"
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-        COMMAND=$COMMAND" sudo rm -r -f $LOG_FILE/kafkalogs;"
+        COMMAND=$COMMAND" sudo rm -rf /mnt/kafkalogs;"
+        COMMAND=$COMMAND" sudo rm -rf /tmp/*;" 
     fi
     echo "kafka server shutdown command is $COMMAND"
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
@@ -306,9 +307,9 @@ do
         COMMAND=$COMMAND" sudo pkill -9 \"java\";"
         #COMMAND=$COMMAND" sudo screen -wipe;"
         echo "Config server shutdown command is $COMMAND"
-		ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
-			$COMMAND"
-		let counter=counter+1;
+        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+            $COMMAND"
+        let counter=counter+1;
 done
 echo ""
 
@@ -321,14 +322,16 @@ do
         COMMAND=''
         if [ $TYPE_OF_STOP -eq 1 ]
         then
-        	COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/historical-$counter.log;"
+            COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/historical-$counter.log;"
+            COMMAND=$COMMAND" sudo rm -rf $PATH_TO_DRUID_BIN/var/*;"
+
         fi
-	    #COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
+        #COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
         COMMAND=$COMMAND" sudo pkill -9 \"java\";"
         #COMMAND=$COMMAND" sudo screen -wipe;"
         echo "Historical server shutdown command is $COMMAND"
         let counter=counter+1
         ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
-        	$COMMAND"
+            $COMMAND"
 done
 echo ""

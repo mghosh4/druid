@@ -364,7 +364,7 @@ do
         echo "historical node startup command is $COMMAND"
         let counter=counter+1
 
-	#ssh to node and run command
+    #ssh to node and run command
         ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
@@ -379,12 +379,17 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN/lib;"
+        if [ ! -e $PATH_TO_DRUID_BIN/lib/sigar-1.6.5.132.jar ]; then
+                COMMAND=$COMMAND" wget https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/org/hyperic/sigar/1.6.5.132/sigar-1.6.5.132.jar;"
+        fi
+        COMMAND=$COMMAND" sudo sed -i '105s@.*@druid.monitoring.monitors=[\"com.metamx.metrics.SysMonitor\",\"com.metamx.metrics.JvmMonitor\"]@' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$BROKER_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Duser.timezone=UTC -Dlogfilename=broker-$counter -Dfile.encoding=UTF-8 -classpath 'conf/druid/_common:conf/druid/broker:lib/*' io.druid.cli.Main server broker;"
 
         echo "Broker node startup command is $COMMAND"
         counter=counter+1
-	#ssh to node and run command
+    #ssh to node and run command
         ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
@@ -400,23 +405,22 @@ do
         COMMAND=''
 
         COMMAND=$COMMAND" cd $PATH_TO_KAFKA;"
-        COMMAND=$COMMAND" sudo sed -i '24s@.*@log4j.appender.kafkaAppender.File=$LOG_FILE/kafkalogs/server.log@' $PATH_TO_KAFKA/config/log4j.properties;"
-        COMMAND=$COMMAND" sudo sed -i '30s@.*@log4j.appender.stateChangeAppender.File=$LOG_FILE/kafkalogs/state-change.log@' $PATH_TO_KAFKA/config/log4j.properties;"
-        COMMAND=$COMMAND" sudo sed -i '36s@.*@log4j.appender.requestAppender.File=$LOG_FILE/kafkalogs/kafka-request.log@' $PATH_TO_KAFKA/config/log4j.properties;"
-        COMMAND=$COMMAND" sudo sed -i '42s@.*@log4j.appender.cleanerAppender.File=$LOG_FILE/kafkalogs/log-cleaner.log@' $PATH_TO_KAFKA/config/log4j.properties;"
-        COMMAND=$COMMAND" sudo sed -i '48s@.*@log4j.appender.controllerAppender.File=$LOG_FILE/kafkalogs/controller.log@' $PATH_TO_KAFKA/config/log4j.properties;"
+        COMMAND=$COMMAND" sudo sed -i '24s@.*@log4j.appender.kafkaAppender.File=/mnt/kafkalogs/server.log@' $PATH_TO_KAFKA/config/log4j.properties;"
+        COMMAND=$COMMAND" sudo sed -i '30s@.*@log4j.appender.stateChangeAppender.File=/mnt/kafkalogs/state-change.log@' $PATH_TO_KAFKA/config/log4j.properties;"
+        COMMAND=$COMMAND" sudo sed -i '36s@.*@log4j.appender.requestAppender.File=/mnt/kafkalogs/kafka-request.log@' $PATH_TO_KAFKA/config/log4j.properties;"
+        COMMAND=$COMMAND" sudo sed -i '42s@.*@log4j.appender.cleanerAppender.File=/mnt/kafkalogs/log-cleaner.log@' $PATH_TO_KAFKA/config/log4j.properties;"
+        COMMAND=$COMMAND" sudo sed -i '48s@.*@log4j.appender.controllerAppender.File=/mnt/kafkalogs/controller.log@' $PATH_TO_KAFKA/config/log4j.properties;"
         COMMAND=$COMMAND" sudo sed -i '39s@.*@          \"zookeeper.connect\": \"$KAFKA_NODE_HOST:$KAFKA_ZOOKEEPER_PORT\",@' $SPEC_FILE;"
         COMMAND=$COMMAND" sudo sed -i '27s@.*@port=$KAFKA_NODE_PORT@' $PATH_TO_KAFKA/config/server.properties;"
         COMMAND=$COMMAND" sudo sed -i '30s@.*@host.name=$KAFKA_NODE_HOST@' $PATH_TO_KAFKA/config/server.properties;"
         COMMAND=$COMMAND" sudo sed -i '35s@.*@advertised.host.name=$KAFKA_NODE_HOST@' $PATH_TO_KAFKA/config/server.properties;"
         COMMAND=$COMMAND" sudo sed -i '39s@.*@advertised.port=$KAFKA_NODE_PORT@' $PATH_TO_KAFKA/config/server.properties;"
         COMMAND=$COMMAND" sudo sed -i '116s@.*@zookeeper.connect=$KAFKA_NODE_HOST:$KAFKA_ZOOKEEPER_PORT@' $PATH_TO_KAFKA/config/server.properties;"
-        COMMAND=$COMMAND" sudo sed -i '60s@.*@log.dirs=$LOG_FILE/kafkalogs@' $PATH_TO_KAFKA/config/server.properties;"
+        COMMAND=$COMMAND" sudo sed -i '60s@.*@log.dirs=/mnt/kafkalogs@' $PATH_TO_KAFKA/config/server.properties;"
         COMMAND=$COMMAND" sudo sed -i '18s@.*@clientPort=$KAFKA_ZOOKEEPER_PORT@' $PATH_TO_KAFKA/config/zookeeper.properties;"
         COMMAND=$COMMAND" screen -d -m sudo ./bin/zookeeper-server-start.sh config/zookeeper.properties;"
         COMMAND=$COMMAND" screen -d -m sudo ./bin/kafka-server-start.sh config/server.properties;"
-        COMMAND=$COMMAND" sleep 2;"
-        COMMAND=$COMMAND" ./bin/kafka-topics.sh --create --zookeeper $KAFKA_NODE_HOST:$KAFKA_ZOOKEEPER_PORT --replication-factor 1 --partitions 1 --topic $KAFKA_TOPIC;"
+        COMMAND=$COMMAND" ./bin/kafka-topics.sh --create --zookeeper $KAFKA_NODE_HOST:$KAFKA_ZOOKEEPER_PORT/kafka --replication-factor 1 --partitions 1 --topic $KAFKA_TOPIC;"
 
         echo "kafka node startup command is $COMMAND"
 
