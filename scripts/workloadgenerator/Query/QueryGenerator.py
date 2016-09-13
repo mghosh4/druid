@@ -97,7 +97,7 @@ class QueryGenerator(object):
     			period_interval_inSec = (period_interval_inSec)/(float(factor))
 			if period_interval_inSec < 1.0:
 				period_interval_inSec = 1
-				
+			period_interval_inSec = int(period_interval_inSec)	
 
     			print "final period in seconds", period_interval_inSec
 			
