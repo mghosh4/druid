@@ -97,7 +97,7 @@ def threadoperation(dataStartTime, dataEndTime, runTime, isbatch, queryPerSec, t
             nextminute = time + timedelta(minutes=1)
             timediff = (nextminute - datetime.now(timezone('UTC'))).total_seconds()
             if timediff > 0:
-                tm.sleep(timediff)
+                yield gen.sleep(timediff)
 
         wait_iterator = gen.WaitIterator(*line)
         while not wait_iterator.done():
