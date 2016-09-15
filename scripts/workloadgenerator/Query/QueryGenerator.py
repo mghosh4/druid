@@ -1,3 +1,7 @@
+import sys
+
+sys.path.append("/home/lexu/workspace/Druid-scripts/workloadgenerator/Utils")
+
 from Utils import Utils
 from Query import Query
 import time
@@ -6,6 +10,7 @@ from datetime import *
 import json
 import random
 from dateutil.relativedelta import relativedelta
+
 
 class QueryGenerator(object):
 	queryRunningCount = 0
@@ -84,28 +89,16 @@ class QueryGenerator(object):
     			originalstart = originallist[i][0]
     			position = (float)((originalstart-dateaccessed[0]).total_seconds())/originallength
     			truestart = startTime+relativedelta(seconds=int(round(position*truelength)))
-    			
-    			#QueryGenerator.queryRunningCount += 1
-    			#starttime = accesslist[i]
-    			#if (starttime + periodlist[i] - 1 > elapsed):
-    			#	starttime = starttime - (periodlist[i] - (elapsed - starttime + 1)
-    			#newstart = start + datetime.timedelta(0, starttime)
-    			#get the query start time
     			newstart = truestart
-    			startstring = newstart.strftime('%Y-%m-%dT%H:%M:%S')  
-    			#get the query length
-    			#period_interval_str = data[i]["event"]["interval"]
-    			#print period_interval_str
-    			#period_count = data[i]["event"]["count"]
-    			#period_pair = period_interval_str.split("/")
-    			#print period_pair
-    			#period_start = datetime.strptime(period_pair[0], '%Y-%m-%dT%H:%M:%S.%fZ')
-    			#period_end = datetime.strptime(period_pair[1], '%Y-%m-%dT%H:%M:%S.%fZ')
-    			#period_interval = dt.timedelta(period_start, period_end)
-    			#period_interval_inSec = period_interval.total_seconds()
+    			startstring = newstart.strftime('%Y-%m-%dT%H:%M:%S')
     			period_interval_inSec = (originallist[i][1]-originallist[i][0]).total_seconds()
-    			print "original period in seconds", period_interval_inSec
-    			period_interval_inSec = int(round(period_interval_inSec/(originallength/truelength)))
+			print "original period in seconds", period_interval_inSec
+			factor = (originallength)/(float(truelength))
+    			period_interval_inSec = (period_interval_inSec)/(float(factor))
+			if period_interval_inSec < 1.0:
+				period_interval_inSec = 1
+			period_interval_inSec = int(period_interval_inSec)	
+
     			print "final period in seconds", period_interval_inSec
 			
     			'''if(period_interval_inSec < 31536000):

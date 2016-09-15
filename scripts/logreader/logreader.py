@@ -58,7 +58,7 @@ def RunLogReader(parameter, logfile):
 		return return_dict
 
 def Writer(dict,filename):
-	f = open(filename, 'a')
+	f = open(filename, 'w')
 	for key,value in dict.iteritems():
 		f.write(key + "~" + str(value) + "\n")
 	f.close()
@@ -89,14 +89,14 @@ def RunLogReaderWithTimeRange(parameter, logfile, timerange1, timerange2):
 		return return_dict
 
 def getMemoryUsed(parameter,logfile):
-	Writer(RunLogReader(parameter, logfile), "historicalmetrics.log")
+	Writer(RunLogReader(parameter, logfile), resultfolder + "historicalmetrics.log")
 
 def getSegmentCount(parameter, logfile):
-	Writer(RunLogReader(parameter, logfile), "coordinatormetrics.log")
+	Writer(RunLogReader(parameter, logfile), resultfolder + "coordinatormetrics.log")
 
 def getAverageLatency():
 	dictionary = dict()
-	theFile = open("broker-0-query-time.log",'r')
+	theFile = open(resultfolder + "broker-0-query-time.log",'r')
         FILE = theFile.readlines()
         theFile.close() 
 
@@ -105,36 +105,31 @@ def getAverageLatency():
 	for line in FILE:
 		totaltime += int(line.split("~")[1].strip())
 		count += 1
-	f = open("averagelatency.log", 'a')
+	f = open(resultfolder + "averagelatency.log", 'a')
         f.write(str(totaltime/count))
         f.close()
 
 for i in xrange(len(historicalmetrics)):
-	for j in xrange(len(num_h_nodes)):
+	for j in xrange(num_h_nodes):
 		if "/" in historicalmetrics[i]:
 			newmetrics = historicalmetrics[i].replace("/", "-")
 		else:
 			newmetrics = historicalmetrics[i]
-		Writer(RunLogReader(historicalmetrics[i], logpath + "historical-" + str(j) + ".log"), "historical-" + str(j) + "-" + newmetrics + ".log")
+		Writer(RunLogReader(historicalmetrics[i], logpath + "historical-" + str(j) + ".log"), resultfolder + "historical-" + str(j) + "-" + newmetrics + ".log")
 
 for i in xrange(len(brokermetrics)):
-        for j in xrange(len(num_b_nodes)):
+        for j in xrange(num_b_nodes):
                 if "/" in brokermetrics[i]:
                         newmetrics = brokermetrics[i].replace("/", "-")
                 else:
                         newmetrics = brokermetrics[i]
-                Writer(RunLogReader(brokermetrics[i], logpath + "broker-" + str(j) + ".log"), "broker-" + str(j) + "-" + newmetrics + ".log")
+                Writer(RunLogReader(brokermetrics[i], logpath + "broker-" + str(j) + ".log"), resultfolder + "broker-" + str(j) + "-" + newmetrics + ".log")
 
 for i in xrange(len(coordinatormetrics)):
-        for j in xrange(len(num_c_nodes)):
+        for j in xrange(num_c_nodes):
                 if "/" in coordinatormetrics[i]:
                         newmetrics = coordinatormetrics[i].replace("/", "-")
                 else:
                         newmetrics = coordinatormetrics[i]
-                Writer(RunLogReader(coordinatormetrics[i], logpath + "coordinator-" + str(j) + ".log"), "coordinator-" + str(j) + "-" + newmetrics + ".log")
+                Writer(RunLogReader(coordinatormetrics[i], logpath + "coordinator-" + str(j) + ".log"), resultfolder + "coordinator-" + str(j) + "-" + newmetrics + ".log")
 getAverageLatency()
-
-
-
-
-
