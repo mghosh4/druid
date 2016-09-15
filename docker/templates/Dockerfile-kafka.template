@@ -9,8 +9,8 @@ RUN wget http://www-us.apache.org/dist/kafka/0.8.2.1/kafka_2.11-0.8.2.1.tgz \
       && ln -s {{ dependencies_dir }}/kafka_2.11-0.8.2.1 {{ kafka_dir }}
 WORKDIR {{ kafka_dir }}
 
-COPY ./docker/generated/conf/kafka/server.properties config/server.properties
 RUN echo "#!/bin/bash\n\
+cp {{ common_conf_dir }}/kafka/server.properties config/server.properties;\n\
 screen -d -m sudo ./bin/zookeeper-server-start.sh config/zookeeper.properties;\n\
 screen -d -m sudo ./bin/kafka-server-start.sh config/server.properties;\n\
 sleep 2;\n\

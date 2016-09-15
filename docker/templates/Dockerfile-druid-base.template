@@ -25,9 +25,6 @@ RUN tar -xvf {{ druid_dir }}/distribution/target/mysql-metadata-storage-bin.tar.
 RUN mv extensions/druid-s3-extensions .
 {% endif %}
 
-#Load druid configs
-RUN rm -rf conf/druid/ && cp -r {{ druid_dir }}/docker/generated/conf/druid conf/
-
 # EXPOSE
 # coordinator_node_port: 8080,
 # historical_node_port: 8081,

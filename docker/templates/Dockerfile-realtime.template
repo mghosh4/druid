@@ -14,7 +14,7 @@ command=java\n\
   -Dfile.encoding=UTF-8\n\
   -XX:MaxDirectMemorySize={{ max_direct_memory_size }}\n\
   -Ddruid.realtime.specFile={{ spec_file }}\n\
-  -classpath 'conf/druid/_common:conf/druid/realtime:lib/*'\n\
+  -classpath '{{ common_conf_dir }}/druid/_common:{{ common_conf_dir }}/druid/realtime:lib/*'\n\
   io.druid.cli.Main server realtime\n\
 priority=1" > /etc/supervisor/conf.d/supervisord.conf
 

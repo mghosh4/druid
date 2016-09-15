@@ -1,5 +1,11 @@
 #!/bin/bash -e
 
+# Prebuild
+cd docker && python pre_build.py && cd ..
+
+# Build conf and script images
+docker build -f docker/generated/Dockerfile-conf-and-scripts -t xiaoyao1991/druid-conf-and-scripts .
+
 # Build docker images
 docker build -f docker/generated/Dockerfile-ubuntu-java8 -t xiaoyao1991/ubuntu-java8 .
 docker build -f docker/generated/Dockerfile-druid-base -t xiaoyao1991/druid-base .
@@ -14,6 +20,7 @@ docker build -f docker/generated/Dockerfile-realtime -t xiaoyao1991/druid-realti
 docker build -f docker/generated/Dockerfile-zookeeper -t xiaoyao1991/druid-zookeeper .
 
 # Push docker images to hub
+docker push xiaoyao1991/druid-conf-and-scripts
 docker push xiaoyao1991/ubuntu-java8
 docker push xiaoyao1991/druid-base
 docker push xiaoyao1991/druid-kafka

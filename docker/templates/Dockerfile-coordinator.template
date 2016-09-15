@@ -1,19 +1,19 @@
 FROM xiaoyao1991/druid-base:latest
 
-ENV CONTAINER_NAME middlemanager
+ENV CONTAINER_NAME coordinator
 
 RUN echo "[supervisord]\n\
 nodaemon=true\n\
 loglevel=debug\n\
-[program:druid-middlemanager]\n\
+[program:druid-coordinator]\n\
 user=root\n\
 command=java\n\
   -Xmx256m\n\
-  -Dlogfilename=middlemanager\n\
+  -Dlogfilename=coordinator\n\
   -Duser.timezone=UTC\n\
   -Dfile.encoding=UTF-8\n\
-  -classpath 'conf/druid/_common:conf/druid/middleManager:lib/*'\n\
-  io.druid.cli.Main server middleManager\n\
+  -classpath '{{ common_conf_dir }}/druid/_common:{{ common_conf_dir }}/druid/coordinator:lib/*'\n\
+  io.druid.cli.Main server coordinator\n\
 priority=1" > /etc/supervisor/conf.d/supervisord.conf
 
 ENTRYPOINT export HOSTIP="$(resolveip -s $HOSTNAME)" && exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

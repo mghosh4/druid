@@ -1,0 +1,8 @@
+FROM xiaoyao1991/ubuntu-java8
+
+# Place conf and scripts
+ADD ./scripts {{ common_scripts_dir }}
+ADD ./docker/generated/conf/ {{ common_conf_dir }}
+
+# Mounting point for external configs and scripts
+VOLUME ["{{ common_conf_dir }}", "{{ common_scripts_dir }}"]

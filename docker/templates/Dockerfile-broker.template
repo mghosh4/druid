@@ -13,7 +13,7 @@ command=java\n\
   -Dlogfilename=broker\n\
   -Duser.timezone=UTC\n\
   -Dfile.encoding=UTF-8\n\
-  -classpath 'conf/druid/_common:conf/druid/broker:lib/*'\n\
+  -classpath '{{ common_conf_dir }}/druid/_common:{{ common_conf_dir }}/druid/broker:lib/*'\n\
   io.druid.cli.Main server broker\n\
 priority=1" > /etc/supervisor/conf.d/supervisord.conf
 

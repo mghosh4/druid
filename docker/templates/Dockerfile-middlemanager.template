@@ -1,19 +1,19 @@
 FROM xiaoyao1991/druid-base:latest
 
-ENV CONTAINER_NAME overlord
+ENV CONTAINER_NAME middlemanager
 
 RUN echo "[supervisord]\n\
 nodaemon=true\n\
 loglevel=debug\n\
-[program:druid-overlord]\n\
+[program:druid-middlemanager]\n\
 user=root\n\
 command=java\n\
   -Xmx256m\n\
-  -Dlogfilename=overlord\n\
+  -Dlogfilename=middlemanager\n\
   -Duser.timezone=UTC\n\
   -Dfile.encoding=UTF-8\n\
-  -classpath 'conf/druid/_common:conf/druid/overlord:lib/*'\n\
-  io.druid.cli.Main server overlord\n\
+  -classpath '{{ common_conf_dir }}/druid/_common:{{ common_conf_dir }}/druid/middleManager:lib/*'\n\
+  io.druid.cli.Main server middleManager\n\
 priority=1" > /etc/supervisor/conf.d/supervisord.conf
 
 ENTRYPOINT export HOSTIP="$(resolveip -s $HOSTNAME)" && exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

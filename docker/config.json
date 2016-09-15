@@ -13,13 +13,15 @@
   "dependencies_dir": "/proj/DCSQ/dependencies",
   "zk_dir": "/proj/DCSQ/dependencies/zookeeper",
   "kafka_dir": "/proj/DCSQ/dependencies/kafka",
-  "spec_file": "/proj/DCSQ/xiaoyao/druid/docker/generated/conf/ingestion/metrics.json",
+  "common_conf_dir": "/proj/DCSQ/xiaoyao/conf",
+  "common_scripts_dir": "/proj/DCSQ/xiaoyao/scripts",
+  "spec_file": "/proj/DCSQ/xiaoyao/conf/ingestion/metrics.json",
 
   "max_direct_memory_size": 34359738368,
 
   "log_path": "/proj/DCSQ/xiaoyao",
   "common_log4j2": "$PATH_TO_DRUID_BIN/conf/druid/_common",
-  "deep_storage_dir": "/proj/DCSQ/xiaoyao-druid-segments",
+  "deep_storage_dir": "/proj/DCSQ/xiaoyao/druid-segments",
   "overlay_net": "p-my-net",
 
   "coordinator_nodes": ["node-1"],
@@ -36,7 +38,7 @@
   "broker_node_hosts": ["node-5-lan"],
   "broker_node_port": 8082,
   "broker_node_aliases": ["broker"],
-  "broker_cache_size_in_bytes": 20000,
+  "broker_cache_size_in_bytes": 5000,
 
   "realtime_nodes": ["node-6"],
   "realtime_node_hosts": ["node-6-lan"],
