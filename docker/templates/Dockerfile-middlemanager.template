@@ -1,4 +1,4 @@
-FROM xiaoyao1991/druid-base:latest
+FROM {{ docker_hub_username }}/druid-base:{{ username }}
 
 ENV CONTAINER_NAME middlemanager
 

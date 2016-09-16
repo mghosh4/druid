@@ -1,4 +1,4 @@
-FROM xiaoyao1991/ubuntu-java8
+FROM {{ docker_hub_username }}/ubuntu-java8:{{ username }}
 
 RUN mkdir -p {{ dependencies_dir }}
 WORKDIR {{ dependencies_dir }}

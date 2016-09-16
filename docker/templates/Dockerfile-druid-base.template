@@ -1,4 +1,4 @@
-FROM xiaoyao1991/ubuntu-java8
+FROM {{ docker_hub_username }}/ubuntu-java8:{{ username }}
 
 # Maven
 RUN wget -q -O - http://archive.apache.org/dist/maven/maven-3/3.2.5/binaries/apache-maven-3.2.5-bin.tar.gz | tar -xzf - -C /usr/local \
