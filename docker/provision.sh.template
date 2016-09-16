@@ -1,0 +1,89 @@
+#!/bin/bash -e
+
+{% if is_dryrun %}
+# Create kv store for service discovery
+docker-machine -D create --driver virtualbox d-mh-keystore
+
+eval $(docker-machine env d-mh-keystore)
+
+docker run -d \
+  -p "8500:8500" \
+  -h "consul" \
+  progrium/consul -server -bootstrap
+
+# Create swarm master
+docker-machine -D create --driver virtualbox \
+  --swarm \
+  --swarm-master \
+  --swarm-discovery="consul://$(docker-machine ip d-mh-keystore):8500" \
+  --engine-opt="cluster-store=consul://$(docker-machine ip d-mh-keystore):8500" \
+  --engine-opt="cluster-advertise=eth1:2376" \
+  d-druid-swarm-master
+
+# Create swarm workers
+for i in `seq 1 2`;
+do
+  echo $i
+  docker-machine -D create --driver virtualbox \
+    --swarm \
+    --swarm-discovery="consul://$(docker-machine ip d-mh-keystore):8500" \
+    --engine-opt="cluster-store=consul://$(docker-machine ip d-mh-keystore):8500" \
+    --engine-opt="cluster-advertise=eth1:2376" \
+    d-node-$i
+done
+
+# Create overlay network
+eval $(docker-machine env --swarm d-druid-swarm-master)
+docker network create --driver overlay --subnet=10.0.9.0/24 d-my-net
+{% else %}
+# Change shell to bash
+for i in `seq 1 12`;
+do
+  ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no {{ username }}@node-$i.{{ experiment }}.dcsq.emulab.net "sudo chsh -s /bin/bash {{ username }}"
+done
+
+# Create kv store for service discovery
+docker-machine -D create --driver generic \
+  --generic-ssh-user={{ username }} \
+  --generic-ip-address=node-12.{{ experiment }}.dcsq.emulab.net \
+  --generic-ssh-key ~/.ssh/id_rsa \
+  p-mh-keystore
+
+eval $(docker-machine env p-mh-keystore)
+
+docker run -d \
+  -p "8500:8500" \
+  -h "consul" \
+  progrium/consul -server -bootstrap
+
+# Create swarm master
+docker-machine -D create --driver generic \
+  --generic-ssh-user={{ username }} \
+  --generic-ip-address=node-11.{{ experiment }}.dcsq.emulab.net \
+  --generic-ssh-key ~/.ssh/id_rsa \
+  --swarm \
+  --swarm-master \
+  --swarm-discovery="consul://$(docker-machine ip p-mh-keystore):8500" \
+  --engine-opt="cluster-store=consul://$(docker-machine ip p-mh-keystore):8500" \
+  --engine-opt="cluster-advertise=eth0:2376" \
+  p-druid-swarm-master
+
+# Create swarm workers
+for i in `seq 1 10`;
+do
+  echo $i
+  docker-machine -D create --driver generic \
+    --generic-ssh-user={{ username }} \
+    --generic-ip-address=node-$i.{{ experiment }}.dcsq.emulab.net \
+    --generic-ssh-key ~/.ssh/id_rsa \
+    --swarm \
+    --swarm-discovery="consul://$(docker-machine ip p-mh-keystore):8500" \
+    --engine-opt="cluster-store=consul://$(docker-machine ip p-mh-keystore):8500" \
+    --engine-opt="cluster-advertise=eth0:2376" \
+    p-node-$i
+done
+
+# Create overlay network
+eval $(docker-machine env --swarm p-druid-swarm-master)
+docker network create --driver overlay --subnet=10.0.9.0/24 p-my-net
+{% endif %}

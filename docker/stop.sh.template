@@ -1,0 +1,18 @@
+#!/bin/bash -e
+
+{% if is_dryrun %}
+for i in `seq 1 2`;
+do
+  docker stop node-$i-conf-and-scripts
+  docker rm node-$i-conf-and-scripts
+done
+{% else %}
+for i in `seq 1 10`;
+do
+  docker stop node-$i-conf-and-scripts
+  docker rm node-$i-conf-and-scripts
+done
+{% endif %}
+docker stop realtime kafka broker historical1 historical2 historical3 coordinator middlemanager overlord mysql zookeeper
+docker rm realtime kafka broker historical1 historical2 historical3 coordinator middlemanager overlord mysql zookeeper
+docker rmi {{ docker_hub_username }}/druid-conf-and-scripts {{ docker_hub_username }}/druid-kafka {{ docker_hub_username }}/druid-zookeeper {{ docker_hub_username }}/druid-mysql {{ docker_hub_username }}/druid-realtime {{ docker_hub_username }}/druid-overlord {{ docker_hub_username }}/druid-middlemanager {{ docker_hub_username }}/druid-historical {{ docker_hub_username }}/druid-coordinator {{ docker_hub_username }}/druid-broker
