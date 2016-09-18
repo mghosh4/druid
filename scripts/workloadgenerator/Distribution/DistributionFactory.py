@@ -7,6 +7,8 @@ class DistributionFactory(object):
 			return Uniform()
 		elif distribution == "zipfian":
 			return ScrambledZipfian()
+		elif distribution == "dynamiczipf":
+			return DynamicZipfian()
 		elif distribution == "latest":
 			return Latest()
 	
