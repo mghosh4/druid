@@ -16,3 +16,10 @@ target
 _site
 *.pyc
 druid-0.9.0-SNAPSHOT/*
+*.python-version
+docker/generated/*
+./build-all.sh
+./build-conf-and-scripts.sh
+./deploy.sh
+./provision.sh
+./stop.sh

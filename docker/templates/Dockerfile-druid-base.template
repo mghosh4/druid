@@ -1,0 +1,42 @@
+FROM {{ docker_hub_username }}/ubuntu-java8:{{ username }}
+
+# Maven
+RUN wget -q -O - http://archive.apache.org/dist/maven/maven-3/3.2.5/binaries/apache-maven-3.2.5-bin.tar.gz | tar -xzf - -C /usr/local \
+      && ln -s /usr/local/apache-maven-3.2.5 /usr/local/apache-maven \
+      && ln -s /usr/local/apache-maven/bin/mvn /usr/local/bin/mvn
+
+# # Druid system user
+# RUN adduser --system --group --no-create-home druid \
+#       && mkdir -p /var/lib/druid \
+#       && chown druid:druid /var/lib/druid
+
+# Druid (from source)
+ADD . {{ druid_dir }}
+
+WORKDIR {{ druid_dir }}
+RUN mvn -U -B install -DskipTests=true -Dmaven.javadoc.skip=true
+WORKDIR {{ druid_dir }}/distribution/target
+RUN tar xvf druid-{{ druid_ver }}-bin.tar.gz
+WORKDIR {{ druid_dir }}/distribution/target/druid-{{ druid_ver }}
+
+# Manage extensions
+RUN tar -xvf {{ druid_dir }}/distribution/target/mysql-metadata-storage-bin.tar.gz -C extensions/
+{% if is_server_aws %}
+RUN mv extensions/druid-s3-extensions .
+{% endif %}
+
+# EXPOSE
+# coordinator_node_port: 8080,
+# historical_node_port: 8081,
+# broker_node_port: 8082,
+# realtime_node_port: 8083,
+# overlord_node_port: 8084,
+# middle_manager_node_port: 8085,
+# zookeeper_node_port: 2181,
+# mysql_node_port: 3306,
+# kafka_node_port: 9092,
+# kafka_zookeeper_port: 2181
+EXPOSE 8080 8081 8082 8083 8084 8085
+EXPOSE 8090
+EXPOSE 3306
+EXPOSE 2181 2888 3888
