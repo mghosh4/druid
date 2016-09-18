@@ -218,9 +218,7 @@ do
     then
         COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/middlemanager-$counter.log;"
     fi
-    #COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
-    #COMMAND=$COMMAND" sudo screen -wipe;"
     echo "middle manager server shutdown command is $COMMAND"
     let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
@@ -239,9 +237,7 @@ do
     then
         COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/overlord-$counter.log;"
     fi
-    #COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
-    #COMMAND=$COMMAND" sudo screen -wipe;"
     echo "overlord server shutdown command is $COMMAND"
     let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
@@ -260,9 +256,7 @@ do
     then
         COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/broker-$counter.log;"
     fi
-    #COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
-    #COMMAND=$COMMAND" sudo screen -wipe;"
     echo "Broker server shutdown command is $COMMAND"
     let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
@@ -279,37 +273,33 @@ do
     COMMAND=''
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-    COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/realtime-$counter.log;"
+        COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/realtime-$counter.log;"
     fi
-    #COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
-    #COMMAND=$COMMAND" sudo screen -wipe;"
     echo "Realtime server shutdown command is $COMMAND"
     let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 
 done
-echo""
+echo ""
 
 #shutdown the coordinator server
 echo "Shutting down coordinator server:"
 counter=0
 for  node in ${NEW_COORDINATOR_NODES//,/ }
 do
-        echo "Shutting down $node ..."
-        COMMAND=''
-        if [ $TYPE_OF_STOP -eq 1 ]
-        then
+    echo "Shutting down $node ..."
+    COMMAND=''
+    if [ $TYPE_OF_STOP -eq 1 ]
+    then
         COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/coordinator-$counter.log;"
-        fi
-        #COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
-        COMMAND=$COMMAND" sudo pkill -9 \"java\";"
-        #COMMAND=$COMMAND" sudo screen -wipe;"
-        echo "Config server shutdown command is $COMMAND"
-        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
-            $COMMAND"
-        let counter=counter+1;
+    fi
+    COMMAND=$COMMAND" sudo pkill -9 \"java\";"
+    echo "Config server shutdown command is $COMMAND"
+    let counter=counter+1;
+    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        $COMMAND"
 done
 echo ""
 
@@ -318,20 +308,17 @@ echo "Shutting down historical servers:"
 counter=0
 for  node in ${NEW_HISTORICAL_NODES//,/ }
 do
-        echo "Shutting down $node ..."
-        COMMAND=''
-        if [ $TYPE_OF_STOP -eq 1 ]
-        then
-            COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/historical-$counter.log;"
-            COMMAND=$COMMAND" sudo rm -rf $PATH_TO_DRUID_BIN/var/;"
-
-        fi
-        #COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
-        COMMAND=$COMMAND" sudo pkill -9 \"java\";"
-        #COMMAND=$COMMAND" sudo screen -wipe;"
-        echo "Historical server shutdown command is $COMMAND"
-        let counter=counter+1
-        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
-            $COMMAND"
+    echo "Shutting down $node ..."
+    COMMAND=''
+    if [ $TYPE_OF_STOP -eq 1 ]
+    then
+        COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/historical-$counter.log;"
+        COMMAND=$COMMAND" sudo rm -rf $PATH_TO_DRUID_BIN/var;"
+    fi
+    COMMAND=$COMMAND" sudo pkill -9 \"java\";"
+    echo "Historical server shutdown command is $COMMAND"
+    let counter=counter+1
+    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        $COMMAND"
 done
 echo ""
