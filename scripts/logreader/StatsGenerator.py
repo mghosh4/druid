@@ -53,15 +53,15 @@ def getSegmentCount(parameter, logfile):
 def getAverageLatency():
 	dictionary = dict()
 	theFile = open(resultfolder + "broker-0-query-time.log",'r')
-    FILE = theFile.readlines()
-    theFile.close() 
+	FILE = theFile.readlines()
+	theFile.close() 
 
 	totaltime = 0
 	count = 0
 	for line in FILE:
 		totaltime += int(line.split("~")[1].strip())
 		count += 1
-	    f = open(resultfolder + "averagelatency.log", 'a')
+		f = open(resultfolder + "averagelatency.log", 'a')
         f.write(str(totaltime/count))
         f.close()
 
