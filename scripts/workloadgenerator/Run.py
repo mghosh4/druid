@@ -67,6 +67,7 @@ def threadoperation(dataStartTime, dataEndTime, runTime, isbatch, queryPerSec, t
         line = list()
         querypermin = queryPerSec * 60
         endtime = datetime.now(timezone('UTC')) + timedelta(minutes=runtime)
+        popularitylist = list()
         while True:
             time = datetime.now(timezone('UTC'))
             logger.info("Time: {}".format(time.strftime("%Y-%m-%d %H:%M:%S")))
@@ -78,9 +79,9 @@ def threadoperation(dataStartTime, dataEndTime, runTime, isbatch, queryPerSec, t
             if filename != "":
                 newquerylist = QueryGenerator.generateQueriesFromFile(dataStartTime, dataEndTime, querypermin, timeAccessGenerator, periodAccessGenerator, filename)
             elif isbatch == True:
-                newquerylist = QueryGenerator.generateQueries(dataStartTime, dataEndTime, querypermin, timeAccessGenerator, periodAccessGenerator)
+                newquerylist = QueryGenerator.generateQueries(dataStartTime, dataEndTime, querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist)
             else:
-                newquerylist = QueryGenerator.generateQueries(dataStartTime, time, querypermin, timeAccessGenerator, periodAccessGenerator)
+                newquerylist = QueryGenerator.generateQueries(dataStartTime, time, querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist)
 
             for query in newquerylist:
                 try:

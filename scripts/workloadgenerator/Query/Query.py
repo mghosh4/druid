@@ -12,3 +12,4 @@ class Query(object):
 
 	def setInterval(self, newinterval):
 		self.interval = newinterval
+		
