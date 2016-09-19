@@ -20,26 +20,25 @@ class ParseConfig:
 				if line[0] == "#":
 					continue
 				words = line.split("=")
-                                key = words[0]
-                                value = words[1].replace("\n", "")
+                key = words[0]
+                value = words[1].replace("\n", "")
 				values = value.split(",")
 				if key == "HISTORICAL_METRIC":
-                                        self.historicalmetric = values
+                    self.historicalmetric = values
 				elif key == "COORDINATOR_METRIC":
-                                        self.coordinatormetric = values
-                                elif key == "BROKER_METRIC":
-                                        self.brokermetric = values
-                                elif key == "LOG_PATH":
-                                        self.logpath = values[0]
-                                elif key == "NUM_HISTORICAL_NODES":
-                                        self.numhistoricalnodes = int(values[0])
-                                elif key == "NUM_BROKER_NODES":
-                                        self.numbrokernodes = int(values[0])
-                                elif key == "NUM_COORDINATOR_NODES":
-                                        self.numcoordinatornodes = int(values[0])
-                                elif key == "RESULT_FOLDER":
-                                        self.resultfolder = values[0]
-
+                    self.coordinatormetric = values
+                elif key == "BROKER_METRIC":
+                    self.brokermetric = values
+                elif key == "LOG_PATH":
+                    self.logpath = values[0]
+                elif key == "NUM_HISTORICAL_NODES":
+                    self.numhistoricalnodes = int(values[0])
+                elif key == "NUM_BROKER_NODES":
+                    self.numbrokernodes = int(values[0])
+                elif key == "NUM_COORDINATOR_NODES":
+                    self.numcoordinatornodes = int(values[0])
+                elif key == "RESULT_FOLDER":
+                    self.resultfolder = values[0]
 
 	def getHistoricalMetric(self):
 		return self.historicalmetric
