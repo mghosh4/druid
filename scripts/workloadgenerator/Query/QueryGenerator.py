@@ -16,17 +16,18 @@ class QueryGenerator(object):
 	queryRunningCount = 0
 
 	@staticmethod
-	def generateQueries(startTime, endTime, numQueries, accessGenerator, periodGenerator, popularitylist):
+	def generateQueries(startTime, endTime, numQueries, accessGenerator, periodGenerator, popularityList):
 		querylist = list()
 		elapsed = (endTime - startTime).total_seconds()
-		accesslist = accessGenerator.generateDistribution(0, elapsed, numQueries)
+		accesslist = accessGenerator.generateDistribution(0, elapsed, numQueries, popularityList)
 
-		periodlist = periodGenerator.generateDistribution(1, elapsed, numQueries)
+		periodlist = periodGenerator.generateDistribution(1, elapsed, numQueries, popularityList)
 
 		for i in xrange(numQueries):
 			q = Query(QueryGenerator.queryRunningCount, elapsed)
 			QueryGenerator.queryRunningCount += 1
 			sttime = accesslist[i]
+			#print "sttime: %s" % sttime
 			#if (starttime + periodlist[i] - 1 > elapsed):
 			#	starttime = starttime - (periodlist[i] - (elapsed - starttime + 1)
 			newstart = startTime + dt.timedelta(0, sttime)
@@ -34,6 +35,9 @@ class QueryGenerator(object):
 			#print(periodlist[i], Utils.iso8601(dt.timedelta(seconds=periodlist[i])))
 			q.setInterval(startstring + "/" + Utils.iso8601(dt.timedelta(seconds=periodlist[i])))
 			querylist.append(q)
+			#print "interval: " + q.interval
+			#print "index: " , q.index
+			#print "starttime: " , q.startTime
 
 		return querylist
     

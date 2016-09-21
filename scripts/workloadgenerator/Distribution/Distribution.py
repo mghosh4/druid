@@ -3,13 +3,13 @@ import numpy
 
 class Uniform(object):
 
-    def generateDistribution(self, minSample, maxSample, numSamples):
+    def generateDistribution(self, minSample, maxSample, numSamples, popularityList):
         # start and end is inclusive
         return numpy.random.random_integers(minSample, maxSample, numSamples)
 
 class Zipfian(object):
 
-    def generateDistribution(self, minSample, maxSample, numSamples):
+    def generateDistribution(self, minSample, maxSample, numSamples, popularityList):
         shape = 1.2   # the distribution shape parameter, also known as `a` or `alpha`
         zipfsample = self.randZipf(maxSample - minSample + 1, shape, numSamples)
         #print "Zipf List"
@@ -36,21 +36,34 @@ class DynamicZipfian(object):
     def generateDistribution(self, minSample, maxSample, numSamples, indexList):
         shape = 1.2   # the distribution shape parameter, also known as `a` or `alpha`
         #update the index list first
+        history = list()
+        #print "minSample %s" % minSample
+        #print "maxSample %s" % int(maxSample)
+        for i in range(minSample, int(maxSample)+1):
+            history.append(i)
+        #print "history:"
+        print str(history)
         zipfGenerator = Zipfian()
-        delta=maxSample-minSample+1
+        delta=int(maxSample-minSample+1)
         idxLength = len(indexList)
         if delta>idxLength:
-            for i in range(0, delta-idxLength-1):
+            #print "delta %s" % delta
+            #print "idxLength %s" % idxLength
+            for i in range(0, delta-idxLength):
                 currIdx=i+len(indexList)
-                zipfsample = self.randZipf(len(indexList), shape, 1)
-                indexList.add(zipfSample, currIdx)
+                samplelist = list()
+                samplelist = self.randZipf(len(indexList), shape, 1)
+                zipfSample = samplelist[0]
+                indexList.insert(zipfSample, currIdx)
                       
         ranksample = self.randZipf(len(indexList), shape, numSamples)
-        indexsample = [ indexList[x] for x in ranksample ]
+        #print "length of indexList: %s"% len(indexList)
+        print str(ranksample)
+        #indexsample = [ indexList[x] for x in ranksample ]
         #print "Zipf List"
-        #Utils.printlist(zipfsample)
+        #Utils.printlist(zipfsample)append
 
-        return [ y + minSample for y in indexsample ]
+        return [ history[y] + minSample for y in ranksample ]
 
     def randZipf(self, n, alpha, numSamples):
         tmp = numpy.power( numpy.arange(1, n+1), -alpha )
@@ -64,14 +77,14 @@ class DynamicZipfian(object):
 
 class Latest(Zipfian):
 
-    def generateDistribution(self, minSample, maxSample, numSamples):
+    def generateDistribution(self, minSample, maxSample, numSamples, popularityList):
         latestsample = super(Latest, self).generateDistribution(minSample, maxSample, numSamples)
         return [maxSample - x + minSample for x in latestsample]
 
 
 class ScrambledZipfian(Zipfian):
 
-    def generateDistribution(self, minSample, maxSample, numSamples):
+    def generateDistribution(self, minSample, maxSample, numSamples, popularityList):
         scrambledzipfiansample = super(ScrambledZipfian, self).generateDistribution(minSample, maxSample, numSamples)
         itemcount = maxSample - minSample + 1
         return [minSample + x % itemcount for x in scrambledzipfiansample]
