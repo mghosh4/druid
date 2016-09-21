@@ -1,6 +1,5 @@
-import os
 import json
-from datetime import timedelta
+from datetime import datetime, timedelta
 from collections import OrderedDict
 from Utils import Utils
 
@@ -31,7 +30,8 @@ class DruidNodeLogReader:
 						
 						if (metric not in self.metricvalues[count]):
 							self.metricvalues[count][metric] = dict()
-						self.metricvalues[count][metric][y[0]['timestamp']] = y[0]['value']
+						timestamp = datetime.strptime(y[0]['timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ')
+						self.metricvalues[count][metric][timestamp] = float(y[0]['value'])
 						break
 
 			for metric in self.metrics:
@@ -55,7 +55,7 @@ class DruidNodeLogReader:
 						if (timestamp >= firsttimerange and timestamp <= secondtimerange):
 							if (metric not in self.metricvalues[count]):
 							    self.metricvalues[count][metric] = dict()
-							self.metricvalues[count][metric][y[0]['timestamp']] = y[0]['value']
+							self.metricvalues[count][metric][timestamp] = float(y[0]['value'])
 			            
 			            break
 	
@@ -82,44 +82,70 @@ class DruidNodeLogReader:
 			return None
 		return self.metricvalues[count][metric]
 	
-	def getAggregateMetricValue(self, metric):
-	    mintime = date.max
-	    maxtime = date.min
+	def getOverallStats(self, metric, stats):
+		overalllist = list()
+		for count in xrange(self.numnodes):
+			overalllist.extend(self.metricvalues[count][metric].values())
+			
+		resultlist = dict()
+		for stat in stats:
+			resultlist[stat] = stat(overalllist)
+			
+		return resultlist
+	
+	def getAggregateStats(self, metric, stats):
+	    mintime = datetime.max
+	    maxtime = datetime.min
 	    iterlist = dict()
+
 	    for count in xrange(self.numnodes):
-	    	if metric not in self.metricvalues[count][metric]:
+	    	if metric not in self.metricvalues[count]:
 	    		continue
 	    	
 	        mintime = min(mintime, min(self.metricvalues[count][metric].keys()))
 	        maxtime = max(maxtime, max(self.metricvalues[count][metric].keys()))
 	
 	        iterlist[count] = iter(self.metricvalues[count][metric].items())
-	
-		candidatelist = dict()
+	        
+	    if len(iterlist) < len(self.metricvalues):
+		    return 
+
+	    candidatelist = dict()
+	    currentVal = dict()
 	    for count in xrange(self.numnodes):
-	        candidatelist[count] = iterlist[count]
+	        candidatelist[count] = next(iterlist[count])
+	        currentVal[count] = 0
 	
 		aggregatelist = dict()
+		for stat in stats:
+			aggregatelist[stat] = OrderedDict()
+			
 	    while len(candidatelist) > 0:
-	    	count = min(candidatelist, key=candidatelist.get)
-	    	key, value = candidatelist[count] 
-	    	aggregatelist[key] = value
+	    	count = min(candidatelist, key = candidatelist.get)
+	    	key, value = candidatelist[count]
+	    	currentVal[count] = value
+	    	
+	    	for stat in stats:
+	    		aggregatelist[stat][key] = stat(currentVal.values())
 	    	
 	    	try:
-	    		iterlist[count].next()
-	    		candidatelist[count] = iterlist[count]
+	    		candidatelist[count] = next(iterlist[count])
 	    	except StopIteration:
 	    		candidatelist.pop(count)
 
 	    sampledlist = dict()
+	    for stat in stats:
+	    	sampledlist[stat] = OrderedDict()
+	    	
 	    tmsample = mintime
-	    actualvalue = 0	    		
-	    for (key, value) in aggregatelist.iteritems():
+	    prevKey = mintime	    		
+	    for key in aggregatelist[stats[0]].keys():
 	    	while (tmsample < key):
-	    		sampledlist[tmsample] = actualvalue
+	    		for stat in stats:
+	    			sampledlist[stat][tmsample] = aggregatelist[stat][prevKey]
 	    		tmsample += timedelta(seconds = 15)
 	    	
-	    	actualvalue = value
+	    	prevKey = key
 	    	
 	    return sampledlist
 	    	

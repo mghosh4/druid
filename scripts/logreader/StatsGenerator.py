@@ -1,7 +1,9 @@
 import os, sys
+import numpy
 
 from ParseConfig import ParseConfig
 from DruidNodeLogReader import DruidNodeLogReader
+from Utils import Utils
 
 def getConfigFile(args):
 	return args[1]
@@ -44,25 +46,33 @@ coordinatormetrics.writeMetrics()
 brokermetrics.writeMetrics()
 historicalmetrics.writeMetrics()
 
-def getMemoryUsed(parameter,logfile):
-	Writer(RunLogReader(parameter, logfile), resultfolder + "historicalmetrics.log")
+### Historical Metrics ###
+stats = [sum, numpy.mean, max, min]
+headerStr = "Time\tTotal\tMean\tMax\tMin\n"
 
-def getSegmentCount(parameter, logfile):
-	Writer(RunLogReader(parameter, logfile), resultfolder + "coordinatormetrics.log")
+for metric in ["segment/count", "sys/mem/used"]:
+	aggValues = historicalmetrics.getAggregateStats(metric, stats)
+	
+	if "/" in metric:
+		newmetrics = metric.replace("/", "-")
+	else:
+		newmetrics = metric
+		
+	filename = resultfolder + "/historical" + "-" + newmetrics + ".log"
+	Utils.writeTimeSeriesMetricStats(filename, aggValues, stats, headerStr)
 
-def getAverageLatency():
-	dictionary = dict()
-	theFile = open(resultfolder + "broker-0-query-time.log",'r')
-	FILE = theFile.readlines()
-	theFile.close() 
+### Broker Metrics ###
+stats = [numpy.mean, numpy.median, Utils.percentile99, Utils.percentile90, Utils.percentile75]
+headerStr = "\tMean\tMedian\t99th Percentile\t95th Percentile\t75th Percentile\n"
 
-	totaltime = 0
-	count = 0
-	for line in FILE:
-		totaltime += int(line.split("~")[1].strip())
-		count += 1
-		f = open(resultfolder + "averagelatency.log", 'a')
-        f.write(str(totaltime/count))
-        f.close()
+for metric in ["query/time"]:
+	overallStats = brokermetrics.getOverallStats(metric, stats)
+	if "/" in metric:
+		newmetrics = metric.replace("/", "-")
+	else:
+		newmetrics = metric
+		
+	filename = resultfolder + "/broker" + "-" + newmetrics + ".log"
+	Utils.writeOverallMetricStats(filename, overallStats, stats, headerStr)
 
-getAverageLatency()
+### Coordinator Metrics ###
