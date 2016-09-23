@@ -369,6 +369,37 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
+  public boolean updateSegmentsPopularities(Map<DataSegment, Number> segmentsPopularities)
+  {
+    for (final Map.Entry<DataSegment, Number> segmentPopularity : segmentsPopularities.entrySet()) {
+      final String segmentId = segmentPopularity.getKey().getIdentifier();
+      try {
+        dbi.withHandle(
+            new HandleCallback<Void>()
+            {
+              @Override
+              public Void withHandle(Handle handle) throws Exception
+              {
+                handle.createStatement(
+                    String.format("UPDATE %s SET popularity=:popularity WHERE id = :id", getSegmentsTable())
+                )
+                      .bind("id", segmentId)
+                      .bind("popularity", segmentPopularity.getValue())
+                      .execute();
+                return null;
+              }
+            }
+        );
+      }
+      catch (Exception e) {
+        log.error(e, "Exception updating popularity of segment %s", segmentId);
+      }
+    }
+
+    return true;
+  }
+
+  @Override
   public DruidDataSource getInventoryValue(String key)
   {
     return dataSources.get().get(key);
