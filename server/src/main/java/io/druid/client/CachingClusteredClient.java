@@ -93,6 +93,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   private final ObjectMapper objectMapper;
   private final CacheConfig cacheConfig;
   private final ListeningExecutorService backgroundExecutorService;
+  private final SegmentCollector segmentCollector;
 
   @Inject
   public CachingClusteredClient(
@@ -101,7 +102,8 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       Cache cache,
       @Smile ObjectMapper objectMapper,
       @BackgroundCaching ExecutorService backgroundExecutorService,
-      CacheConfig cacheConfig
+      CacheConfig cacheConfig,
+      SegmentCollector segmentCollector
   )
   {
     this.warehouse = warehouse;
@@ -110,6 +112,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     this.objectMapper = objectMapper;
     this.cacheConfig = cacheConfig;
     this.backgroundExecutorService = MoreExecutors.listeningDecorator(backgroundExecutorService);
+    this.segmentCollector = segmentCollector;
 
     serverView.registerSegmentCallback(
         Execs.singleThreaded("CCClient-ServerView-CB-%d"),
@@ -233,7 +236,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         segments.add(Pair.of(selector, descriptor));
 
         if (!REALTIME_NODE_TYPE.equals(selector.pick().getServer().getType())) {
-          SegmentCollector.addSegment(selector.getSegment());
+          segmentCollector.addSegment(selector.getSegment());
           log.info("Adding Segment ID [%s]", selector.getSegment().getIdentifier());
         }
       }

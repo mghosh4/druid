@@ -35,6 +35,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.server.http.SegmentCollector;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -233,7 +234,8 @@ public class CachingClusteredClientFunctionalityTest {
           {
             return mergeLimit;
           }
-        }
+        },
+        new SegmentCollector(CachingClusteredClientTest.jsonMapper)
     );
   }
 }

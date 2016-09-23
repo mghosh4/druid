@@ -114,6 +114,7 @@ import io.druid.query.topn.TopNQueryConfig;
 import io.druid.query.topn.TopNQueryQueryToolChest;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.TestHelper;
+import io.druid.server.http.SegmentCollector;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -2236,7 +2237,8 @@ public class CachingClusteredClientTest
           {
             return mergeLimit;
           }
-        }
+        },
+        new SegmentCollector(jsonMapper)
     );
   }
 
