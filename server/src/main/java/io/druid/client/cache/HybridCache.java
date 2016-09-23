@@ -129,4 +129,10 @@ public class HybridCache implements Cache
     level1.doMonitor(emitter);
     level2.doMonitor(emitter);
   }
+
+  @Override
+  public void setSegmentsPopularitiesSnapshot(Map<String, Float> segmentsPopularitiesSnapshot)
+  {
+
+  }
 }

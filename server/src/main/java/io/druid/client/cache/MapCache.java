@@ -175,4 +175,10 @@ public class MapCache implements Cache
   {
     // No special monitoring
   }
+
+  @Override
+  public void setSegmentsPopularitiesSnapshot(Map<String, Float> segmentsPopularitiesSnapshot)
+  {
+
+  }
 }

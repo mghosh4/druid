@@ -45,7 +45,9 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.BaseResultSetMapper;
 import org.skife.jdbi.v2.Batch;
+import org.skife.jdbi.v2.DefaultMapper;
 import org.skife.jdbi.v2.FoldController;
+import org.skife.jdbi.v2.Folder2;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
@@ -59,6 +61,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -397,6 +400,35 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     }
 
     return true;
+  }
+
+  @Override
+  public Map<String, Float> retrieveSegmentsPopularitiesSnapshot()
+  {
+    return dbi.withHandle(
+        new HandleCallback<Map<String, Float>>()
+        {
+          @Override
+          public Map<String, Float> withHandle(Handle handle) throws Exception
+          {
+            return handle.createQuery(
+                String.format("SELECT id, popularity FROM %s", getSegmentsTable())
+            )
+                .map(new DefaultMapper())
+                .fold(new HashMap<String, Float>(), new Folder2<HashMap<String, Float>>()
+                {
+                  @Override
+                  public HashMap<String, Float> fold(
+                      HashMap<String, Float> accumulator, ResultSet rs, StatementContext ctx
+                  ) throws SQLException
+                  {
+                    accumulator.put(rs.getString("id"), rs.getFloat("popularity"));
+                    return accumulator;
+                  }
+                });
+          }
+        }
+    );
   }
 
   @Override
