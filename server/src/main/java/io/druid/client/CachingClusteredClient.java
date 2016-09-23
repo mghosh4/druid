@@ -246,7 +246,10 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       }
     }
 
-    cache.setSegmentsPopularitiesSnapshot(metadataSegmentManager.retrieveSegmentsPopularitiesSnapshot());
+    log.info("Setting segments popularities snapshot...");
+    if (metadataSegmentManager != null) {
+      cache.setSegmentsPopularitiesSnapshot(metadataSegmentManager.retrieveSegmentsPopularitiesSnapshot());
+    }
 
     final byte[] queryCacheKey;
 

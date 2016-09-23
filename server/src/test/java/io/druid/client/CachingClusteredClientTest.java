@@ -2238,7 +2238,8 @@ public class CachingClusteredClientTest
             return mergeLimit;
           }
         },
-        new SegmentCollector(jsonMapper)
+        new SegmentCollector(jsonMapper),
+        null
     );
   }
 
