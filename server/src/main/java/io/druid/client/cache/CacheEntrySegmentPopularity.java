@@ -11,9 +11,9 @@ public class CacheEntrySegmentPopularity
   private final ByteBuffer key;
   private final byte[] value;
   private final String segmentIdentifier;
-  private final Float popularity;
+  private final Double popularity;
 
-  public CacheEntrySegmentPopularity(String segmentIdentifier, ByteBuffer key, byte[] value, Float popularity)
+  public CacheEntrySegmentPopularity(String segmentIdentifier, ByteBuffer key, byte[] value, Double popularity)
   {
     this.segmentIdentifier = segmentIdentifier;
     this.key = key;
@@ -26,7 +26,7 @@ public class CacheEntrySegmentPopularity
     return segmentIdentifier;
   }
 
-  public Float getPopularity()
+  public Double getPopularity()
   {
     return popularity;
   }
@@ -47,7 +47,6 @@ public class CacheEntrySegmentPopularity
   }
 
   public static class SegmentPopularityComparator implements Comparator<CacheEntrySegmentPopularity> {
-    private static final float TOLERANCE = 0.0001f;
     @Override
     public int compare(CacheEntrySegmentPopularity o1, CacheEntrySegmentPopularity o2)
     {

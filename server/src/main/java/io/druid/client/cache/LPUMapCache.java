@@ -58,7 +58,7 @@ public class LPUMapCache implements Cache
 
   private final AtomicLong hitCount = new AtomicLong(0);
   private final AtomicLong missCount = new AtomicLong(0);
-  private volatile Map<String, Float> segmentPopularitySnapshot;
+  private volatile Map<String, Double> segmentPopularitySnapshot;
 
   LPUMapCache(
       ByteCountingLRUMap byteCountingLRUMap
@@ -126,7 +126,7 @@ public class LPUMapCache implements Cache
           }
 
           // Lookup segment popularity, populate priority queue
-          Float popularity = segmentPopularitySnapshot.get(segmentIdentifier);
+          Double popularity = segmentPopularitySnapshot.get(segmentIdentifier);
           if (popularity == null) {
             throw new IllegalStateException("SegmentIdentifier not found in popularity snapshot, but exist in cache");
           }
@@ -235,7 +235,7 @@ public class LPUMapCache implements Cache
   }
 
   @Override
-  public void setSegmentsPopularitiesSnapshot(Map<String, Float> segmentsPopularitiesSnapshot)
+  public void setSegmentsPopularitiesSnapshot(Map<String, Double> segmentsPopularitiesSnapshot)
   {
     this.segmentPopularitySnapshot = segmentsPopularitiesSnapshot;
   }

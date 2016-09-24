@@ -372,9 +372,9 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
-  public boolean updateSegmentsPopularities(Map<DataSegment, Number> segmentsPopularities)
+  public boolean updateSegmentsPopularities(Map<DataSegment, Double> segmentsPopularities)
   {
-    for (final Map.Entry<DataSegment, Number> segmentPopularity : segmentsPopularities.entrySet()) {
+    for (final Map.Entry<DataSegment, Double> segmentPopularity : segmentsPopularities.entrySet()) {
       final String segmentId = segmentPopularity.getKey().getIdentifier();
       try {
         dbi.withHandle(
@@ -403,26 +403,26 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
-  public Map<String, Float> retrieveSegmentsPopularitiesSnapshot()
+  public Map<String, Double> retrieveSegmentsPopularitiesSnapshot()
   {
     return dbi.withHandle(
-        new HandleCallback<Map<String, Float>>()
+        new HandleCallback<Map<String, Double>>()
         {
           @Override
-          public Map<String, Float> withHandle(Handle handle) throws Exception
+          public Map<String, Double> withHandle(Handle handle) throws Exception
           {
             return handle.createQuery(
                 String.format("SELECT id, popularity FROM %s", getSegmentsTable())
             )
                 .map(new DefaultMapper())
-                .fold(new HashMap<String, Float>(), new Folder2<HashMap<String, Float>>()
+                .fold(new HashMap<String, Double>(), new Folder2<HashMap<String, Double>>()
                 {
                   @Override
-                  public HashMap<String, Float> fold(
-                      HashMap<String, Float> accumulator, ResultSet rs, StatementContext ctx
+                  public HashMap<String, Double> fold(
+                      HashMap<String, Double> accumulator, ResultSet rs, StatementContext ctx
                   ) throws SQLException
                   {
-                    accumulator.put(rs.getString("id"), rs.getFloat("popularity"));
+                    accumulator.put(rs.getString("id"), rs.getDouble("popularity"));
                     return accumulator;
                   }
                 });

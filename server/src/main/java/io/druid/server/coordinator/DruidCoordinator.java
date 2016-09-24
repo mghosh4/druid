@@ -139,7 +139,7 @@ public class DruidCoordinator
 	private volatile int leaderCounter = 0;
 	private volatile boolean leader = false;
 	private volatile SegmentReplicantLookup segmentReplicantLookup = null;
-	private volatile HashMap<DataSegment, Number> weightedAccessCounts;
+	private volatile HashMap<DataSegment, Double> weightedAccessCounts;
 
 	@Inject
 	public DruidCoordinator(
@@ -202,7 +202,7 @@ public class DruidCoordinator
 		this.config = config;
 		this.zkPaths = zkPaths;
 		this.configManager = configManager;
-		this.weightedAccessCounts = new HashMap<DataSegment,Number>();
+		this.weightedAccessCounts = new HashMap<>();
 
 		this.metadataSegmentManager = metadataSegmentManager;
 		this.serverInventoryView = serverInventoryView;
@@ -232,12 +232,12 @@ public class DruidCoordinator
 		return loadManagementPeons;
 	}
 
-	public HashMap<DataSegment, Number> getWeightedAccessCounts()
+	public HashMap<DataSegment, Double> getWeightedAccessCounts()
 	{
 		return weightedAccessCounts;
 	}
 
-	public void setWeightedAccessCounts(HashMap<DataSegment, Number> counts)
+	public void setWeightedAccessCounts(HashMap<DataSegment, Double> counts)
 	{
 		this.weightedAccessCounts = counts;
 	}

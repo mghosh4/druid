@@ -47,9 +47,9 @@ public interface MetadataSegmentManager
 
   boolean isStarted();
 
-  boolean updateSegmentsPopularities(Map<DataSegment, Number> segmentsPopularities);
+  boolean updateSegmentsPopularities(Map<DataSegment, Double> segmentsPopularities);
 
-  Map<String, Float> retrieveSegmentsPopularitiesSnapshot();
+  Map<String, Double> retrieveSegmentsPopularitiesSnapshot();
 
   DruidDataSource getInventoryValue(String key);
 

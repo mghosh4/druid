@@ -55,7 +55,7 @@ public interface Cache
    */
   void doMonitor(ServiceEmitter emitter);
 
-  void setSegmentsPopularitiesSnapshot(Map<String, Float> segmentsPopularitiesSnapshot);
+  void setSegmentsPopularitiesSnapshot(Map<String, Double> segmentsPopularitiesSnapshot);
 
   class NamedKey
   {

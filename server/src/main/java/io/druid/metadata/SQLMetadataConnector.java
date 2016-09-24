@@ -224,7 +224,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  version VARCHAR(255) NOT NULL,\n"
                 + "  used BOOLEAN NOT NULL,\n"
                 + "  payload %2$s NOT NULL,\n"
-                + "  popularity FLOAT NOT NULL DEFAULT 0,\n"
+                + "  popularity DOUBLE NOT NULL DEFAULT 0,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
                 tableName, getPayloadType()
