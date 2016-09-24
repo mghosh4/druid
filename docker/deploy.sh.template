@@ -2,41 +2,41 @@
 
 {% if is_dryrun %}
 eval $(docker-machine env --swarm d-druid-swarm-master)
-docker run -itd --name=zookeeper --network=d-my-net --env="constraint:node==d-node-1" {{ docker_hub_username }}/druid-zookeeper:{{ username }}
-docker run -itd --name=mysql --network=d-my-net --env="constraint:node==d-node-2" {{ docker_hub_username }}/druid-mysql:{{ username }}
+docker run -itd --name=zookeeper --network=d-my-net --env="constraint:node==d-node-1" {{ docker_hub_username }}/druid-zookeeper:{{ image_tag }}
+docker run -itd --name=mysql --network=d-my-net --env="constraint:node==d-node-2" {{ docker_hub_username }}/druid-mysql:{{ image_tag }}
 
 for i in `seq 1 2`;
 do
-  docker run -itd --name=node-$i-conf-and-scripts --network=d-my-net --env="constraint:node==d-node-$i" {{ docker_hub_username }}/druid-conf-and-scripts:{{ username }}
+  docker run -itd --name=node-$i-conf-and-scripts --network=d-my-net --env="constraint:node==d-node-$i" {{ docker_hub_username }}/druid-conf-and-scripts:{{ image_tag }}
 done
 
-docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-2-conf-and-scripts --name=overlord --network=d-my-net --env="constraint:node==d-node-2" {{ docker_hub_username }}/druid-overlord:{{ username }}
-docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-1-conf-and-scripts --name=middlemanager --network=d-my-net --env="constraint:node==d-node-1" {{ docker_hub_username }}/druid-middlemanager:{{ username }}
-docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-1-conf-and-scripts -p 8080:8080 --name=coordinator --network=d-my-net --env="constraint:node==d-node-1" {{ docker_hub_username }}/druid-coordinator:{{ username }}
-docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-2-conf-and-scripts --name=historical1 --network=d-my-net --env="constraint:node==d-node-2" {{ docker_hub_username }}/druid-historical:{{ username }}
-docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-2-conf-and-scripts --name=historical2 --network=d-my-net --env="constraint:node==d-node-2" {{ docker_hub_username }}/druid-historical:{{ username }}
-docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-2-conf-and-scripts --name=historical3 --network=d-my-net --env="constraint:node==d-node-2" {{ docker_hub_username }}/druid-historical:{{ username }}
-docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-1-conf-and-scripts --name=broker --network=d-my-net --env="constraint:node==d-node-1" {{ docker_hub_username }}/druid-broker:{{ username }}
-docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-1-conf-and-scripts --name=kafka --network=d-my-net --env="constraint:node==d-node-1" {{ docker_hub_username }}/druid-kafka:{{ username }}e }}
-docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-2-conf-and-scripts --name=realtime --network=d-my-net --env="constraint:node==d-node-2" {{ docker_hub_username }}/druid-realtime:{{ username }}
+docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-2-conf-and-scripts --name=overlord --network=d-my-net --env="constraint:node==d-node-2" {{ docker_hub_username }}/druid-overlord:{{ image_tag }}
+docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-1-conf-and-scripts --name=middlemanager --network=d-my-net --env="constraint:node==d-node-1" {{ docker_hub_username }}/druid-middlemanager:{{ image_tag }}
+docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-1-conf-and-scripts -p 8080:8080 --name=coordinator --network=d-my-net --env="constraint:node==d-node-1" {{ docker_hub_username }}/druid-coordinator:{{ image_tag }}
+docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-2-conf-and-scripts --name=historical1 --network=d-my-net --env="constraint:node==d-node-2" {{ docker_hub_username }}/druid-historical:{{ image_tag }}
+docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-2-conf-and-scripts --name=historical2 --network=d-my-net --env="constraint:node==d-node-2" {{ docker_hub_username }}/druid-historical:{{ image_tag }}
+docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-2-conf-and-scripts --name=historical3 --network=d-my-net --env="constraint:node==d-node-2" {{ docker_hub_username }}/druid-historical:{{ image_tag }}
+docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-1-conf-and-scripts --name=broker --network=d-my-net --env="constraint:node==d-node-1" {{ docker_hub_username }}/druid-broker:{{ image_tag }}
+docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-1-conf-and-scripts --name=kafka --network=d-my-net --env="constraint:node==d-node-1" {{ docker_hub_username }}/druid-kafka:{{ image_tag }}e }}
+docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-2-conf-and-scripts --name=realtime --network=d-my-net --env="constraint:node==d-node-2" {{ docker_hub_username }}/druid-realtime:{{ image_tag }}
 
 {% else %}
 eval $(docker-machine env --swarm p-druid-swarm-master)
-docker run -itd --name=zookeeper --network=p-my-net --env="constraint:node==p-node-7" {{ docker_hub_username }}/druid-zookeeper:{{ username }}
-docker run -itd --name=mysql --network=p-my-net --env="constraint:node==p-node-8" {{ docker_hub_username }}/druid-mysql:{{ username }}
+docker run -itd --name=zookeeper --network=p-my-net --env="constraint:node==p-node-7" {{ docker_hub_username }}/druid-zookeeper:{{ image_tag }}
+docker run -itd --name=mysql --network=p-my-net --env="constraint:node==p-node-8" {{ docker_hub_username }}/druid-mysql:{{ image_tag }}
 
 for i in `seq 1 10`;
 do
-  docker run -itd --name=node-$i-conf-and-scripts --network=p-my-net --env="constraint:node==p-node-$i" {{ docker_hub_username }}/druid-conf-and-scripts:{{ username }}
+  docker run -itd --name=node-$i-conf-and-scripts --network=p-my-net --env="constraint:node==p-node-$i" {{ docker_hub_username }}/druid-conf-and-scripts:{{ image_tag }}
 done
 
-docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-9-conf-and-scripts --name=overlord --network=p-my-net --env="constraint:node==p-node-9" {{ docker_hub_username }}/druid-overlord:{{ username }}
-docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-10-conf-and-scripts --name=middlemanager --network=p-my-net --env="constraint:node==p-node-10" {{ docker_hub_username }}/druid-middlemanager:{{ username }}
-docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-1-conf-and-scripts -p 8080:8080 --name=coordinator --network=p-my-net --env="constraint:node==p-node-1" {{ docker_hub_username }}/druid-coordinator:{{ username }}
-docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-2-conf-and-scripts --name=historical1 --network=p-my-net --env="constraint:node==p-node-2" {{ docker_hub_username }}/druid-historical:{{ username }}
-docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-3-conf-and-scripts --name=historical2 --network=p-my-net --env="constraint:node==p-node-3" {{ docker_hub_username }}/druid-historical:{{ username }}
-docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-4-conf-and-scripts --name=historical3 --network=p-my-net --env="constraint:node==p-node-4" {{ docker_hub_username }}/druid-historical:{{ username }}
-docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-5-conf-and-scripts --name=broker --network=p-my-net --env="constraint:node==p-node-5" {{ docker_hub_username }}/druid-broker:{{ username }}
-docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-8-conf-and-scripts --name=kafka --network=p-my-net --env="constraint:node==p-node-8" {{ docker_hub_username }}/druid-kafka:{{ username }}
-docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-6-conf-and-scripts --name=realtime --network=p-my-net --env="constraint:node==p-node-6" {{ docker_hub_username }}/druid-realtime:{{ username }}
+docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-9-conf-and-scripts --name=overlord --network=p-my-net --env="constraint:node==p-node-9" {{ docker_hub_username }}/druid-overlord:{{ image_tag }}
+docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-10-conf-and-scripts --name=middlemanager --network=p-my-net --env="constraint:node==p-node-10" {{ docker_hub_username }}/druid-middlemanager:{{ image_tag }}
+docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-1-conf-and-scripts -p 8080:8080 --name=coordinator --network=p-my-net --env="constraint:node==p-node-1" {{ docker_hub_username }}/druid-coordinator:{{ image_tag }}
+docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-2-conf-and-scripts --name=historical1 --network=p-my-net --env="constraint:node==p-node-2" {{ docker_hub_username }}/druid-historical:{{ image_tag }}
+docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-3-conf-and-scripts --name=historical2 --network=p-my-net --env="constraint:node==p-node-3" {{ docker_hub_username }}/druid-historical:{{ image_tag }}
+docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-4-conf-and-scripts --name=historical3 --network=p-my-net --env="constraint:node==p-node-4" {{ docker_hub_username }}/druid-historical:{{ image_tag }}
+docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-5-conf-and-scripts --name=broker --network=p-my-net --env="constraint:node==p-node-5" {{ docker_hub_username }}/druid-broker:{{ image_tag }}
+docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-8-conf-and-scripts --name=kafka --network=p-my-net --env="constraint:node==p-node-8" {{ docker_hub_username }}/druid-kafka:{{ image_tag }}
+docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-6-conf-and-scripts --name=realtime --network=p-my-net --env="constraint:node==p-node-6" {{ docker_hub_username }}/druid-realtime:{{ image_tag }}
 {% endif %}

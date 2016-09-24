@@ -1,4 +1,4 @@
-FROM {{ docker_hub_username }}/druid-base:{{ username }}
+FROM {{ docker_hub_username }}/druid-base:{{ image_tag }}
 
 ENV CONTAINER_NAME kafka
 
