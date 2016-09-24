@@ -23,6 +23,7 @@ import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
+import org.apache.commons.codec.binary.Hex;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -51,7 +52,7 @@ public class LPUMapCache implements Cache
   private final ByteCountingLRUMap byteCountingLRUMap;
 
   private final Map<String, byte[]> namespaceId;
-  private final ConcurrentMap<byte[], String> reverseNamespaceId;
+  private final ConcurrentMap<String, String> reverseNamespaceId;
   private final AtomicInteger ids;
 
   private final Object clearLock = new Object();
@@ -120,7 +121,7 @@ public class LPUMapCache implements Cache
           cacheEntry.getKey().rewind();
 
           // Lookup the namespaceId byte array to get the segmentIdentifier string
-          String segmentIdentifier = reverseNamespaceId.get(namespaceIdBytes);
+          String segmentIdentifier = reverseNamespaceId.get(Hex.encodeHexString(namespaceIdBytes));
           if (segmentIdentifier == null) {
             throw new IllegalStateException("SegmentIdentifier not found in reverse namespaceId lookup, but exist in cache");
           }
@@ -180,7 +181,7 @@ public class LPUMapCache implements Cache
       }
 
       namespaceId.remove(namespace);
-      reverseNamespaceId.remove(idBytes);
+      reverseNamespaceId.remove(Hex.encodeHexString(idBytes));
     }
     synchronized (clearLock) {
       Iterator<ByteBuffer> iter = baseMap.keySet().iterator();
@@ -211,7 +212,7 @@ public class LPUMapCache implements Cache
 
       idBytes = Ints.toByteArray(ids.getAndIncrement());
       namespaceId.put(identifier, idBytes);
-      reverseNamespaceId.put(idBytes, identifier);
+      reverseNamespaceId.put(Hex.encodeHexString(idBytes), identifier);
       return idBytes;
     }
   }
