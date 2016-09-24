@@ -55,6 +55,6 @@ public class BrokerResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getSegments()
   {
-    return Response.ok(segmentCollector.getSerializedSegmentCounter()).build();
+    return Response.ok(segmentCollector.getSerializedSegmentList()).build();
   }
 }

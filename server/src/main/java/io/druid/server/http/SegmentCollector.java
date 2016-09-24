@@ -25,36 +25,35 @@ import com.metamx.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 
 import javax.inject.Inject;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public final class SegmentCollector {
 	private static final Logger log = new Logger(SegmentCollector.class);
 
-	private final Map<DataSegment, Long> segmentCounter;
+	private final List<DataSegment> segmentList;
 
 	private final ObjectMapper mapper;
 
 	@Inject
 	public SegmentCollector(ObjectMapper mapper){
-		this.segmentCounter = new ConcurrentHashMap<>();
+		this.segmentList = new CopyOnWriteArrayList<>();
 		this.mapper = mapper;
 	}
 	
 	public void addSegment(DataSegment segment)
 	{
 		log.info("Adding Segment ID [%s]", segment.getIdentifier());
-		Long count = segmentCounter.getOrDefault(segment, 0L);
-		segmentCounter.put(segment, count + 1);
+		segmentList.add(segment);
 	}
 	
-	public String getSerializedSegmentCounter()
+	public String getSerializedSegmentList()
 	{
 		String result = null;
 		try {
-			result = mapper.writeValueAsString(segmentCounter);
+			result = mapper.writeValueAsString(segmentList);
 			log.info("Serializing Segment List [%d]", result.length());
-			segmentCounter.clear();
+			segmentList.clear();
 		} catch (JsonProcessingException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

@@ -25,7 +25,6 @@ import com.google.api.client.util.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Multiset.Entry;
@@ -105,7 +104,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
     HashMap<DataSegment, Number> removeList = new HashMap<>();
 
     // Acquire Query Workload in the last window
-    Map<DataSegment, Long> segments = Maps.newHashMap();
+    Multiset<DataSegment> segments = HashMultiset.create();
     calculateSegmentCounts(segments);
 
     // Calculate the popularity map
@@ -168,21 +167,21 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
     return uris;
   }
 
-  private void calculateSegmentCounts(Map<DataSegment, Long> segmentCounts)
+  private void calculateSegmentCounts(Multiset<DataSegment> segmentCounts)
   {
     //log.info("Starting replication. Getting Segment Popularity");
     List<String> urls = getBrokerURLs();
 
     ExecutorService pool = Executors.newFixedThreadPool(urls.size());
-    List<Future<Map<DataSegment, Long>>> futures = new ArrayList<>();
+    List<Future<List<DataSegment>>> futures = new ArrayList<>();
 
     for (final String url : urls) {
-      futures.add(pool.submit(new Callable<Map<DataSegment, Long>>()
+      futures.add(pool.submit(new Callable<List<DataSegment>>()
       {
         @Override
-        public Map<DataSegment, Long> call()
+        public List<DataSegment> call()
         {
-          Map<DataSegment, Long> segments;
+          List<DataSegment> segments;
           try {
             StatusResponseHolder response = httpClient.go(
                 new Request(
@@ -203,7 +202,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 
             log.info("Response Length [%d]", response.getContent().length());
 
-            segments = jsonMapper.readValue(response.getContent(), new TypeReference<Map<DataSegment, Long>>()
+            segments = jsonMapper.readValue(response.getContent(), new TypeReference<List<DataSegment>>()
             {
             });
           }
@@ -222,12 +221,13 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
       }));
     }
 
-    for (Future<Map<DataSegment, Long>> future : futures) {
+    for (Future<List<DataSegment>> future : futures) {
       try {
-        Map<DataSegment, Long> segments = future.get();
-        for (Map.Entry<DataSegment, Long> entry : segments.entrySet()) {
-          Long prevVal = segmentCounts.getOrDefault(entry.getKey(), 0L);
-          segmentCounts.put(entry.getKey(), entry.getValue() + prevVal);
+        List<DataSegment> segments = future.get();
+        for (DataSegment segment : segments) {
+          if (segment != null) {
+            segmentCounts.add(segment);
+          }
         }
       } catch (InterruptedException | ExecutionException e) {
         // TODO Auto-generated catch block
@@ -244,7 +244,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 
   private void calculateWeightedAccessCounts(
       DruidCoordinatorRuntimeParams params,
-      Map<DataSegment, Long> segments,
+      Multiset<DataSegment> segments,
       HashMap<DataSegment, Double> weightedAccessCounts,
       HashMap<DataSegment, Number> removeList
   )
@@ -253,14 +253,14 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 
     // Handle those segments which are in Coordinator's map but not in segments collected from query
 		for (Map.Entry<DataSegment, Double> entry : weightedAccessCounts.entrySet()) {
-      if (!segments.containsKey(entry.getKey())) {
+      if (!segments.contains(entry.getKey())) {
         weightedAccessCounts.put(entry.getKey(), 0.5 * entry.getValue());
       }
 		}
 
-    for (Map.Entry<DataSegment, Long> entry : segments.entrySet()) {
-      DataSegment segment = entry.getKey();
-      long segmentCount = entry.getValue();
+    for (Entry<DataSegment> entry : segments.entrySet()) {
+      DataSegment segment = entry.getElement();
+      long segmentCount = entry.getCount();
 
 			if (!weightedAccessCounts.containsKey(segment)) {
         weightedAccessCounts.put(segment, (double) segmentCount);
