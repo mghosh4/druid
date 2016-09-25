@@ -45,11 +45,11 @@ public class LPUMapCache implements Cache
   private static final Logger log = new Logger(LPUMapCache.class);
   public static Cache create(long sizeInBytes)
   {
-    return new LPUMapCache(new ByteCountingLRUMap(sizeInBytes));
+    return new LPUMapCache(new ByteCountingMap(sizeInBytes));
   }
 
   private final Map<ByteBuffer, byte[]> baseMap;
-  private final ByteCountingLRUMap byteCountingLRUMap;
+  private final ByteCountingMap byteCountingMap;
 
   private final Map<String, byte[]> namespaceId;
   private final ConcurrentMap<String, String> reverseNamespaceId;
@@ -59,14 +59,16 @@ public class LPUMapCache implements Cache
 
   private final AtomicLong hitCount = new AtomicLong(0);
   private final AtomicLong missCount = new AtomicLong(0);
+  private final AtomicLong evictionCount = new AtomicLong(0);
+
   private volatile Map<String, Double> segmentPopularitySnapshot;
 
   LPUMapCache(
-      ByteCountingLRUMap byteCountingLRUMap
+      ByteCountingMap byteCountingMap
   )
   {
-    this.byteCountingLRUMap = byteCountingLRUMap;
-    this.baseMap = Collections.synchronizedMap(byteCountingLRUMap);
+    this.byteCountingMap = byteCountingMap;
+    this.baseMap = Collections.synchronizedMap(byteCountingMap);
 
     this.segmentPopularitySnapshot = Maps.newHashMap();
 
@@ -81,9 +83,9 @@ public class LPUMapCache implements Cache
     return new CacheStats(
         hitCount.get(),
         missCount.get(),
-        byteCountingLRUMap.size(),
-        byteCountingLRUMap.getNumBytes(),
-        byteCountingLRUMap.getEvictionCount(),
+        byteCountingMap.size(),
+        byteCountingMap.getNumBytes(),
+        evictionCount.get(),
         0,
         0
     );
@@ -111,8 +113,8 @@ public class LPUMapCache implements Cache
       ByteBuffer newEntryKey = computeKey(getNamespaceId(key.namespace), key.key);
       int newEntrySize = newEntryKey.remaining() + value.length;
 
-      // If the new entry added could cause cache size exceed its limit, we should decide to evict least popular entries
-      if (byteCountingLRUMap.getNumBytes() + newEntrySize > byteCountingLRUMap.getSizeInBytes()) {
+      // If adding the new entry could cause cache size to exceed its limit, we should decide to evict least popular entries
+      if (byteCountingMap.getNumBytes() + newEntrySize > byteCountingMap.getSizeInBytes()) {
         PriorityQueue<CacheEntrySegmentPopularity> pq = new PriorityQueue<>(baseMap.size(), new CacheEntrySegmentPopularity.SegmentPopularityComparator());
         for (Entry<ByteBuffer, byte[]> cacheEntry : baseMap.entrySet()) {
           // Retrieve the namespaceId byte array
@@ -136,7 +138,7 @@ public class LPUMapCache implements Cache
 
         int totalEvictionSize = 0;
         List<CacheEntrySegmentPopularity> toEvict = new ArrayList<>();
-        while (byteCountingLRUMap.getNumBytes() + newEntrySize - totalEvictionSize > byteCountingLRUMap.getSizeInBytes()) {
+        while (byteCountingMap.getNumBytes() + newEntrySize - totalEvictionSize > byteCountingMap.getSizeInBytes()) {
           CacheEntrySegmentPopularity leastPopularSegment = pq.poll();
           toEvict.add(leastPopularSegment);
           totalEvictionSize += leastPopularSegment.getEntrySize();
@@ -144,6 +146,7 @@ public class LPUMapCache implements Cache
 
         // Evict
         for (CacheEntrySegmentPopularity entryToEvict : toEvict) {
+          evictionCount.incrementAndGet();
           log.info(
               "Evicting segment %s with popularity=%s",
               entryToEvict.getSegmentIdentifier(),
