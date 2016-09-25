@@ -26,7 +26,6 @@ import com.metamx.emitter.service.ServiceEmitter;
 import org.apache.commons.codec.binary.Hex;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -136,24 +135,15 @@ public class LPUMapCache implements Cache
           pq.add(new CacheEntrySegmentPopularity(segmentIdentifier, cacheEntry.getKey(), cacheEntry.getValue(), popularity));
         }
 
-        int totalEvictionSize = 0;
-        List<CacheEntrySegmentPopularity> toEvict = new ArrayList<>();
-        while (byteCountingMap.getNumBytes() + newEntrySize - totalEvictionSize > byteCountingMap.getSizeInBytes()) {
-          CacheEntrySegmentPopularity leastPopularSegment = pq.poll();
-          toEvict.add(leastPopularSegment);
-          totalEvictionSize += leastPopularSegment.getEntrySize();
-        }
-
         // Evict
-        for (CacheEntrySegmentPopularity entryToEvict : toEvict) {
-          evictionCount.incrementAndGet();
-          log.info(
-              "Evicting segment %s with popularity=%s",
-              entryToEvict.getSegmentIdentifier(),
-              entryToEvict.getPopularity()
-          );
-          baseMap.remove(entryToEvict.getKey());
-        }
+        CacheEntrySegmentPopularity leastPopularSegment = pq.poll();
+        evictionCount.incrementAndGet();
+        log.info(
+            "Evicting segment %s with popularity=%s",
+            leastPopularSegment.getSegmentIdentifier(),
+            leastPopularSegment.getPopularity()
+        );
+        baseMap.remove(leastPopularSegment.getKey());
       }
 
       baseMap.put(newEntryKey, value);

@@ -55,7 +55,8 @@ public class CacheEntrySegmentPopularity
       } else if (o1.getPopularity() > o2.getPopularity()) {
         return 1;
       } else {
-        return 0;
+        // Smaller entry comes first
+        return o1.getEntrySize() - o2.getEntrySize();
       }
     }
   }
