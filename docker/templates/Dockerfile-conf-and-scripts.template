@@ -1,4 +1,4 @@
-FROM {{ docker_hub_username }}/ubuntu-java8:{{ username }}
+FROM {{ docker_hub_username }}/ubuntu-java8:{{ image_tag }}
 
 # Place conf and scripts
 ADD ./scripts {{ common_scripts_dir }}
