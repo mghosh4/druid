@@ -78,13 +78,13 @@ class DynamicZipfian(object):
 class Latest(Zipfian):
 
     def generateDistribution(self, minSample, maxSample, numSamples, popularityList):
-        latestsample = super(Latest, self).generateDistribution(minSample, maxSample, numSamples)
+        latestsample = super(Latest, self).generateDistribution(minSample, maxSample, numSamples, popularityList)
         return [maxSample - x + minSample for x in latestsample]
 
 
 class ScrambledZipfian(Zipfian):
 
     def generateDistribution(self, minSample, maxSample, numSamples, popularityList):
-        scrambledzipfiansample = super(ScrambledZipfian, self).generateDistribution(minSample, maxSample, numSamples)
+        scrambledzipfiansample = super(ScrambledZipfian, self).generateDistribution(minSample, maxSample, numSamples, popularityList)
         itemcount = maxSample - minSample + 1
         return [minSample + x % itemcount for x in scrambledzipfiansample]
