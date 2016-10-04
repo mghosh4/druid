@@ -1,4 +1,4 @@
-FROM {{ docker_hub_username }}/ubuntu-java8:{{ username }}
+FROM {{ docker_hub_username }}/ubuntu-java8:{{ image_tag }}
 
 RUN mkdir -p {{ dependencies_dir }}
 WORKDIR {{ dependencies_dir }}

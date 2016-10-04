@@ -26,5 +26,10 @@ To run the workload generator, issue the command: python Run.py <path-to-config-
 
 The configurations can be set in the file, query.conf.
 
+##README FOR LOGREADER
+This script helps you parse 3 logs -- broker, historical and coordinator. It provides some apis to query and aggregate the collected result. You can further run functions like mean, percentile, max, etc to obtain useful metrics from the data. You can look at the examples in StatsGenerator code.
+
+To run the log reader, issue the command python StatsGenerator.py <path-to-config-file>. You can specify the path to the log folder and where you want the result output. An example conf file is getafix.conf
+
 ##NOTE FOR RUNNING TIERED EXPERIMENTS
 When running experiments in tiered mode, the user must first specify which tags belong to which historical nodes (e.g. node-1 is "hot", node-2 is "warm", etc.). This can be done in the runtime.properties file of each historical node. In order to set the tag, add the line "druid.server.tier=<label>".

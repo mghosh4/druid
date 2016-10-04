@@ -42,6 +42,9 @@ do
   ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no {{ username }}@node-$i.{{ experiment }}.dcsq.emulab.net "sudo chsh -s /bin/bash {{ username }}"
 done
 
+# Remove apt-get lock
+# ssh node-12.{{ experiment }}.dcsq.emulab.net "sudo rm /var/lib/apt/lists/lock"
+
 # Create kv store for service discovery
 docker-machine -D create --driver generic \
   --generic-ssh-user={{ username }} \

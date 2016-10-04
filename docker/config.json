@@ -6,6 +6,7 @@
   "env": "emulab.net",
   "project": "dcsq",
   "username": "xiaoyao",
+  "image_tag": "xiaoyao",
   "docker_hub_username": "dprg",
   "kafka_topic": "metrics",
   "druid_ver": "0.9.0-SNAPSHOT",
