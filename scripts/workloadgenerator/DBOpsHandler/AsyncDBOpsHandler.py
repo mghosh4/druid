@@ -1,11 +1,11 @@
 from datetime import datetime, date
+from pydruid.async_client import *
 import os, sys
 import ast
 import logging
 from pydruid.utils import *
 from tornado import gen
 
-from async_client import *
 from Query import Query
 
 class AsyncDBOpsHandler:
