@@ -19,17 +19,29 @@
 
 package io.druid.client.cache;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.inject.Provider;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = LocalCacheProvider.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "local", value = LocalCacheProvider.class),
-    @JsonSubTypes.Type(name = "local_lpu", value = LocalLPUCacheProvider.class),
-    @JsonSubTypes.Type(name = "memcached", value = MemcachedCacheProvider.class),
-    @JsonSubTypes.Type(name = "hybrid", value = HybridCacheProvider.class)
-})
-public interface CacheProvider extends Provider<Cache>
+import javax.validation.constraints.Min;
+
+/**
+ */
+public class LocalLPUCacheProvider implements CacheProvider
 {
+  @JsonProperty
+  @Min(0)
+  private long sizeInBytes = 0;
+
+  @JsonProperty
+  @Min(0)
+  private int initialSize = 500000;
+
+  @JsonProperty
+  @Min(0)
+  private int logEvictionCount = 0;
+
+  @Override
+  public Cache get()
+  {
+    return new LPUMapCache(new ByteCountingLRUMap(initialSize, logEvictionCount, sizeInBytes));
+  }
 }

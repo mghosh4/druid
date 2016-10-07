@@ -19,36 +19,40 @@
 
 package io.druid.server.http;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import io.druid.jackson.DefaultObjectMapper;
-import io.druid.timeline.DataSegment;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.common.logger.Logger;
+import io.druid.timeline.DataSegment;
+
+import javax.inject.Inject;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public final class SegmentCollector {
 	private static final Logger log = new Logger(SegmentCollector.class);
-	private static final List<DataSegment> segmentList = new ArrayList<DataSegment>();
-	private static final ObjectMapper mapper = new DefaultObjectMapper();
-	
-	public SegmentCollector(){
+
+	private final List<DataSegment> segmentList;
+
+	private final ObjectMapper mapper;
+
+	@Inject
+	public SegmentCollector(ObjectMapper mapper){
+		this.segmentList = new CopyOnWriteArrayList<>();
+		this.mapper = mapper;
 	}
 	
-	public static void addSegment(DataSegment segment)
+	public void addSegment(DataSegment segment)
 	{
-        log.info("Adding Segment ID [%s]", segment.getIdentifier());
+		log.info("Adding Segment ID [%s]", segment.getIdentifier());
 		segmentList.add(segment);
 	}
 	
-	public static String getSerializedSegmentList()
+	public String getSerializedSegmentList()
 	{
 		String result = null;
 		try {
 			result = mapper.writeValueAsString(segmentList);
-	        log.info("Serializing Segment List [%d]", result.length());
+			log.info("Serializing Segment List [%d]", result.length());
 			segmentList.clear();
 		} catch (JsonProcessingException e) {
 			// TODO Auto-generated catch block

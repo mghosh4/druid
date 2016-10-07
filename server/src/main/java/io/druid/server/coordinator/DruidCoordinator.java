@@ -42,7 +42,6 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.http.client.HttpClient;
-
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.ImmutableDruidDataSource;
@@ -70,13 +69,12 @@ import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentPopularityDumper;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentReplicator;
 import io.druid.server.coordinator.rules.LoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
-import io.druid.server.router.TieredBrokerHostSelector;
 import io.druid.timeline.DataSegment;
-
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
@@ -141,7 +139,7 @@ public class DruidCoordinator
 	private volatile int leaderCounter = 0;
 	private volatile boolean leader = false;
 	private volatile SegmentReplicantLookup segmentReplicantLookup = null;
-	private volatile HashMap<DataSegment, Number> weightedAccessCounts;
+	private volatile HashMap<DataSegment, Double> weightedAccessCounts;
 
 	@Inject
 	public DruidCoordinator(
@@ -204,7 +202,7 @@ public class DruidCoordinator
 		this.config = config;
 		this.zkPaths = zkPaths;
 		this.configManager = configManager;
-		this.weightedAccessCounts = new HashMap<DataSegment,Number>();
+		this.weightedAccessCounts = new HashMap<>();
 
 		this.metadataSegmentManager = metadataSegmentManager;
 		this.serverInventoryView = serverInventoryView;
@@ -234,12 +232,12 @@ public class DruidCoordinator
 		return loadManagementPeons;
 	}
 
-	public HashMap<DataSegment, Number> getWeightedAccessCounts()
+	public HashMap<DataSegment, Double> getWeightedAccessCounts()
 	{
 		return weightedAccessCounts;
 	}
 
-	public void setWeightedAccessCounts(HashMap<DataSegment, Number> counts)
+	public void setWeightedAccessCounts(HashMap<DataSegment, Double> counts)
 	{
 		this.weightedAccessCounts = counts;
 	}
@@ -906,6 +904,7 @@ public class DruidCoordinator
 							new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),
 							new DruidCoordinatorBalancer(DruidCoordinator.this),
 							new DruidCoordinatorSegmentReplicator(DruidCoordinator.this, DruidCoordinator.httpClient, DruidCoordinator.this.serverDiscoveryFactory),
+							new DruidCoordinatorSegmentPopularityDumper(DruidCoordinator.this, DruidCoordinator.this.metadataSegmentManager),
 							new DruidCoordinatorLogger()
 							),
 							startingLeaderCounter

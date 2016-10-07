@@ -33,11 +33,13 @@ import javax.ws.rs.core.Response;
 public class BrokerResource
 {
   private final BrokerServerView brokerServerView;
+  private final SegmentCollector segmentCollector;
 
   @Inject
-  public BrokerResource(BrokerServerView brokerServerView)
+  public BrokerResource(BrokerServerView brokerServerView, SegmentCollector segmentCollector)
   {
     this.brokerServerView = brokerServerView;
+    this.segmentCollector = segmentCollector;
   }
 
   @GET
@@ -53,6 +55,6 @@ public class BrokerResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getSegments()
   {
-    return Response.ok(SegmentCollector.getSerializedSegmentList()).build();
+    return Response.ok(segmentCollector.getSerializedSegmentList()).build();
   }
 }

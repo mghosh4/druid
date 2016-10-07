@@ -50,6 +50,7 @@ import io.druid.client.selector.ServerSelector;
 import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Smile;
+import io.druid.metadata.MetadataSegmentManager;
 import io.druid.query.BaseQuery;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.CacheStrategy;
@@ -93,6 +94,8 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   private final ObjectMapper objectMapper;
   private final CacheConfig cacheConfig;
   private final ListeningExecutorService backgroundExecutorService;
+  private final SegmentCollector segmentCollector;
+  private final MetadataSegmentManager metadataSegmentManager;
 
   @Inject
   public CachingClusteredClient(
@@ -101,7 +104,9 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       Cache cache,
       @Smile ObjectMapper objectMapper,
       @BackgroundCaching ExecutorService backgroundExecutorService,
-      CacheConfig cacheConfig
+      CacheConfig cacheConfig,
+      SegmentCollector segmentCollector,
+      MetadataSegmentManager metadataSegmentManager
   )
   {
     this.warehouse = warehouse;
@@ -110,6 +115,8 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     this.objectMapper = objectMapper;
     this.cacheConfig = cacheConfig;
     this.backgroundExecutorService = MoreExecutors.listeningDecorator(backgroundExecutorService);
+    this.segmentCollector = segmentCollector;
+    this.metadataSegmentManager = metadataSegmentManager;
 
     serverView.registerSegmentCallback(
         Execs.singleThreaded("CCClient-ServerView-CB-%d"),
@@ -233,10 +240,15 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         segments.add(Pair.of(selector, descriptor));
 
         if (!REALTIME_NODE_TYPE.equals(selector.pick().getServer().getType())) {
-          SegmentCollector.addSegment(selector.getSegment());
+          segmentCollector.addSegment(selector.getSegment());
           log.info("Adding Segment ID [%s]", selector.getSegment().getIdentifier());
         }
       }
+    }
+
+    log.info("Setting segments popularities snapshot...");
+    if (metadataSegmentManager != null) {
+      cache.setSegmentsPopularitiesSnapshot(metadataSegmentManager.retrieveSegmentsPopularitiesSnapshot());
     }
 
     final byte[] queryCacheKey;
