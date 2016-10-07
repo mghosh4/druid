@@ -16,6 +16,7 @@ class ParseConfig:
 		self.brokernodeurl = ""
 		self.brokerendpoint = ""
 		self.opspersecond = 0
+		self.logfolder = ""
 		self.runtime = 0
 		self.isbatch = 0
 		self.filename = ""
@@ -63,6 +64,8 @@ class ParseConfig:
 					self.brokerendpoint = value
 				elif key == "opspersecond":
 					self.opspersecond = int(value)
+				elif key == "logfolder":
+					self.logfolder = value
 				elif key == "runtime":
 					self.runtime = int(value)
 				elif key == "isbatch":
@@ -115,6 +118,9 @@ class ParseConfig:
 	def getOpsPerSecond(self):
 		return self.opspersecond
 
+	def getLogFolder(self):
+		return self.logfolder
+
 	def getRunTime(self):
 		return self.runtime
 
@@ -141,6 +147,7 @@ class ParseConfig:
 		print "Broker Node Url : " + self.getBrokerNodeUrl()
 		print "Broker Endpoint : " + self.getBrokerEndpoint()
 		print "Operations per second : " + self.getOpsPerSecond()
+		print "Log Folder : " + self.getLogFolder()
 		print "Runtime : " + self.getRunTime()
 		print "Is Batch Experiment : " + self.getBatchExperiment()
 		print "File Name : " + self.getFileName()
