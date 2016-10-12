@@ -141,7 +141,8 @@ public class DruidCoordinator
 	private volatile int leaderCounter = 0;
 	private volatile boolean leader = false;
 	private volatile SegmentReplicantLookup segmentReplicantLookup = null;
-	private volatile HashMap<DataSegment, Number> weightedAccessCounts;
+	private volatile HashMap<DataSegment, Long> weightedAccessCounts;
+	private volatile HashMap<DataSegment, HashMap<ServerHolder, Long>> routingTable;
 
 	@Inject
 	public DruidCoordinator(
@@ -204,7 +205,8 @@ public class DruidCoordinator
 		this.config = config;
 		this.zkPaths = zkPaths;
 		this.configManager = configManager;
-		this.weightedAccessCounts = new HashMap<DataSegment,Number>();
+		this.weightedAccessCounts = new HashMap<DataSegment, Long>();
+		this.routingTable = new HashMap<DataSegment, HashMap<ServerHolder, Long>>();
 
 		this.metadataSegmentManager = metadataSegmentManager;
 		this.serverInventoryView = serverInventoryView;
@@ -234,16 +236,26 @@ public class DruidCoordinator
 		return loadManagementPeons;
 	}
 
-	public HashMap<DataSegment, Number> getWeightedAccessCounts()
+	public HashMap<DataSegment, Long> getWeightedAccessCounts()
 	{
 		return weightedAccessCounts;
 	}
 
-	public void setWeightedAccessCounts(HashMap<DataSegment, Number> counts)
+	public void setWeightedAccessCounts(HashMap<DataSegment, Long> counts)
 	{
 		this.weightedAccessCounts = counts;
 	}
 
+	public HashMap<DataSegment, HashMap<ServerHolder, Long>> getRoutingTable()
+	{
+		return routingTable;
+	}
+
+	public void setRoutingTable(HashMap<DataSegment, HashMap<ServerHolder, Long>> table)
+	{
+		this.routingTable = table;
+	}
+	
 	public Map<String, CountingMap<String>> getReplicationStatus()
 	{
 		final Map<String, CountingMap<String>> retVal = Maps.newHashMap();

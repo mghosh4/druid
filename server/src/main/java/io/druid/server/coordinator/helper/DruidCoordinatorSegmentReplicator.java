@@ -85,7 +85,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 	private final HttpClient httpClient;
 	private final ServerDiscoveryFactory serverDiscoveryFactory;
 
-	private static final double MIN_THRESHOLD = 5;
+	private static final long MIN_THRESHOLD = 5;
 
 	public DruidCoordinatorSegmentReplicator(
 			DruidCoordinator coordinator, 
@@ -102,21 +102,23 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 	{
 		//log.info("Starting replication. Getting Segment Popularity");
 		final CoordinatorStats stats = new CoordinatorStats();
-		HashMap<DataSegment, Number> insertList = new HashMap<DataSegment, Number>();
-		HashMap<DataSegment, Number> removeList = new HashMap<DataSegment, Number>();
+		HashMap<DataSegment, Long> insertList = new HashMap<DataSegment, Long>();
+		HashMap<DataSegment, Long> removeList = new HashMap<DataSegment, Long>();
 
 		// Acquire Query Workload in the last window
 		Multiset<DataSegment> segments = HashMultiset.create();
 		calculateSegmentCounts(segments);
 
 		// Calculate the popularity map
-		HashMap<DataSegment, Number> weightedAccessCounts = coordinator.getWeightedAccessCounts();
+		HashMap<DataSegment, Long> weightedAccessCounts = coordinator.getWeightedAccessCounts();
 		calculateWeightedAccessCounts(params, segments, weightedAccessCounts, removeList);
 		coordinator.setWeightedAccessCounts(weightedAccessCounts);
 
 		// Calculate replication based on popularity
 		//calculateAdaptiveReplication(params, weightedAccessCounts, insertList, removeList);
-		calculateBestFitReplication(params, weightedAccessCounts, insertList, removeList);
+		HashMap<DataSegment, HashMap<ServerHolder, Long>> routingTable = new HashMap<DataSegment, HashMap<ServerHolder, Long>>();
+		calculateBestFitReplication(params, weightedAccessCounts, routingTable, insertList, removeList);
+		coordinator.setRoutingTable(routingTable);
 
 		// Manage replicas
 		manageReplicas(params, insertList, removeList, stats);
@@ -250,14 +252,14 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		}*/
 	}
 
-	private void calculateWeightedAccessCounts(DruidCoordinatorRuntimeParams params, Multiset<DataSegment> segments, HashMap<DataSegment, Number> weightedAccessCounts, HashMap<DataSegment, Number> removeList)
+	private void calculateWeightedAccessCounts(DruidCoordinatorRuntimeParams params, Multiset<DataSegment> segments, HashMap<DataSegment, Long> weightedAccessCounts, HashMap<DataSegment, Long> removeList)
 	{
 		//log.info("Calculating Weighted Access Counts for Segments");
 
 		// Handle those segments which are in Coordinator's map but not in segments collected from query
-		for (Map.Entry<DataSegment, Number> entry : weightedAccessCounts.entrySet())
+		for (Map.Entry<DataSegment, Long> entry : weightedAccessCounts.entrySet())
 			if (segments.contains(entry.getKey()) == false)
-				weightedAccessCounts.put(entry.getKey(), 0.5 * entry.getValue().doubleValue());
+				weightedAccessCounts.put(entry.getKey(), (long)Math.ceil(0.5 * entry.getValue()));
 
 		for (Entry<DataSegment> entry : segments.entrySet())
 		{
@@ -265,11 +267,11 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 			int segmentCount = entry.getCount();
 
 			if (weightedAccessCounts.containsKey(segment) == false)
-				weightedAccessCounts.put(segment, (double)segmentCount);
+				weightedAccessCounts.put(segment, (long)segmentCount);
 			else
 			{
 				double popularity = weightedAccessCounts.get(segment).doubleValue();
-				weightedAccessCounts.put(segment, (double)segmentCount + 0.5 * popularity);
+				weightedAccessCounts.put(segment, (long)Math.ceil(segmentCount + 0.5 * popularity));
 			}
 		}
 		
@@ -277,38 +279,40 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
         Iterator it = weightedAccessCounts.entrySet().iterator();
 		while (it.hasNext())
 		{
-            Map.Entry<DataSegment, Number> entry = (Map.Entry<DataSegment, Number>)it.next();
+            Map.Entry<DataSegment, Long> entry = (Map.Entry<DataSegment, Long>)it.next();
 			//log.info("Segment Received [%s] Count [%f]", entry.getKey().getIdentifier(), entry.getValue().doubleValue());
 
-			if (entry.getValue().doubleValue() < MIN_THRESHOLD)
+			if (entry.getValue() < MIN_THRESHOLD)
 			{
 				DataSegment segment = entry.getKey();
-				removeList.put(segment, params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier()));
+				removeList.put(segment, (long)params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier()));
 				it.remove();
 			}
 		}
 	}
 
-	private void calculateAdaptiveReplication(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, Number> weightedAccessCounts, HashMap<DataSegment, Number> insertList, HashMap<DataSegment, Number> removeList)
+	private void calculateAdaptiveReplication(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, Long> weightedAccessCounts, HashMap<DataSegment, Long> insertList, HashMap<DataSegment, Long> removeList)
 	{
 		//log.info("Calculating Replication for Segments");
 		int historicalNodeCount = 0;
 		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
 			historicalNodeCount += serverQueue.size(); 
 
-		double totalWeightCount = 0;
-		for (Number number : weightedAccessCounts.values())
-			totalWeightCount += number.doubleValue();
+		long totalWeightCount = 0;
+		for (long number : weightedAccessCounts.values())
+			totalWeightCount += number;
+		
+		long all = -1;
 
-		for (Map.Entry<DataSegment, Number> entry : weightedAccessCounts.entrySet())
+		for (Map.Entry<DataSegment, Long> entry : weightedAccessCounts.entrySet())
 		{
 			DataSegment segment = entry.getKey();
 			int totalReplicantsInCluster = params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier());
 
-			double newReplicationFactor = Math.ceil(entry.getValue().doubleValue() * historicalNodeCount / totalWeightCount);
+			long newReplicationFactor = (long)Math.ceil(entry.getValue().doubleValue() * historicalNodeCount / totalWeightCount);
 
 			if (newReplicationFactor == 0)
-				removeList.put(segment, -1);
+				removeList.put(segment, all);
 			else if (newReplicationFactor < totalReplicantsInCluster)
 				removeList.put(segment, totalReplicantsInCluster - newReplicationFactor);
 			else if (newReplicationFactor > totalReplicantsInCluster)
@@ -316,7 +320,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		}
 	}
 
-	private void calculateBestFitReplication(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, Number> weightedAccessCounts, HashMap<DataSegment, Number> insertList, HashMap<DataSegment, Number> removeList)
+	private void calculateBestFitReplication(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, Long> weightedAccessCounts, HashMap<DataSegment, HashMap<ServerHolder, Long>> routingTable, HashMap<DataSegment, Long> insertList, HashMap<DataSegment, Long> removeList)
 	{
 		//log.info("Calculating Best Fit Replication for Segments");
 		int historicalNodeCount = 0;
@@ -324,41 +328,44 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 			historicalNodeCount += serverQueue.size(); 
 
 		double totalWeightCount = 0;
-		for (Number number : weightedAccessCounts.values())
-			totalWeightCount += number.doubleValue();
+		for (long number : weightedAccessCounts.values())
+			totalWeightCount += number;
 
 		log.info("Total Weight Count [%f]", totalWeightCount);
 		
-		int slotsperhn = (int) Math.ceil((double)totalWeightCount / historicalNodeCount);
+		long slotsperhn = (long) Math.ceil((double)totalWeightCount / historicalNodeCount);
 
-		int[] nodeCapacities = new int[historicalNodeCount];
-		for (int i=0; i < historicalNodeCount; i++)
+		HashMap<ServerHolder, Long> nodeCapacities = new HashMap<ServerHolder, Long>();
+		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
 		{
-			nodeCapacities[i] = slotsperhn;
+			for (ServerHolder server : serverQueue)
+			{
+				nodeCapacities.put(server, slotsperhn);
+			}
 		}
 
 		PriorityQueue<Tuple> maxheap = new PriorityQueue<Tuple>(10, new Comparator<Tuple>()
 		{
 			public int compare(Tuple o1, Tuple o2){
-				int result = -Double.compare(o1.weight, o2.weight);
+				int result = -Long.compare(o1.weight, o2.weight);
 				return result;
 			}
 		});
 		
-		for(Map.Entry<DataSegment, Number> entry : weightedAccessCounts.entrySet())
+		for(Map.Entry<DataSegment, Long> entry : weightedAccessCounts.entrySet())
 		{
-			maxheap.add(new Tuple(entry.getKey(), entry.getValue().doubleValue()));
+			maxheap.add(new Tuple(entry.getKey(), entry.getValue()));
 		}
 		
 		Multiset<DataSegment> expectedCount = HashMultiset.create();
-		while(maxheap.peek() != null)
+		while (maxheap.peek() != null)
 		{
 			Tuple candidate = maxheap.poll();
 			//log.info("Chosen Segment [%s] [%f]", candidate.segment.getIdentifier(), candidate.weight);
 			
-			int valleft = bestFit(candidate.weight, nodeCapacities);
+			long valleft = bestFit(candidate, nodeCapacities, routingTable);
 			expectedCount.add(candidate.segment);
-			if(valleft > 0)
+			if (valleft > 0)
 			{
 				maxheap.add(new Tuple(candidate.segment, valleft));
 			}
@@ -366,8 +373,8 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 
 		for (Entry<DataSegment> entry : expectedCount.entrySet())
 		{
-			int totalReplicantsInCluster = params.getSegmentReplicantLookup().getTotalReplicants(entry.getElement().getIdentifier());
-			int newReplicationFactor = entry.getCount();
+			long totalReplicantsInCluster = params.getSegmentReplicantLookup().getTotalReplicants(entry.getElement().getIdentifier());
+			long newReplicationFactor = entry.getCount();
 			
 			log.info("Replication Decision for [%s]: Current [%d] Required [%d]", entry.getElement().getIdentifier(), totalReplicantsInCluster, newReplicationFactor);
 
@@ -378,50 +385,57 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		}
 	}
 
-	private int bestFit(double val, int nodeCapacities[])
+	private long bestFit(Tuple candidate, HashMap<ServerHolder, Long> nodeCapacities, HashMap<DataSegment, HashMap<ServerHolder, Long>> routingTable)
 	{
-		int mincapleftafterfill = Integer.MAX_VALUE;
-		int minvalleftafterfill = Integer.MAX_VALUE;
-		int minfitindex = 0;
-		int minspillindex = 0;
-		int counter = 0;
+		long val = candidate.weight;
+		if (!routingTable.containsKey(candidate.segment))
+			routingTable.put(candidate.segment, new HashMap<ServerHolder, Long>());
+
+		long mincapleftafterfill = Integer.MAX_VALUE;
+		long minvalleftafterfill = Integer.MAX_VALUE;
+		ServerHolder minfitServer = null;
+		ServerHolder minspillServer = null;
 		boolean fits = false;
-		for(int capacity : nodeCapacities)
+		long empty = 0;
+		for (Map.Entry<ServerHolder, Long> entry : nodeCapacities.entrySet())
 		{
+			long capacity = entry.getValue(); 
 			if(val <= capacity)
 			{
 				fits = true;
-				int leftafterfill = (int)(capacity - val);
-				if(leftafterfill < mincapleftafterfill)
+				long leftafterfill = capacity - val;
+				if (leftafterfill < mincapleftafterfill)
 				{
 					mincapleftafterfill = leftafterfill;
-					minfitindex = counter;
+					minfitServer = entry.getKey();
 				}
 			}
 			else
 			{
-				int leftafterfill = (int)(val - capacity);
+				long leftafterfill = val - capacity;
 				if(leftafterfill < minvalleftafterfill)
 				{
 					minvalleftafterfill = leftafterfill;
-					minspillindex = counter;
+					minspillServer = entry.getKey();
 				}
 			}
-			counter += 1;
 		}
-		if(fits == true)
+		
+		if (fits == true)
 		{
-			nodeCapacities[minfitindex] = mincapleftafterfill;
+			routingTable.get(candidate.segment).put(minfitServer, val);
+			nodeCapacities.put(minfitServer, mincapleftafterfill);
 			return 0;
 		}
 		else
 		{
-			nodeCapacities[minspillindex] = 0;
+			routingTable.get(candidate.segment).put(minfitServer, val);
+			nodeCapacities.put(minspillServer, empty);
 			return minvalleftafterfill;
 		}
 	}
 
-	private void manageReplicas(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, Number> insertList, HashMap<DataSegment, Number> removeList, CoordinatorStats stats)
+	private void manageReplicas(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, Long> insertList, HashMap<DataSegment, Long> removeList, CoordinatorStats stats)
 	{
 		//log.info("Managing Replicas by inserting and removing replicas for relevant data segments");
 
@@ -444,7 +458,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
 		final BalancerStrategy strategy = params.getBalancerStrategyFactory().createBalancerStrategy(referenceTimestamp);
 
-		for (Map.Entry<DataSegment, Number> entry : insertList.entrySet())
+		for (Map.Entry<DataSegment, Long> entry : insertList.entrySet())
 		{
 			String id = entry.getKey().getIdentifier();
             DataSegment segment = null;
@@ -467,12 +481,12 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 					strategy,
 					serverHolderList,
 					segment,
-					entry.getValue().intValue()
+					entry.getValue()
 					);
 			stats.accumulate(assignStats);
 		}
 
-		for (Map.Entry<DataSegment, Number> entry : removeList.entrySet())
+		for (Map.Entry<DataSegment, Long> entry : removeList.entrySet())
 		{
 			String id = entry.getKey().getIdentifier();
             DataSegment segment = null;
@@ -493,7 +507,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 				continue;
 			}
 
-			int numReplicantsToRemove = entry.getValue().intValue() == -1 ? totalReplicantsInCluster : entry.getValue().intValue();
+			long numReplicantsToRemove = entry.getValue() == -1 ? totalReplicantsInCluster : entry.getValue();
 			CoordinatorStats dropStats = drop(
 					params.getReplicationManager(),
 					tier,
@@ -511,7 +525,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 			final BalancerStrategy strategy,
 			final List<ServerHolder> serverHolderList,
 			final DataSegment segment,
-			final int numReplicantsToAdd
+			final long numReplicantsToAdd
 			)
 	{
 		log.info("Insert Segment [%s] [%d]", segment.getIdentifier(), numReplicantsToAdd);
@@ -519,7 +533,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
         final CoordinatorStats stats = new CoordinatorStats();
 		stats.addToTieredStat(assignedCount, tier, 0);
 
-		int numReplicants = numReplicantsToAdd;
+		long numReplicants = numReplicantsToAdd;
 		while (numReplicants > 0) {
 			final ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
 
@@ -566,7 +580,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 			final String tier,
 			final List<ServerHolder> serverHolderList,
 			final DataSegment segment,
-			final int numReplicantsToRemove
+			final long numReplicantsToRemove
 			)
 	{
 		log.info("Remove Segment [%s] [%d]", segment.getIdentifier(), numReplicantsToRemove);
@@ -578,7 +592,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 			if (serverHolder.getServer().getSegment(segment.getIdentifier()) != null)
 				segmentCountMap.put(serverHolder.getServer().getSegments().size(), serverHolder);
 
-		int numReplicants = numReplicantsToRemove;
+		long numReplicants = numReplicantsToRemove;
 		for (Map.Entry<Number, ServerHolder> entry : segmentCountMap.entrySet())
 		{
 			//log.info("Removing Segment from [%s] because it has [%d] segments", entry.getValue().getServer().getMetadata().toString(), entry.getKey().intValue());
