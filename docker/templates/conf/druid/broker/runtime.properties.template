@@ -14,3 +14,6 @@ druid.broker.cache.useCache=true
 druid.broker.cache.populateCache=true
 druid.cache.type=local
 druid.cache.sizeInBytes={{ broker_cache_size_in_bytes }}
+
+# routing strategy
+druid.broker.balancer.type=getafix

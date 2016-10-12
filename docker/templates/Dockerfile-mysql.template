@@ -3,6 +3,7 @@ FROM mysql:latest
 RUN echo "#!/bin/bash\n\
 service mysql start\n\
 mysql -u root -e \"CREATE DATABASE druid DEFAULT CHARACTER SET utf8;\n\
+GRANT ALL ON druid.* TO 'druid'@'%' IDENTIFIED BY 'diurd';\n\
 {%- for alias in overlord_node_aliases + realtime_node_aliases + broker_node_aliases + historical_node_aliases + coordinator_node_aliases + middle_manager_node_aliases + [zookeeper_node_alias] + [kafka_node_alias] %}
 GRANT ALL ON druid.* TO 'druid'@'{{ alias }}' IDENTIFIED BY 'diurd';\n\
 GRANT ALL ON druid.* TO 'druid'@'{{ alias }}.{{ overlay_net }}' IDENTIFIED BY 'diurd';\n\{%- endfor %}
