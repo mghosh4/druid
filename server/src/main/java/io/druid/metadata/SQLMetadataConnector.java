@@ -224,12 +224,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  version VARCHAR(255) NOT NULL,\n"
                 + "  used BOOLEAN NOT NULL,\n"
                 + "  payload %2$s NOT NULL,\n"
+                + "  popularity DOUBLE NOT NULL DEFAULT 0,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
                 tableName, getPayloadType()
             ),
             String.format("CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource)", tableName),
-            String.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName)
+            String.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName),
+            String.format("CREATE INDEX idx_%1$s_popularity ON %1$s(popularity)", tableName)
         )
     );
   }
