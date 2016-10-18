@@ -372,9 +372,9 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
-  public boolean updateSegmentsPopularities(Map<DataSegment, Double> segmentsPopularities)
+  public boolean updateSegmentsPopularities(Map<DataSegment, Long> segmentsPopularities)
   {
-    for (final Map.Entry<DataSegment, Double> segmentPopularity : segmentsPopularities.entrySet()) {
+    for (final Map.Entry<DataSegment, Long> segmentPopularity : segmentsPopularities.entrySet()) {
       final String segmentId = segmentPopularity.getKey().getIdentifier();
       try {
         dbi.withHandle(

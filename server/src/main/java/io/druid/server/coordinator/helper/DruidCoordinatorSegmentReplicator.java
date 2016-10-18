@@ -121,7 +121,8 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		coordinator.setRoutingTable(routingTable);
 
 		// Manage replicas
-		manageReplicas(params, insertList, removeList, stats);
+		//manageReplicas(params, insertList, removeList, stats);
+		manageReplicas(params, routingTable, stats);
 
 		return params.buildFromExisting() 
 				.withCoordinatorStats(stats) 
@@ -433,6 +434,156 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 			nodeCapacities.put(minspillServer, empty);
 			return minvalleftafterfill;
 		}
+	}
+	
+	private void manageReplicas(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, HashMap<ServerHolder, Long>> routingTable, CoordinatorStats stats)
+	{
+		//log.info("Managing Replicas by inserting and removing replicas for relevant data segments");
+
+		List<ServerHolder> serverHolderList = new ArrayList<ServerHolder>();
+		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
+			serverHolderList.addAll(serverQueue);
+		
+		if (serverHolderList.size() == 0) {
+			log.makeAlert("Cluster has no servers! Check your cluster configuration!").emit();
+			return;
+		}
+		
+		HashMap<DataSegment, List<ServerHolder>> currentTable = new HashMap<DataSegment, List<ServerHolder>>();		
+		for (ServerHolder holder : serverHolderList)
+		{
+			for (DataSegment segment : holder.getServer().getSegments().values())
+			{
+				if (!currentTable.containsKey(segment))
+					currentTable.put(segment, new ArrayList<ServerHolder>());
+				currentTable.get(segment).add(holder);
+			}
+		}
+
+		final List<String> tierNameList = Lists.newArrayList(params.getDruidCluster().getTierNames());
+		if (tierNameList.size() == 0) {
+			log.makeAlert("Cluster has multiple tiers! Check your cluster configuration!").emit();
+			return;
+		}
+		final String tier = tierNameList.get(0);
+		
+		for (Map.Entry<DataSegment, HashMap<ServerHolder, Long>> entry : routingTable.entrySet())
+		{
+			DataSegment segment = entry.getKey();
+			for (ServerHolder holder : entry.getValue().keySet())
+			{
+				if (!currentTable.containsKey(segment) || !currentTable.get(segment).contains(holder))
+				{
+					CoordinatorStats assignStats = assign(
+							params.getReplicationManager(),
+							tier,
+							holder,
+							segment
+							);
+					stats.accumulate(assignStats);
+				}
+			}			
+		}
+		
+		for (Map.Entry<DataSegment, List<ServerHolder>> entry : currentTable.entrySet())
+		{
+			DataSegment segment = entry.getKey();
+			for (ServerHolder holder : entry.getValue())
+			{
+				if (!routingTable.containsKey(segment) || !routingTable.get(segment).keySet().contains(holder))
+				{
+					CoordinatorStats dropStats = drop(
+							params.getReplicationManager(),
+							tier,
+							holder,
+							segment
+							);
+					stats.accumulate(dropStats); 
+				}
+			}
+		}
+	}
+	
+	private CoordinatorStats assign(
+			final ReplicationThrottler replicationManager,
+			final String tier,
+			final ServerHolder holder,
+			final DataSegment segment
+			)
+	{
+		log.info("Insert Segment [%s] to [%s]", segment.getIdentifier(), holder.getServer().getHost());
+		
+        final CoordinatorStats stats = new CoordinatorStats();
+		stats.addToTieredStat(assignedCount, tier, 0);
+
+		replicationManager.registerReplicantCreation(
+				tier, segment.getIdentifier(), holder.getServer().getHost()
+				);
+
+		holder.getPeon().loadSegment(
+				segment,
+				new LoadPeonCallback()
+				{
+					@Override
+					public void execute()
+					{
+						replicationManager.unregisterReplicantCreation(
+								tier,
+								segment.getIdentifier(),
+								holder.getServer().getHost()
+								);
+					}
+				}
+				);
+
+		log.info("Inserted Segment [%s]", segment.getIdentifier());
+
+		stats.addToTieredStat(assignedCount, tier, 1);
+
+		return stats;
+	}
+	
+	private CoordinatorStats drop(
+			final ReplicationThrottler replicationManager,
+			final String tier,
+			final ServerHolder holder,
+			final DataSegment segment
+			)
+	{
+		log.info("Remove Segment [%s] from [%s]", segment.getIdentifier(), holder.getServer().getHost());
+		CoordinatorStats stats = new CoordinatorStats();
+
+		//log.info("Removing Segment from [%s] because it has [%d] segments", entry.getValue().getServer().getMetadata().toString(), entry.getKey().intValue());
+		stats.addToTieredStat(droppedCount, tier, 0);
+
+		if (holder.isServingSegment(segment)) {
+			replicationManager.registerReplicantTermination(
+					tier,
+					segment.getIdentifier(),
+					holder.getServer().getHost()
+					);
+		}
+
+		holder.getPeon().dropSegment(
+				segment,
+				new LoadPeonCallback()
+				{
+					@Override
+					public void execute()
+					{
+						replicationManager.unregisterReplicantTermination(
+								tier,
+								segment.getIdentifier(),
+								holder.getServer().getHost()
+								);
+					}
+				}
+				);
+			
+		stats.addToTieredStat(droppedCount, tier, 1);
+		log.info("Removed Segment [%s]", segment.getIdentifier());
+			
+		return stats;
 	}
 
 	private void manageReplicas(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, Long> insertList, HashMap<DataSegment, Long> removeList, CoordinatorStats stats)

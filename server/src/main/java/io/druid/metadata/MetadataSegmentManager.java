@@ -47,7 +47,7 @@ public interface MetadataSegmentManager
 
   boolean isStarted();
 
-  boolean updateSegmentsPopularities(Map<DataSegment, Double> segmentsPopularities);
+  boolean updateSegmentsPopularities(Map<DataSegment, Long> segmentsPopularities);
 
   Map<String, Double> retrieveSegmentsPopularitiesSnapshot();
 
