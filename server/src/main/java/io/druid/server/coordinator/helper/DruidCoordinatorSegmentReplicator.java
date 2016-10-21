@@ -36,6 +36,7 @@ import com.google.common.collect.Multiset;
 import com.google.common.collect.Multiset.Entry;
 
 import io.druid.client.selector.Server;
+import io.druid.client.ImmutableDruidServer;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.jackson.DefaultObjectMapper;
@@ -116,7 +117,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 
 		// Calculate replication based on popularity
 		//calculateAdaptiveReplication(params, weightedAccessCounts, insertList, removeList);
-		HashMap<DataSegment, HashMap<ServerHolder, Long>> routingTable = new HashMap<DataSegment, HashMap<ServerHolder, Long>>();
+		HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>> routingTable = new HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>>();
 		calculateBestFitReplication(params, weightedAccessCounts, routingTable, insertList, removeList);
 		coordinator.setRoutingTable(routingTable);
 
@@ -321,9 +322,9 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		}
 	}
 
-	private void calculateBestFitReplication(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, Long> weightedAccessCounts, HashMap<DataSegment, HashMap<ServerHolder, Long>> routingTable, HashMap<DataSegment, Long> insertList, HashMap<DataSegment, Long> removeList)
+	private void calculateBestFitReplication(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, Long> weightedAccessCounts, HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>> routingTable, HashMap<DataSegment, Long> insertList, HashMap<DataSegment, Long> removeList)
 	{
-		//log.info("Calculating Best Fit Replication for Segments");
+		log.info("Calculating Best Fit Replication for Segments");
 		int historicalNodeCount = 0;
 		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
 			historicalNodeCount += serverQueue.size(); 
@@ -336,12 +337,12 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		
 		long slotsperhn = (long) Math.ceil((double)totalWeightCount / historicalNodeCount);
 
-		HashMap<ServerHolder, Long> nodeCapacities = new HashMap<ServerHolder, Long>();
+		HashMap<ImmutableDruidServer, Long> nodeCapacities = new HashMap<ImmutableDruidServer, Long>();
 		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
 		{
-			for (ServerHolder server : serverQueue)
+			for (ServerHolder holder : serverQueue)
 			{
-				nodeCapacities.put(server, slotsperhn);
+				nodeCapacities.put(holder.getServer(), slotsperhn);
 			}
 		}
 
@@ -372,7 +373,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 			}
 		}
 
-		for (Entry<DataSegment> entry : expectedCount.entrySet())
+		/*for (Entry<DataSegment> entry : expectedCount.entrySet())
 		{
 			long totalReplicantsInCluster = params.getSegmentReplicantLookup().getTotalReplicants(entry.getElement().getIdentifier());
 			long newReplicationFactor = entry.getCount();
@@ -383,24 +384,33 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 				removeList.put(entry.getElement(), totalReplicantsInCluster - newReplicationFactor);
 			else if (newReplicationFactor > totalReplicantsInCluster)
 				insertList.put(entry.getElement(), newReplicationFactor - totalReplicantsInCluster);
-		}
+		}*/
+		
+        /*for (Map.Entry<DataSegment, HashMap<ImmutableDruidServer, Long>> entry : routingTable.entrySet())
+			for (ImmutableDruidServer server : entry.getValue().keySet())
+                log.info("Server [%s] should have segment [%s]", server.getHost(), entry.getKey().getIdentifier());*/
 	}
 
-	private long bestFit(Tuple candidate, HashMap<ServerHolder, Long> nodeCapacities, HashMap<DataSegment, HashMap<ServerHolder, Long>> routingTable)
+	private long bestFit(Tuple candidate, HashMap<ImmutableDruidServer, Long> nodeCapacities, HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>> routingTable)
 	{
+        //log.info("Segment [%s] Weight [%d]", candidate.segment.getIdentifier(), candidate.weight);
 		long val = candidate.weight;
 		if (!routingTable.containsKey(candidate.segment))
-			routingTable.put(candidate.segment, new HashMap<ServerHolder, Long>());
+			routingTable.put(candidate.segment, new HashMap<ImmutableDruidServer, Long>());
 
 		long mincapleftafterfill = Integer.MAX_VALUE;
 		long minvalleftafterfill = Integer.MAX_VALUE;
-		ServerHolder minfitServer = null;
-		ServerHolder minspillServer = null;
+		ImmutableDruidServer minfitServer = null;
+		ImmutableDruidServer minspillServer = null;
 		boolean fits = false;
 		long empty = 0;
-		for (Map.Entry<ServerHolder, Long> entry : nodeCapacities.entrySet())
+		for (Map.Entry<ImmutableDruidServer, Long> entry : nodeCapacities.entrySet())
 		{
-			long capacity = entry.getValue(); 
+            //log.info("Server [%s] Capacity [%d]", entry.getKey().getHost(), entry.getValue());
+			long capacity = entry.getValue();
+            if (capacity == 0)
+                continue;
+
 			if(val <= capacity)
 			{
 				fits = true;
@@ -409,6 +419,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 				{
 					mincapleftafterfill = leftafterfill;
 					minfitServer = entry.getKey();
+                    //log.info("Server [%s] fits segment [%s]", minfitServer.getHost(), candidate.segment.getIdentifier());
 				}
 			}
 			else
@@ -418,6 +429,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 				{
 					minvalleftafterfill = leftafterfill;
 					minspillServer = entry.getKey();
+                    //log.info("Server [%s] spills segment [%s]", minspillServer.getHost(), candidate.segment.getIdentifier());
 				}
 			}
 		}
@@ -430,33 +442,35 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		}
 		else
 		{
-			routingTable.get(candidate.segment).put(minfitServer, val);
+			routingTable.get(candidate.segment).put(minspillServer, val - minvalleftafterfill);
 			nodeCapacities.put(minspillServer, empty);
 			return minvalleftafterfill;
 		}
 	}
 	
-	private void manageReplicas(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, HashMap<ServerHolder, Long>> routingTable, CoordinatorStats stats)
+	private void manageReplicas(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>> routingTable, CoordinatorStats stats)
 	{
 		//log.info("Managing Replicas by inserting and removing replicas for relevant data segments");
 
-		List<ServerHolder> serverHolderList = new ArrayList<ServerHolder>();
+		HashMap<ImmutableDruidServer, ServerHolder> serverHolderMap = new HashMap<ImmutableDruidServer, ServerHolder>();
 		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
-			serverHolderList.addAll(serverQueue);
+            for (ServerHolder holder : serverQueue)
+			    serverHolderMap.put(holder.getServer(), holder);
 		
-		if (serverHolderList.size() == 0) {
+		if (serverHolderMap.size() == 0) {
 			log.makeAlert("Cluster has no servers! Check your cluster configuration!").emit();
 			return;
 		}
 		
-		HashMap<DataSegment, List<ServerHolder>> currentTable = new HashMap<DataSegment, List<ServerHolder>>();		
-		for (ServerHolder holder : serverHolderList)
+		HashMap<DataSegment, List<ImmutableDruidServer>> currentTable = new HashMap<DataSegment, List<ImmutableDruidServer>>();		
+		for (ImmutableDruidServer server : serverHolderMap.keySet())
 		{
-			for (DataSegment segment : holder.getServer().getSegments().values())
+			for (DataSegment segment : server.getSegments().values())
 			{
+                log.info("Server [%s] has segment [%s]", server.getHost(), segment.getIdentifier());
 				if (!currentTable.containsKey(segment))
-					currentTable.put(segment, new ArrayList<ServerHolder>());
-				currentTable.get(segment).add(holder);
+					currentTable.put(segment, new ArrayList<ImmutableDruidServer>());
+				currentTable.get(segment).add(server);
 			}
 		}
 
@@ -467,35 +481,36 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		}
 		final String tier = tierNameList.get(0);
 		
-		for (Map.Entry<DataSegment, HashMap<ServerHolder, Long>> entry : routingTable.entrySet())
+		for (Map.Entry<DataSegment, HashMap<ImmutableDruidServer, Long>> entry : routingTable.entrySet())
 		{
 			DataSegment segment = entry.getKey();
-			for (ServerHolder holder : entry.getValue().keySet())
+			for (ImmutableDruidServer server : entry.getValue().keySet())
 			{
-				if (!currentTable.containsKey(segment) || !currentTable.get(segment).contains(holder))
+                //log.info("Server [%s] should have segment [%s]", server.getHost(), segment.getIdentifier());
+				if (!currentTable.containsKey(segment) || !currentTable.get(segment).contains(server))
 				{
 					CoordinatorStats assignStats = assign(
 							params.getReplicationManager(),
 							tier,
-							holder,
+							serverHolderMap.get(server),
 							segment
 							);
 					stats.accumulate(assignStats);
 				}
-			}			
+			}
 		}
 		
-		for (Map.Entry<DataSegment, List<ServerHolder>> entry : currentTable.entrySet())
+		for (Map.Entry<DataSegment, List<ImmutableDruidServer>> entry : currentTable.entrySet())
 		{
 			DataSegment segment = entry.getKey();
-			for (ServerHolder holder : entry.getValue())
+			for (ImmutableDruidServer server : entry.getValue())
 			{
-				if (!routingTable.containsKey(segment) || !routingTable.get(segment).keySet().contains(holder))
+				if (!routingTable.containsKey(segment) || !routingTable.get(segment).keySet().contains(server))
 				{
 					CoordinatorStats dropStats = drop(
 							params.getReplicationManager(),
 							tier,
-							holder,
+							serverHolderMap.get(server),
 							segment
 							);
 					stats.accumulate(dropStats); 
