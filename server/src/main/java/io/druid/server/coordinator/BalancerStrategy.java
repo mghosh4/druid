@@ -21,13 +21,18 @@ package io.druid.server.coordinator;
 
 import io.druid.timeline.DataSegment;
 
+import java.util.HashMap;
 import java.util.List;
 
 public interface BalancerStrategy
 {
   public ServerHolder findNewSegmentHomeBalancer(final DataSegment proposalSegment, final List<ServerHolder> serverHolders);
+  
+  public ServerHolder findNewSegmentHomeBalancerWithPopularity(final DataSegment proposalSegment, final List<ServerHolder> serverHolders,HashMap<DataSegment, Number> weightedAccessCounts);
 
   public ServerHolder findNewSegmentHomeReplicator(final DataSegment proposalSegment, final List<ServerHolder> serverHolders);
+
+  public ServerHolder findNewSegmentHomeReplicatorWithPopularity(DataSegment proposalSegment, List<ServerHolder> serverHolders, HashMap<DataSegment, Number> weightedAccessCounts);
 
   public BalancerSegmentHolder pickSegmentToMove(final List<ServerHolder> serverHolders);
 

@@ -37,40 +37,75 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 
-public class CostBalancerStrategy implements BalancerStrategy
+public class ScarlettBalancerStrategy implements BalancerStrategy
 {
-  private static final EmittingLogger log = new EmittingLogger(CostBalancerStrategy.class);
+  private static final EmittingLogger log = new EmittingLogger(ScarlettBalancerStrategy.class);
   private static final long DAY_IN_MILLIS = 1000 * 60 * 60 * 24;
   private static final long SEVEN_DAYS_IN_MILLIS = 7 * DAY_IN_MILLIS;
   private static final long THIRTY_DAYS_IN_MILLIS = 30 * DAY_IN_MILLIS;
   private final long referenceTimestamp;
   private final int threadCount;
+  private static HashMap<ServerHolder, Double> serverLoadMap;
 
-  public CostBalancerStrategy(DateTime referenceTimestamp, int threadCount)
+  public ScarlettBalancerStrategy(DateTime referenceTimestamp, int threadCount)
   {
     this.referenceTimestamp = referenceTimestamp.getMillis();
     this.threadCount = threadCount;
+    this.serverLoadMap = new HashMap<ServerHolder, Double>();
   }
 
   @Override
+  //obsolete
   public ServerHolder findNewSegmentHomeReplicator(
       DataSegment proposalSegment, List<ServerHolder> serverHolders
   )
   {
-    ServerHolder holder = chooseBestServer(proposalSegment, serverHolders, false).rhs;
+    ServerHolder holder = chooseBestServer(proposalSegment, serverHolders, false, null, null).rhs;
     if (holder != null && !holder.isServingSegment(proposalSegment)) {
       return holder;
     }
     return null;
   }
 
+  @Override
+  public ServerHolder findNewSegmentHomeReplicatorWithPopularity(
+  		DataSegment proposalSegment, List<ServerHolder> serverHolders,
+  		HashMap<DataSegment, Number> weightedAccessCounts) {
+  	// TODO Auto-generated method stub
+	//check if the serverload map has all the server
+	for(ServerHolder sh: serverHolders){
+		if(!this.serverLoadMap.containsKey(sh)){
+			this.serverLoadMap.put(sh, 0.0);
+		}
+	}
+    ServerHolder holder = chooseBestServer(proposalSegment, serverHolders, false, weightedAccessCounts, serverLoadMap).rhs;
+    if (holder != null && !holder.isServingSegment(proposalSegment)) {
+      return holder;
+    }
+    return null;
+  }
 
   @Override
+  //obsolete
   public ServerHolder findNewSegmentHomeBalancer(
       DataSegment proposalSegment, List<ServerHolder> serverHolders
   )
   {
-    return chooseBestServer(proposalSegment, serverHolders, true).rhs;
+    return chooseBestServer(proposalSegment, serverHolders, true, null, null).rhs;
+  }
+  
+  @Override
+  public ServerHolder findNewSegmentHomeBalancerWithPopularity(
+  		DataSegment proposalSegment, List<ServerHolder> serverHolders, HashMap<DataSegment, Number> weightedAccessCounts) {
+  	// TODO Auto-generated method stub
+	//check if the serverload map has all the server
+		for(ServerHolder sh: serverHolders){
+			if(!this.serverLoadMap.containsKey(sh)){
+				this.serverLoadMap.put(sh, 0.0);
+			}
+		}
+	  
+	  return chooseBestServer(proposalSegment, serverHolders, true, weightedAccessCounts, serverLoadMap).rhs;
   }
 
   /**
@@ -149,7 +184,7 @@ public class CostBalancerStrategy implements BalancerStrategy
 
   /**
    * Calculates the cost normalization.  This is such that the normalized cost is lower bounded
-   * by 1 (e.g. when each segment gets its own historical node).
+   * by 1 (e.g. when each segment gets its own historical node).serverLoadMap
    *
    * @param serverHolders A list of ServerHolders for a particular tier.
    *
@@ -192,7 +227,7 @@ public class CostBalancerStrategy implements BalancerStrategy
   }
 
   protected double computeCost(
-      final DataSegment proposalSegment, final ServerHolder server, final boolean includeCurrentServer
+      final DataSegment proposalSegment, final ServerHolder server, final boolean includeCurrentServer, HashMap<ServerHolder, Double> serverLoadMap
   )
   {
     final long proposalSegmentSize = proposalSegment.getSize();
@@ -204,18 +239,7 @@ public class CostBalancerStrategy implements BalancerStrategy
       }
 
       /** The contribution to the total cost of a given server by proposing to move the segment to that server is... */
-      double cost = 0f;
-      /**  the sum of the costs of other (exclusive of the proposalSegment) segments on the server */
-      for (DataSegment segment : server.getServer().getSegments().values()) {
-        if (!proposalSegment.equals(segment)) {
-          cost += computeJointSegmentCosts(proposalSegment, segment);
-        }
-      }
-      /**  plus the costs of segments that will be loaded */
-      for (DataSegment segment : server.getPeon().getSegmentsToLoad()) {
-        cost += computeJointSegmentCosts(proposalSegment, segment);
-      }
-      return cost;
+      return serverLoadMap.get(server);
     }
     return Double.POSITIVE_INFINITY;
   }
@@ -225,6 +249,7 @@ public class CostBalancerStrategy implements BalancerStrategy
    *
    * @param proposalSegment A DataSegment that we are proposing to move.
    * @param serverHolders   An iterable of ServerHolders for a particular tier.
+ * @param serverLoadMap 
    *
    * @return A ServerHolder with the new home for a segment.
    */
@@ -232,23 +257,26 @@ public class CostBalancerStrategy implements BalancerStrategy
   protected Pair<Double, ServerHolder> chooseBestServer(
       final DataSegment proposalSegment,
       final Iterable<ServerHolder> serverHolders,
-      final boolean includeCurrentServer
+      final boolean includeCurrentServer,
+      HashMap<DataSegment, Number> weightedAccessCounts, HashMap<ServerHolder, Double> serverLoadMap
   )
   {
     Pair<Double, ServerHolder> bestServer = Pair.of(Double.POSITIVE_INFINITY, null);
 
     ListeningExecutorService service = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(threadCount));
     List<ListenableFuture<Pair<Double, ServerHolder>>> futures = Lists.newArrayList();
+    final HashMap<ServerHolder, Double> slm = new HashMap<ServerHolder, Double>(serverLoadMap);
 
     for (final ServerHolder server : serverHolders) {
       futures.add(
           service.submit(
               new Callable<Pair<Double, ServerHolder>>()
               {
+
                 @Override
                 public Pair<Double, ServerHolder> call() throws Exception
                 {
-                  return Pair.of(computeCost(proposalSegment, server, includeCurrentServer), server);
+                  return Pair.of(computeCost(proposalSegment, server, includeCurrentServer,slm), server);
                 }
               }
           )
@@ -263,6 +291,8 @@ public class CostBalancerStrategy implements BalancerStrategy
           bestServer = server;
         }
       }
+      //update bestserver cost
+      this.serverLoadMap.put(bestServer.rhs, serverLoadMap.get(bestServer)+ 1.0 / (weightedAccessCounts.get(proposalSegment).intValue()*1.0));
     }
     catch (Exception e) {
       log.makeAlert(e, "Cost Balancer Multithread strategy wasn't able to complete cost computation.").emit();
@@ -271,24 +301,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     return bestServer;
   }
 
-@Override
-public ServerHolder findNewSegmentHomeReplicatorWithPopularity(
-		DataSegment proposalSegment, List<ServerHolder> serverHolders,
-		HashMap<DataSegment, Number> weightedAccessCounts) {
-	// TODO Auto-generated method stub
-	ServerHolder holder = chooseBestServer(proposalSegment, serverHolders, false).rhs;
-    if (holder != null && !holder.isServingSegment(proposalSegment)) {
-      return holder;
-    }
-    return null;
-}
 
-@Override
-public ServerHolder findNewSegmentHomeBalancerWithPopularity(
-		DataSegment proposalSegment, List<ServerHolder> serverHolders, HashMap<DataSegment, Number> weightedAccessCounts) {
-	// TODO Auto-generated method stub
-	return chooseBestServer(proposalSegment, serverHolders, true).rhs;
-}
 
 
 
