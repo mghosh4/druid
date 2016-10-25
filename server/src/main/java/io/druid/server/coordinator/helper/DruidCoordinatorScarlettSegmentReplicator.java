@@ -19,12 +19,43 @@
 
 package io.druid.server.coordinator.helper;
 
-import com.metamx.common.ISE;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.response.StatusResponseHandler;
-import com.metamx.http.client.response.StatusResponseHolder;
+import io.druid.client.ImmutableDruidServer;
+import io.druid.client.selector.Server;
+import io.druid.curator.discovery.ServerDiscoveryFactory;
+import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.jackson.DefaultObjectMapper;
+import io.druid.server.coordinator.CoordinatorStats;
+import io.druid.server.coordinator.DruidCoordinator;
+import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import io.druid.server.coordinator.LoadPeonCallback;
+import io.druid.server.coordinator.ReplicationThrottler;
+import io.druid.server.coordinator.ServerHolder;
+import io.druid.server.router.TieredBrokerConfig;
+import io.druid.timeline.DataSegment;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.util.Charsets;
@@ -34,61 +65,30 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Multiset.Entry;
+import com.metamx.common.ISE;
+import com.metamx.emitter.EmittingLogger;
+import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.Request;
+import com.metamx.http.client.response.StatusResponseHandler;
+import com.metamx.http.client.response.StatusResponseHolder;
 
-import io.druid.client.selector.Server;
-import io.druid.client.ImmutableDruidServer;
-import io.druid.curator.discovery.ServerDiscoveryFactory;
-import io.druid.curator.discovery.ServerDiscoverySelector;
-import io.druid.jackson.DefaultObjectMapper;
-import io.druid.server.coordinator.BalancerStrategy;
-import io.druid.server.coordinator.CoordinatorStats;
-import io.druid.server.coordinator.DruidCoordinator;
-import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import io.druid.server.coordinator.LoadPeonCallback;
-import io.druid.server.coordinator.ReplicationThrottler;
-import io.druid.server.coordinator.ServerHolder;
-import io.druid.timeline.DataSegment;
-import io.druid.server.coordinator.helper.Tuple;
-import io.druid.server.router.TieredBrokerConfig;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.TreeMap;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.joda.time.DateTime;
-
-public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
+public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinatorHelper
 {
 	private final DruidCoordinator coordinator;
 
-	private static final EmittingLogger log = new EmittingLogger(DruidCoordinatorSegmentReplicator.class);
+	private static final EmittingLogger log = new EmittingLogger(DruidCoordinatorScarlettSegmentReplicator.class);
 	private static final String assignedCount = "assignedCount";
 	private static final String droppedCount = "droppedCount";
 	private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 	private final StatusResponseHandler responseHandler = new StatusResponseHandler(Charsets.UTF_8);
 	private final HttpClient httpClient;
 	private final ServerDiscoveryFactory serverDiscoveryFactory;
+	private HashMap<DataSegment, Long> CCAMap = new HashMap<DataSegment, Long>();
 
 	private static final long MIN_THRESHOLD = 5;
 
-	public DruidCoordinatorSegmentReplicator(
+
+	public DruidCoordinatorScarlettSegmentReplicator(
 			DruidCoordinator coordinator, 
 			HttpClient httpClient,
 			ServerDiscoveryFactory factory)
@@ -118,7 +118,9 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		// Calculate replication based on popularity
 		//calculateAdaptiveReplication(params, weightedAccessCounts, insertList, removeList);
 		HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>> routingTable = new HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>>();
-		calculateBestFitReplication(params, weightedAccessCounts, routingTable, insertList, removeList);
+		HashMap<ImmutableDruidServer, Long> nodeCapacities = coordinator.getNodeCapacities();
+		calculateScarlettReplication(params, weightedAccessCounts, segments, routingTable, nodeCapacities, insertList, removeList);
+		coordinator.setNodeCapacities(nodeCapacities);
 		coordinator.setRoutingTable(routingTable);
 
 		// Manage replicas
@@ -259,119 +261,177 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		//log.info("Calculating Weighted Access Counts for Segments");
 
 		// Handle those segments which are in Coordinator's map but not in segments collected from query
-		for (Map.Entry<DataSegment, Long> entry : weightedAccessCounts.entrySet())
+		/**for (Map.Entry<DataSegment, Long> entry : weightedAccessCounts.entrySet())
 			if (segments.contains(entry.getKey()) == false)
-				weightedAccessCounts.put(entry.getKey(), (long)Math.ceil(0.5 * entry.getValue()));
+				weightedAccessCounts.put(entry.getKey(), (long)Math.ceil(0.5 * entry.getValue()));**/
+
+		int historicalNodeCount = 0;
+		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
+			historicalNodeCount += serverQueue.size();
+		
+		if (historicalNodeCount == 0) {
+			log.makeAlert("Cluster has no servers! Check your cluster configuration!").emit();
+			return;
+		}
+		Long numServers = Long.valueOf(historicalNodeCount);
+		
+		//clean up concurrency map
+		this.CCAMap = new HashMap<DataSegment, Long>();
 
 		for (Entry<DataSegment> entry : segments.entrySet())
 		{
 			DataSegment segment = entry.getElement();
 			int segmentCount = entry.getCount();
 
+			this.CCAMap.put(segment, Long.valueOf(segmentCount));
+			
 			if (weightedAccessCounts.containsKey(segment) == false)
-				weightedAccessCounts.put(segment, (long)segmentCount);
+				weightedAccessCounts.put(segment, (long)segmentCount > numServers? numServers : (long)segmentCount);
 			else
 			{
 				double popularity = weightedAccessCounts.get(segment).doubleValue();
-				weightedAccessCounts.put(segment, (long)Math.ceil(segmentCount + 0.5 * popularity));
+				weightedAccessCounts.put(segment, ((long)(segmentCount + popularity))> numServers? numServers : (long)(segmentCount + popularity));
 			}
 		}
 		
-		// Remove segments with counts less than a threshold from weightedAccessCounts. Also add it to removeList
+		// Remove segments that doesn't appear in the access window
         Iterator it = weightedAccessCounts.entrySet().iterator();
 		while (it.hasNext())
 		{
             Map.Entry<DataSegment, Long> entry = (Map.Entry<DataSegment, Long>)it.next();
 			//log.info("Segment Received [%s] Count [%f]", entry.getKey().getIdentifier(), entry.getValue().doubleValue());
-
-			if (entry.getValue() < MIN_THRESHOLD)
-			{
-				DataSegment segment = entry.getKey();
-				removeList.put(segment, (long)params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier()));
-				it.remove();
-			}
+            if(!segments.contains(entry)){
+            	weightedAccessCounts.remove(entry);
+            }
 		}
 	}
 
-	private void calculateAdaptiveReplication(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, Long> weightedAccessCounts, HashMap<DataSegment, Long> insertList, HashMap<DataSegment, Long> removeList)
+
+
+	private void calculateScarlettReplication(DruidCoordinatorRuntimeParams params, 
+			HashMap<DataSegment, Long> weightedAccessCounts, 
+			Multiset<DataSegment> segments, 
+			HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>> routingTable, 
+			HashMap<ImmutableDruidServer, Long> nodeCapacities, 
+			HashMap<DataSegment, Long> insertList, 
+			HashMap<DataSegment, Long> removeList)
 	{
-		//log.info("Calculating Replication for Segments");
+		log.info("Calculating Scarlett Replication for Segments");
 		int historicalNodeCount = 0;
+		Map<ImmutableDruidServer, Long> sortedNodeCapacities = new HashMap<ImmutableDruidServer, Long>();
+		Map<ImmutableDruidServer, Long> sortedNodeCapacitiesReverse = new HashMap<ImmutableDruidServer, Long>();
 		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
 			historicalNodeCount += serverQueue.size(); 
 
-		long totalWeightCount = 0;
-		for (long number : weightedAccessCounts.values())
-			totalWeightCount += number;
-		
-		long all = -1;
 
-		for (Map.Entry<DataSegment, Long> entry : weightedAccessCounts.entrySet())
-		{
-			DataSegment segment = entry.getKey();
-			int totalReplicantsInCluster = params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier());
-
-			long newReplicationFactor = (long)Math.ceil(entry.getValue().doubleValue() * historicalNodeCount / totalWeightCount);
-
-			if (newReplicationFactor == 0)
-				removeList.put(segment, all);
-			else if (newReplicationFactor < totalReplicantsInCluster)
-				removeList.put(segment, totalReplicantsInCluster - newReplicationFactor);
-			else if (newReplicationFactor > totalReplicantsInCluster)
-				insertList.put(segment, newReplicationFactor - totalReplicantsInCluster);
-		}
-	}
-
-	private void calculateBestFitReplication(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, Long> weightedAccessCounts, HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>> routingTable, HashMap<DataSegment, Long> insertList, HashMap<DataSegment, Long> removeList)
-	{
-		log.info("Calculating Best Fit Replication for Segments");
-		int historicalNodeCount = 0;
-		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
-			historicalNodeCount += serverQueue.size(); 
-
-		double totalWeightCount = 0;
-		for (long number : weightedAccessCounts.values())
-			totalWeightCount += number;
-
-		log.info("Total Weight Count [%f]", totalWeightCount);
-		
-		long slotsperhn = (long) Math.ceil((double)totalWeightCount / historicalNodeCount);
-
-		HashMap<ImmutableDruidServer, Long> nodeCapacities = new HashMap<ImmutableDruidServer, Long>();
-		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
+		//HashMap<ImmutableDruidServer, Long> nodeCapacities = new HashMap<ImmutableDruidServer, Long>();
+		//populate nodeCapacities if needed
+		/*for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
 		{
 			for (ServerHolder holder : serverQueue)
 			{
-				nodeCapacities.put(holder.getServer(), slotsperhn);
+				if(!nodeCapacities.containsKey(holder.getServer())){
+					nodeCapacities.put(holder.getServer(), 0L);	
+				}
+
+			}
+		}*/
+		
+		//get server side information
+		HashMap<ImmutableDruidServer, ServerHolder> serverHolderMap = new HashMap<ImmutableDruidServer, ServerHolder>();
+		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
+            for (ServerHolder holder : serverQueue)
+			    serverHolderMap.put(holder.getServer(), holder);
+		
+		if (serverHolderMap.size() == 0) {
+			log.makeAlert("Cluster has no servers! Check your cluster configuration!").emit();
+			return;
+		}
+		
+		HashMap<DataSegment, List<ImmutableDruidServer>> currentTable = new HashMap<DataSegment, List<ImmutableDruidServer>>();		
+		for (ImmutableDruidServer server : serverHolderMap.keySet())
+		{
+			for (DataSegment segment : server.getSegments().values())
+			{
+                log.info("Server [%s] has segment [%s]", server.getHost(), segment.getIdentifier());
+				if (!currentTable.containsKey(segment))
+					currentTable.put(segment, new ArrayList<ImmutableDruidServer>());
+				currentTable.get(segment).add(server);
+			}
+			
+			if(!nodeCapacities.containsKey(server)){
+				nodeCapacities.put(server, 0L);	
 			}
 		}
 
-		PriorityQueue<Tuple> maxheap = new PriorityQueue<Tuple>(10, new Comparator<Tuple>()
-		{
-			public int compare(Tuple o1, Tuple o2){
-				int result = -Long.compare(o1.weight, o2.weight);
-				return result;
+		for(Map.Entry<DataSegment, Long> entry : weightedAccessCounts.entrySet()){
+			DataSegment targetSegment = entry.getKey();
+			Long repFactor = entry.getValue();
+			if(currentTable.containsKey(targetSegment)){
+				sortedNodeCapacities = sortByValue(nodeCapacities, true);
+				List<ImmutableDruidServer> currentLocations = currentTable.get(targetSegment);
+				
+				if(currentLocations.size()<repFactor){//if we have less replicas than we need					
+					int count = currentLocations.size();
+					HashMap<ImmutableDruidServer, Long> valuelist = new HashMap<ImmutableDruidServer, Long>();
+					
+					for(Map.Entry<ImmutableDruidServer, Long> pair: sortedNodeCapacities.entrySet()){
+						Long cca = this.CCAMap.get(targetSegment);
+						nodeCapacities.put(pair.getKey(), pair.getValue()+cca/(count+1));
+						count++;
+						valuelist.put(pair.getKey(), 0L);
+						if(count>=repFactor)
+							break;
+					}
+					
+					//also add current location to the routing list
+					for(ImmutableDruidServer currentLocation : currentLocations){
+						valuelist.put(currentLocation, 0L);
+					}
+					routingTable.put(targetSegment, valuelist); 
+				}
+				else if(currentLocations.size()>repFactor){//if we have more replicas than we need
+					sortedNodeCapacitiesReverse = sortByValue(nodeCapacities, false);
+					int count = currentLocations.size();
+					HashMap<ImmutableDruidServer, Long> valuelist = new HashMap<ImmutableDruidServer, Long>();
+					
+					for(Map.Entry<ImmutableDruidServer, Long> pair: sortedNodeCapacitiesReverse.entrySet()){
+						if(currentLocations.contains(pair.getKey())){//current heaviest loaded server that contains this segment
+							currentLocations.remove(pair.getKey());
+						}
+						Long cca = this.CCAMap.get(targetSegment);
+						nodeCapacities.put(pair.getKey(), pair.getValue()-cca/count);
+						count--;
+						if(count<=repFactor)
+							break;
+					}
+					
+					//add the rest of the current loaction to the routing list
+					for(ImmutableDruidServer currentLocation : currentLocations){
+						valuelist.put(currentLocation, 0L);
+					}
+					routingTable.put(targetSegment, valuelist);
+				}
+				
+			}else{//segments is not currently stored
+				//create all entries in routing table
+				sortedNodeCapacities = sortByValue(nodeCapacities, true);
+				int count = 0;
+				HashMap<ImmutableDruidServer, Long> valuelist = new HashMap<ImmutableDruidServer, Long>();
+				for(Map.Entry<ImmutableDruidServer, Long> pair:sortedNodeCapacities.entrySet()){
+					Long cca = this.CCAMap.get(targetSegment);	
+					nodeCapacities.put(pair.getKey(), pair.getValue()+cca/(count+1));
+					count++;
+					valuelist.put(pair.getKey(), 0L);
+					if(count>=repFactor)
+						break;
+				}
+				routingTable.put(targetSegment, valuelist);
 			}
-		});
-		
-		for(Map.Entry<DataSegment, Long> entry : weightedAccessCounts.entrySet())
-		{
-			maxheap.add(new Tuple(entry.getKey(), entry.getValue()));
 		}
 		
-		Multiset<DataSegment> expectedCount = HashMultiset.create();
-		while (maxheap.peek() != null)
-		{
-			Tuple candidate = maxheap.poll();
-			//log.info("Chosen Segment [%s] [%f]", candidate.segment.getIdentifier(), candidate.weight);
-			
-			long valleft = bestFit(candidate, nodeCapacities, routingTable);
-			expectedCount.add(candidate.segment);
-			if (valleft > 0)
-			{
-				maxheap.add(new Tuple(candidate.segment, valleft));
-			}
-		}
+
+		
 
 		/*for (Entry<DataSegment> entry : expectedCount.entrySet())
 		{
@@ -391,63 +451,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
                 log.info("Server [%s] should have segment [%s]", server.getHost(), entry.getKey().getIdentifier());*/
 	}
 
-	private long bestFit(Tuple candidate, HashMap<ImmutableDruidServer, Long> nodeCapacities, HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>> routingTable)
-	{
-        //log.info("Segment [%s] Weight [%d]", candidate.segment.getIdentifier(), candidate.weight);
-		long val = candidate.weight;
-		if (!routingTable.containsKey(candidate.segment))
-			routingTable.put(candidate.segment, new HashMap<ImmutableDruidServer, Long>());
 
-		long mincapleftafterfill = Integer.MAX_VALUE;
-		long minvalleftafterfill = Integer.MAX_VALUE;
-		ImmutableDruidServer minfitServer = null;
-		ImmutableDruidServer minspillServer = null;
-		boolean fits = false;
-		long empty = 0;
-		for (Map.Entry<ImmutableDruidServer, Long> entry : nodeCapacities.entrySet())
-		{
-            //log.info("Server [%s] Capacity [%d]", entry.getKey().getHost(), entry.getValue());
-			long capacity = entry.getValue();
-            if (capacity == 0)
-                continue;
-
-			if(val <= capacity)
-			{
-				fits = true;
-				long leftafterfill = capacity - val;
-				if (leftafterfill < mincapleftafterfill)
-				{
-					mincapleftafterfill = leftafterfill;
-					minfitServer = entry.getKey();
-                    //log.info("Server [%s] fits segment [%s]", minfitServer.getHost(), candidate.segment.getIdentifier());
-				}
-			}
-			else
-			{
-				long leftafterfill = val - capacity;
-				if(leftafterfill < minvalleftafterfill)
-				{
-					minvalleftafterfill = leftafterfill;
-					minspillServer = entry.getKey();
-                    //log.info("Server [%s] spills segment [%s]", minspillServer.getHost(), candidate.segment.getIdentifier());
-				}
-			}
-		}
-		
-		if (fits == true)
-		{
-			routingTable.get(candidate.segment).put(minfitServer, val);
-			nodeCapacities.put(minfitServer, mincapleftafterfill);
-			return 0;
-		}
-		else
-		{
-			routingTable.get(candidate.segment).put(minspillServer, val - minvalleftafterfill);
-			nodeCapacities.put(minspillServer, empty);
-			return minvalleftafterfill;
-		}
-	}
-	
 	private void manageReplicas(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>> routingTable, CoordinatorStats stats)
 	{
 		//log.info("Managing Replicas by inserting and removing replicas for relevant data segments");
@@ -475,7 +479,7 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		}
 
 		final List<String> tierNameList = Lists.newArrayList(params.getDruidCluster().getTierNames());
-		if (tierNameList.size() == 0) {
+		if (tierNameList.size() != 0) { //!!!!!!!!!!!!!!!!!!!!!!CHECK LATER
 			log.makeAlert("Cluster has multiple tiers! Check your cluster configuration!").emit();
 			return;
 		}
@@ -601,201 +605,41 @@ public class DruidCoordinatorSegmentReplicator implements DruidCoordinatorHelper
 		return stats;
 	}
 
-	private void manageReplicas(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, Long> insertList, HashMap<DataSegment, Long> removeList, CoordinatorStats stats)
-	{
-		//log.info("Managing Replicas by inserting and removing replicas for relevant data segments");
+	//code referenced: http://stackoverflow.com/questions/109383/sort-a-mapkey-value-by-values-java?noredirect=1&lq=1
+	//http://stackoverflow.com/questions/8119366/sorting-hashmap-by-values
+	private static Map<ImmutableDruidServer, Long> sortByValue(HashMap<ImmutableDruidServer, Long> unsortMap, final boolean order)
+    {
 
-		List<ServerHolder> serverHolderList = new ArrayList<ServerHolder>();
-		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
-			serverHolderList.addAll(serverQueue);
+        List<Map.Entry<ImmutableDruidServer, Long>> list = new LinkedList<Map.Entry<ImmutableDruidServer, Long>>(unsortMap.entrySet());
 
-		if (serverHolderList.size() == 0) {
-			log.makeAlert("Cluster has no servers! Check your cluster configuration!").emit();
-			return;
-		}
-
-		final List<String> tierNameList = Lists.newArrayList(params.getDruidCluster().getTierNames());
-		if (tierNameList.size() == 0) {
-			log.makeAlert("Cluster has multiple tiers! Check your cluster configuration!").emit();
-			return;
-		}
-		final String tier = tierNameList.get(0);
-
-		final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
-		final BalancerStrategy strategy = params.getBalancerStrategyFactory().createBalancerStrategy(referenceTimestamp);
-
-		for (Map.Entry<DataSegment, Long> entry : insertList.entrySet())
-		{
-			String id = entry.getKey().getIdentifier();
-            DataSegment segment = null;
-            for (DataSegment candidate : coordinator.getAvailableDataSegments())
+        // Sorting the list based on values
+        Collections.sort(list, new Comparator<Map.Entry<ImmutableDruidServer, Long>>()
+        {
+            public int compare(Map.Entry<ImmutableDruidServer, Long> o1,
+                    Map.Entry<ImmutableDruidServer, Long> o2)
             {
-		        //log.info("Comparing candidate: %s to incumbent %s", candidate.getIdetifier(), id);
-                if (candidate.getIdentifier().equals(id))
+                if (order)
                 {
-                    segment = candidate;
-                    break;
+                    return o1.getValue().compareTo(o2.getValue());
+                }
+                else
+                {
+                    return o2.getValue().compareTo(o1.getValue());
+
                 }
             }
 
-            if (segment == null)
-                continue;
-
-			CoordinatorStats assignStats = assign(
-					params.getReplicationManager(),
-					tier,
-					strategy,
-					serverHolderList,
-					segment,
-					entry.getValue()
-					);
-			stats.accumulate(assignStats);
-		}
-
-		for (Map.Entry<DataSegment, Long> entry : removeList.entrySet())
-		{
-			String id = entry.getKey().getIdentifier();
-            DataSegment segment = null;
-            for (DataSegment candidate : coordinator.getAvailableDataSegments())
-            {
-                if (candidate.getIdentifier().equals(id))
-                {
-                    segment = candidate;
-                    break;
-                }
-            }
-
-            if (segment == null)
-                continue;
-
-			int totalReplicantsInCluster = params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier());
-			if (totalReplicantsInCluster <= 0) {
-				continue;
-			}
-
-			long numReplicantsToRemove = entry.getValue() == -1 ? totalReplicantsInCluster : entry.getValue();
-			CoordinatorStats dropStats = drop(
-					params.getReplicationManager(),
-					tier,
-					serverHolderList,
-					segment,
-					numReplicantsToRemove
-					);
-			stats.accumulate(dropStats);      
-		}
-	}
-
-	private CoordinatorStats assign(
-			final ReplicationThrottler replicationManager,
-			final String tier,
-			final BalancerStrategy strategy,
-			final List<ServerHolder> serverHolderList,
-			final DataSegment segment,
-			final long numReplicantsToAdd
-			)
-	{
-		log.info("Insert Segment [%s] [%d]", segment.getIdentifier(), numReplicantsToAdd);
-		
-        final CoordinatorStats stats = new CoordinatorStats();
-		stats.addToTieredStat(assignedCount, tier, 0);
-
-		long numReplicants = numReplicantsToAdd;
-		while (numReplicants > 0) {
-			final ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
-
-			if (holder == null) {
-				log.warn(
-						"Not enough [%s] servers or node capacity to assign segment[%s]!",
-						tier,
-						segment.getIdentifier()
-						);
-				break;
-			}
-
-			replicationManager.registerReplicantCreation(
-					tier, segment.getIdentifier(), holder.getServer().getHost()
-					);
-
-			holder.getPeon().loadSegment(
-					segment,
-					new LoadPeonCallback()
-					{
-						@Override
-						public void execute()
-						{
-							replicationManager.unregisterReplicantCreation(
-									tier,
-									segment.getIdentifier(),
-									holder.getServer().getHost()
-									);
-						}
-					}
-					);
-
-			log.info("Inserted Segment [%s]", segment.getIdentifier());
-
-			stats.addToTieredStat(assignedCount, tier, 1);
-			--numReplicants;
-		}
-
-		return stats;
-	}
-
-	private CoordinatorStats drop(
-			final ReplicationThrottler replicationManager,
-			final String tier,
-			final List<ServerHolder> serverHolderList,
-			final DataSegment segment,
-			final long numReplicantsToRemove
-			)
-	{
-		log.info("Remove Segment [%s] [%d]", segment.getIdentifier(), numReplicantsToRemove);
-		CoordinatorStats stats = new CoordinatorStats();
-
-		// Pick the server which has the maximum number of segments for load balance
-		Map<Number, ServerHolder> segmentCountMap = new TreeMap<Number, ServerHolder>(Collections.reverseOrder());
-		for (ServerHolder serverHolder : serverHolderList)
-			if (serverHolder.getServer().getSegment(segment.getIdentifier()) != null)
-				segmentCountMap.put(serverHolder.getServer().getSegments().size(), serverHolder);
-
-		long numReplicants = numReplicantsToRemove;
-		for (Map.Entry<Number, ServerHolder> entry : segmentCountMap.entrySet())
-		{
-			//log.info("Removing Segment from [%s] because it has [%d] segments", entry.getValue().getServer().getMetadata().toString(), entry.getKey().intValue());
-			final ServerHolder holder = entry.getValue();
-			stats.addToTieredStat(droppedCount, tier, 0);
-
-			if (holder.isServingSegment(segment)) {
-				replicationManager.registerReplicantTermination(
-						tier,
-						segment.getIdentifier(),
-						holder.getServer().getHost()
-						);
-			}
-
-			holder.getPeon().dropSegment(
-					segment,
-					new LoadPeonCallback()
-					{
-						@Override
-						public void execute()
-						{
-							replicationManager.unregisterReplicantTermination(
-									tier,
-									segment.getIdentifier(),
-									holder.getServer().getHost()
-									);
-						}
-					}
-					);
 			
-            --numReplicants;
-			stats.addToTieredStat(droppedCount, tier, 1);
-			log.info("Removed Segment [%s]", segment.getIdentifier());
-			
-            if (numReplicants == 0)
-				break;
-		}
-		return stats;
-	}
+        });
+
+        // Maintaining insertion order with the help of LinkedList
+        Map<ImmutableDruidServer, Long> sortedMap = new LinkedHashMap<ImmutableDruidServer, Long>();
+        for (Map.Entry<ImmutableDruidServer, Long> entry : list)
+        {
+            sortedMap.put(entry.getKey(), entry.getValue());
+        }
+
+        return sortedMap;
+    }
+
 }

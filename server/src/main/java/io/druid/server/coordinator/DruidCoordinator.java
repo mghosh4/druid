@@ -42,6 +42,7 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.http.client.HttpClient;
+
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.ImmutableDruidDataSource;
@@ -66,15 +67,17 @@ import io.druid.server.coordinator.helper.DruidCoordinatorCleanupUnneeded;
 import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import io.druid.server.coordinator.helper.DruidCoordinatorLogger;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
+import io.druid.server.coordinator.helper.DruidCoordinatorScarlettSegmentReplicator;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentPopularityDumper;
-import io.druid.server.coordinator.helper.DruidCoordinatorSegmentReplicator;
+
 import io.druid.server.coordinator.rules.LoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
+
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
@@ -141,6 +144,7 @@ public class DruidCoordinator
 	private volatile SegmentReplicantLookup segmentReplicantLookup = null;
 	private volatile HashMap<DataSegment, Long> weightedAccessCounts;
 	private volatile HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>> routingTable;
+	private volatile HashMap<ImmutableDruidServer, Long> nodeCapacities;
 
 	@Inject
 	public DruidCoordinator(
@@ -154,7 +158,7 @@ public class DruidCoordinator
 			ServiceEmitter emitter,
 			ScheduledExecutorFactory scheduledExecutorFactory,
 			IndexingServiceClient indexingServiceClient,
-			LoadQueueTaskMaster taskMaster,
+			LoadQueueTaskMaster taskMaster, 
 			ServiceAnnouncer serviceAnnouncer,
 			@Self DruidNode self,
 			@Global HttpClient httpClient,
@@ -205,6 +209,7 @@ public class DruidCoordinator
 		this.configManager = configManager;
 		this.weightedAccessCounts = new HashMap<DataSegment, Long>();
 		this.routingTable = new HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>>();
+		this.nodeCapacities = new HashMap<ImmutableDruidServer, Long>();
 
 		this.metadataSegmentManager = metadataSegmentManager;
 		this.serverInventoryView = serverInventoryView;
@@ -915,7 +920,7 @@ public class DruidCoordinator
 							new DruidCoordinatorCleanupUnneeded(DruidCoordinator.this),
 							new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),
 							new DruidCoordinatorBalancer(DruidCoordinator.this),
-							new DruidCoordinatorSegmentReplicator(DruidCoordinator.this, DruidCoordinator.httpClient, DruidCoordinator.this.serverDiscoveryFactory),
+							new DruidCoordinatorScarlettSegmentReplicator(DruidCoordinator.this, DruidCoordinator.httpClient, DruidCoordinator.this.serverDiscoveryFactory),
 							new DruidCoordinatorSegmentPopularityDumper(DruidCoordinator.this, DruidCoordinator.this.metadataSegmentManager),
 							new DruidCoordinatorLogger()
 							),
@@ -930,6 +935,14 @@ public class DruidCoordinator
 		{
 			super(helpers, startingLeaderCounter);
 		}
+	}
+
+	public HashMap<ImmutableDruidServer, Long> getNodeCapacities() {
+		return nodeCapacities;
+	}
+
+	public void setNodeCapacities(HashMap<ImmutableDruidServer, Long> nodeCapacities) {
+		this.nodeCapacities = nodeCapacities;
 	}
 }
 
