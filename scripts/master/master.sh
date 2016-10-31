@@ -32,7 +32,7 @@ done
 
 ############################## SETUP ################################
 #ingestion and workload generator and logreader and plot script
-if [ BATCH -e "TRUE" ]
+if [ $BATCH = "TRUE" ]; then
 
     echo "DEPLOYMENT: "
     for  node in ${NEW_KAFKA_NODES//,/ }
@@ -334,3 +334,4 @@ else
             $COMMAND"
     done
     echo ""
+fi
