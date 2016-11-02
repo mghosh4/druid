@@ -112,6 +112,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 
 		// Calculate the popularity map
 		HashMap<DataSegment, Long> weightedAccessCounts = coordinator.getWeightedAccessCounts();
+		weightedAccessCounts = new HashMap<DataSegment, Long>();
 		calculateWeightedAccessCounts(params, segments, weightedAccessCounts, removeList);
 		coordinator.setWeightedAccessCounts(weightedAccessCounts);
 
@@ -175,7 +176,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 
 	private void calculateSegmentCounts(Multiset<DataSegment> segmentCounts)
 	{
-		//log.info("Starting replication. Getting Segment Popularity");
+		log.info("Starting replication. Getting Segment Popularity");
 		List<String> urls = getBrokerURLs();
 		
 		ExecutorService pool = Executors.newFixedThreadPool(urls.size());
@@ -219,10 +220,10 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 				        throw Throwables.propagate(e);
 				      }
 				    
-				    /*for (DataSegment segment:segments)
+				    for (DataSegment segment:segments)
 				    {
 				        log.info("Segment Received [%s]", segment.getIdentifier());
-				    }*/
+				    }
 				    
 				    return segments;
 				}
@@ -258,7 +259,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 
 	private void calculateWeightedAccessCounts(DruidCoordinatorRuntimeParams params, Multiset<DataSegment> segments, HashMap<DataSegment, Long> weightedAccessCounts, HashMap<DataSegment, Long> removeList)
 	{
-		//log.info("Calculating Weighted Access Counts for Segments");
+		log.info("Calculating Weighted Access Counts for Segments");
 
 		// Handle those segments which are in Coordinator's map but not in segments collected from query
 		/**for (Map.Entry<DataSegment, Long> entry : weightedAccessCounts.entrySet())
@@ -299,7 +300,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 		while (it.hasNext())
 		{
             Map.Entry<DataSegment, Long> entry = (Map.Entry<DataSegment, Long>)it.next();
-			//log.info("Segment Received [%s] Count [%f]", entry.getKey().getIdentifier(), entry.getValue().doubleValue());
+			log.info("Segment Received [%s] Count [%f]", entry.getKey().getIdentifier(), entry.getValue().doubleValue());
             if(!segments.contains(entry)){
             	weightedAccessCounts.remove(entry);
             }
@@ -385,9 +386,13 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 					}
 					
 					//also add current location to the routing list
+					String logentry = "";
 					for(ImmutableDruidServer currentLocation : currentLocations){
 						valuelist.put(currentLocation, 0L);
+						logentry = logentry + currentLocation.getHost()+".";
 					}
+					logentry = "Adding target segment " + targetSegment.getIdentifier() + " with value: " + logentry + " to routing table";
+					log.info(logentry);
 					routingTable.put(targetSegment, valuelist); 
 				}
 				else if(currentLocations.size()>repFactor){//if we have more replicas than we need
@@ -407,9 +412,13 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 					}
 					
 					//add the rest of the current loaction to the routing list
+					String logentry = "";
 					for(ImmutableDruidServer currentLocation : currentLocations){
 						valuelist.put(currentLocation, 0L);
+						logentry = logentry + currentLocation.getHost()+".";
 					}
+					logentry = "Adding target segment " + targetSegment.getIdentifier() + " with value: " + logentry + " to routing table";
+					log.info(logentry);
 					routingTable.put(targetSegment, valuelist);
 				}
 				
@@ -418,15 +427,19 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 				sortedNodeCapacities = sortByValue(nodeCapacities, true);
 				int count = 0;
 				HashMap<ImmutableDruidServer, Long> valuelist = new HashMap<ImmutableDruidServer, Long>();
+				String logentry = "";
 				for(Map.Entry<ImmutableDruidServer, Long> pair:sortedNodeCapacities.entrySet()){
 					Long cca = this.CCAMap.get(targetSegment);	
 					nodeCapacities.put(pair.getKey(), pair.getValue()+cca/(count+1));
 					count++;
 					valuelist.put(pair.getKey(), 0L);
+					logentry = logentry + pair.getKey().getHost()+".";
 					if(count>=repFactor)
 						break;
 				}
 				routingTable.put(targetSegment, valuelist);
+				logentry = "Creating target segment " + targetSegment.getIdentifier() + " with value: " + logentry + " to routing table";
+				log.info(logentry);
 			}
 		}
 		
@@ -479,7 +492,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 		}
 
 		final List<String> tierNameList = Lists.newArrayList(params.getDruidCluster().getTierNames());
-		if (tierNameList.size() != 0) { //!!!!!!!!!!!!!!!!!!!!!!CHECK LATER
+		if (tierNameList.size() == 0) { //!!!!!!!!!!!!!!!!!!!!!!CHECK LATER
 			log.makeAlert("Cluster has multiple tiers! Check your cluster configuration!").emit();
 			return;
 		}
@@ -490,9 +503,10 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 			DataSegment segment = entry.getKey();
 			for (ImmutableDruidServer server : entry.getValue().keySet())
 			{
-                //log.info("Server [%s] should have segment [%s]", server.getHost(), segment.getIdentifier());
+                log.info("Server [%s] should have segment [%s]", server.getHost(), segment.getIdentifier());
 				if (!currentTable.containsKey(segment) || !currentTable.get(segment).contains(server))
 				{
+					log.info("Server [%s] add segment [%s]", server.getHost(), segment.getIdentifier());
 					CoordinatorStats assignStats = assign(
 							params.getReplicationManager(),
 							tier,
@@ -511,6 +525,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 			{
 				if (!routingTable.containsKey(segment) || !routingTable.get(segment).keySet().contains(server))
 				{
+					log.info("Server [%s] drop segment [%s]", server.getHost(), segment.getIdentifier());
 					CoordinatorStats dropStats = drop(
 							params.getReplicationManager(),
 							tier,
