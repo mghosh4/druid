@@ -68,6 +68,7 @@ import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import io.druid.server.coordinator.helper.DruidCoordinatorLogger;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import io.druid.server.coordinator.helper.DruidCoordinatorScarlettSegmentReplicator;
+import io.druid.server.coordinator.helper.DruidCoordinatorBestFitSegmentReplicator;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
@@ -138,6 +139,7 @@ public class DruidCoordinator
 	private final ServiceAnnouncer serviceAnnouncer;
 	private final DruidNode self;
 	public final ServerDiscoveryFactory serverDiscoveryFactory;
+	private final DruidCoordinatorHelper replicator;
 	private volatile boolean started = false;
 	private volatile int leaderCounter = 0;
 	private volatile boolean leader = false;
@@ -222,7 +224,21 @@ public class DruidCoordinator
 		this.self = self;
 		this.httpClient = httpClient;
 		this.serverDiscoveryFactory = factory;
-
+		if(config.getReplicationPolicy() == "getafix")
+		{
+			log.info("GETAFIX");
+			replicator = new DruidCoordinatorBestFitSegmentReplicator(DruidCoordinator.this);
+		}
+		else if(config.getReplicationPolicy() == "scarlett")
+		{
+			log.info("SCARLETT");
+			replicator = new DruidCoordinatorScarlettSegmentReplicator(DruidCoordinator.this);
+		}
+		else
+		{
+			log.info("DEFAULT_RULE");
+			replicator = new DruidCoordinatorRuleRunner(DruidCoordinator.this);
+		}
 		this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
 
 		this.leaderLatch = new AtomicReference<>(null);
@@ -916,11 +932,10 @@ public class DruidCoordinator
 											.build();
 								}
 							},
-							new DruidCoordinatorRuleRunner(DruidCoordinator.this),
+							replicator,
 							new DruidCoordinatorCleanupUnneeded(DruidCoordinator.this),
 							new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),
 							new DruidCoordinatorBalancer(DruidCoordinator.this),
-							new DruidCoordinatorScarlettSegmentReplicator(DruidCoordinator.this, DruidCoordinator.httpClient, DruidCoordinator.this.serverDiscoveryFactory),
 							new DruidCoordinatorSegmentPopularityDumper(DruidCoordinator.this, DruidCoordinator.this.metadataSegmentManager),
 							new DruidCoordinatorLogger()
 							),

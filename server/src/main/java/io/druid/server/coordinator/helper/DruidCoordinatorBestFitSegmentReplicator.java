@@ -89,13 +89,11 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 	private static final long MIN_THRESHOLD = 5;
 
 	public DruidCoordinatorBestFitSegmentReplicator(
-			DruidCoordinator coordinator, 
-			HttpClient httpClient,
-			ServerDiscoveryFactory factory)
+			DruidCoordinator coordinator)
 	{
 		this.coordinator = coordinator;
-		this.httpClient = httpClient;
-		this.serverDiscoveryFactory = factory;
+		this.httpClient = coordinator.httpClient;
+		this.serverDiscoveryFactory = coordinator.serverDiscoveryFactory;
 	}
 
 	@Override
