@@ -39,6 +39,7 @@ if [ $BATCH = "TRUE" ]; then
     do
         COMMAND=''
         COMMAND=$COMMAND" cd $DEPLOYMENT_DIRECTORY;"
+        COMMAND=$COMMAND" sudo sed -i '3s@.*druid.replicator.policy=$RULE@' $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@EXPERIMENT=$EXPERIMENT@' $DEPLOYMENT_CONF;"
         COMMAND=$COMMAND" sudo sed -i '4s@.*@IP=$IP@' $DEPLOYMENT_CONF;"
         COMMAND=$COMMAND" sudo sed -i '5s@.*@AWS=$AWS@' $DEPLOYMENT_CONF;"
@@ -196,6 +197,7 @@ else
     do
         COMMAND=''
         COMMAND=$COMMAND" cd $DEPLOYMENT_DIRECTORY;"
+        COMMAND=$COMMAND" sudo sed -i '3s@.*druid.replicator.policy=$RULE@' $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@EXPERIMENT=$EXPERIMENT@' $DEPLOYMENT_CONF;"
         COMMAND=$COMMAND" sudo sed -i '4s@.*@IP=$IP@' $DEPLOYMENT_CONF;"
         COMMAND=$COMMAND" sudo sed -i '5s@.*@AWS=$AWS@' $DEPLOYMENT_CONF;"
