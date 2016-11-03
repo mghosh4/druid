@@ -104,7 +104,6 @@ if [ $BATCH = "TRUE" ]; then
         COMMAND=$COMMAND" sudo sed -i '6s@.*@kafkahost=$kafkahost@' $INGESTION_CONF;"
         COMMAND=$COMMAND" cd $INGESTION_DIRECTORY;"
         COMMAND=$COMMAND" python ingestion.py -n1 $INGESTION_CONF;"
-        COMMAND=$COMMAND" curl -x POST -d \"$RULE\" 'https://$COORDINATOR_NODE:$COORDINATOR_NODE_PORT/druid/coordinator/v1/rules/$kafkatopic';"
         COMMAND=$COMMAND" python ingestion.py -n$INGESTION_TIME $INGESTION_CONF;"
 
         #ssh to node and run command
@@ -262,7 +261,6 @@ else
         COMMAND=$COMMAND" sudo sed -i '6s@.*@kafkahost=$kafkahost@' $INGESTION_CONF;"
         COMMAND="cd $INGESTION_DIRECTORY;"
         COMMAND=$COMMAND" python ingestion.py -n1 $INGESTION_CONF;"
-        COMMAND=$COMMAND" curl -x POST -d \"$RULE\" 'https://$COORDINATOR_NODE:$COORDINATOR_NODE_PORT/druid/coordinator/v1/rules/$kafkatopic';"
         COMMAND="nohup python ingestion.py -n$INGESTION_TIME $INGESTION_CONF &;"
         COMMAND=$COMMAND" sudo sed -i '1s@.*@datasource=$datasource@' $WORKLOAD_GENERATOR_CONF;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@granularity=$granularity@' $WORKLOAD_GENERATOR_CONF;"
