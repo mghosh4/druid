@@ -82,10 +82,10 @@ def threadoperation(queryPerSec):
             newquerylist = QueryGenerator.generateQueries(start, end, querypermin * runtime, timeAccessGenerator, periodAccessGenerator, popularitylist)
         if filename != "" or isbatch == True:
             count = 0
+            time = datetime.now(timezone('UTC'))
+            logger.info("Time: {}".format(time.strftime("%Y-%m-%d %H:%M:%S")))
+            nextminute = time + timedelta(minutes=1)
             for query in newquerylist:
-                time = datetime.now(timezone('UTC'))
-                logger.info("Time: {}".format(time.strftime("%Y-%m-%d %H:%M:%S")))
-
                 try:
                     line.append(applyOperation(query, config, logger))
                 except Exception as inst:
@@ -98,11 +98,13 @@ def threadoperation(queryPerSec):
 
                 count = count + 1
                 if count >= querypermin:
-                    count = 0
-                    nextminute = time + timedelta(minutes=1)
                     timediff = (nextminute - datetime.now(timezone('UTC'))).total_seconds()
                     if timediff > 0:
                         yield gen.sleep(timediff)
+                    count = 0
+                    time = datetime.now(timezone('UTC'))
+                    logger.info("Time: {}".format(time.strftime("%Y-%m-%d %H:%M:%S")))
+                    nextminute = time + timedelta(minutes=1)
 
         else:                    
             while True:
@@ -137,10 +139,10 @@ def threadoperation(queryPerSec):
                 result = yield wait_iterator.next()
             except Exception as e:
                 logger.error("Error {} from {}".format(e, wait_iterator.current_future))
-            else:
-                logger.info("Result {} received from {} at {}".format(
-                    result, wait_iterator.current_future,
-                    wait_iterator.current_index))
+            #else:
+            #    logger.info("Result {} received from {} at {}".format(
+            #        result, wait_iterator.current_future,
+            #        wait_iterator.current_index))
     
     IOLoop().run_sync(printresults)
     

@@ -157,7 +157,8 @@ do
     if [ $TYPE_OF_STOP -eq 1 ]
     then
         COMMAND=$COMMAND" sudo rm -rf /mnt/kafkalogs;"
-        COMMAND=$COMMAND" sudo rm -rf /tmp/*;" 
+        COMMAND=$COMMAND" sudo rm -rf /tmp/*;"
+        COMMAND=$COMMAND" sudo rm -rf $LOG_FILE/workloadgenerator.log;" 
     fi
     echo "kafka server shutdown command is $COMMAND"
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
