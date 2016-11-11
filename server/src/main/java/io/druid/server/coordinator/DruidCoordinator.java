@@ -62,6 +62,7 @@ import io.druid.metadata.MetadataSegmentManager;
 import io.druid.segment.IndexIO;
 import io.druid.server.DruidNode;
 import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
+import io.druid.server.coordinator.helper.DruidCoordinatorBestFitSegmentReplicator;
 import io.druid.server.coordinator.helper.DruidCoordinatorCleanupOvershadowed;
 import io.druid.server.coordinator.helper.DruidCoordinatorCleanupUnneeded;
 import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
@@ -72,7 +73,6 @@ import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentPopularityDumper;
-
 import io.druid.server.coordinator.rules.LoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -920,7 +920,7 @@ public class DruidCoordinator
 							new DruidCoordinatorCleanupUnneeded(DruidCoordinator.this),
 							new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),
 							new DruidCoordinatorBalancer(DruidCoordinator.this),
-							new DruidCoordinatorScarlettSegmentReplicator(DruidCoordinator.this, DruidCoordinator.httpClient, DruidCoordinator.this.serverDiscoveryFactory),
+							new DruidCoordinatorBestFitSegmentReplicator(DruidCoordinator.this, DruidCoordinator.httpClient, DruidCoordinator.this.serverDiscoveryFactory),
 							new DruidCoordinatorSegmentPopularityDumper(DruidCoordinator.this, DruidCoordinator.this.metadataSegmentManager),
 							new DruidCoordinatorLogger()
 							),

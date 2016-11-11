@@ -101,7 +101,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 	@Override
 	public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
 	{
-		//log.info("Starting replication. Getting Segment Popularity");
+		log.info("Starting replication. Getting Segment Popularity");
 		final CoordinatorStats stats = new CoordinatorStats();
 		HashMap<DataSegment, Long> insertList = new HashMap<DataSegment, Long>();
 		HashMap<DataSegment, Long> removeList = new HashMap<DataSegment, Long>();
@@ -173,7 +173,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 
 	private void calculateSegmentCounts(Multiset<DataSegment> segmentCounts)
 	{
-		//log.info("Starting replication. Getting Segment Popularity");
+		log.info("Starting replication. Getting Segment Popularity");
 		List<String> urls = getBrokerURLs();
 		
 		ExecutorService pool = Executors.newFixedThreadPool(urls.size());
@@ -217,10 +217,10 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 				        throw Throwables.propagate(e);
 				      }
 				    
-				    /*for (DataSegment segment:segments)
+				    for (DataSegment segment:segments)
 				    {
 				        log.info("Segment Received [%s]", segment.getIdentifier());
-				    }*/
+				    }
 				    
 				    return segments;
 				}
@@ -247,16 +247,16 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 			}
 		}
 		
-		/*for (Entry<DataSegment> entry : segmentCounts.entrySet())
+		for (Entry<DataSegment> entry : segmentCounts.entrySet())
 		{
 			if (entry != null)
 				log.info("Segment Received [%s] Count [%d]", entry.getElement().getIdentifier(), entry.getCount());
-		}*/
+		}
 	}
 
 	private void calculateWeightedAccessCounts(DruidCoordinatorRuntimeParams params, Multiset<DataSegment> segments, HashMap<DataSegment, Long> weightedAccessCounts, HashMap<DataSegment, Long> removeList)
 	{
-		//log.info("Calculating Weighted Access Counts for Segments");
+		log.info("Calculating Weighted Access Counts for Segments");
 
 		// Handle those segments which are in Coordinator's map but not in segments collected from query
 		for (Map.Entry<DataSegment, Long> entry : weightedAccessCounts.entrySet())
@@ -282,7 +282,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		while (it.hasNext())
 		{
             Map.Entry<DataSegment, Long> entry = (Map.Entry<DataSegment, Long>)it.next();
-			//log.info("Segment Received [%s] Count [%f]", entry.getKey().getIdentifier(), entry.getValue().doubleValue());
+			log.info("Segment Received [%s] Count [%f]", entry.getKey().getIdentifier(), entry.getValue().doubleValue());
 
 			if (entry.getValue() < MIN_THRESHOLD)
 			{
@@ -295,7 +295,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 
 	private void calculateAdaptiveReplication(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, Long> weightedAccessCounts, HashMap<DataSegment, Long> insertList, HashMap<DataSegment, Long> removeList)
 	{
-		//log.info("Calculating Replication for Segments");
+		log.info("Calculating Replication for Segments");
 		int historicalNodeCount = 0;
 		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
 			historicalNodeCount += serverQueue.size(); 
