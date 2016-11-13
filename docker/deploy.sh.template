@@ -10,7 +10,7 @@ do
   docker run -itd --name=node-$i-conf-and-scripts --network=d-my-net --env="constraint:node==d-node-$i" {{ docker_hub_username }}/druid-conf-and-scripts:{{ image_tag }}
 done
 
-docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-2-conf-and-scripts --name=overlord --network=d-my-net --env="constraint:node==d-node-2" {{ docker_hub_username }}/druid-overlord:{{ image_tag }}
+docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-2-conf-and-scripts -p 8084:8084 --name=overlord --network=d-my-net --env="constraint:node==d-node-2" {{ docker_hub_username }}/druid-overlord:{{ image_tag }}
 docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-1-conf-and-scripts --name=middlemanager --network=d-my-net --env="constraint:node==d-node-1" {{ docker_hub_username }}/druid-middlemanager:{{ image_tag }}
 docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-1-conf-and-scripts -p 8080:8080 --name=coordinator --network=d-my-net --env="constraint:node==d-node-1" {{ docker_hub_username }}/druid-coordinator:{{ image_tag }}
 docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-2-conf-and-scripts --name=historical1 --network=d-my-net --env="constraint:node==d-node-2" {{ docker_hub_username }}/druid-historical:{{ image_tag }}
@@ -30,7 +30,7 @@ do
   docker run -itd --name=node-$i-conf-and-scripts --network=p-my-net --env="constraint:node==p-node-$i" {{ docker_hub_username }}/druid-conf-and-scripts:{{ image_tag }}
 done
 
-docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-9-conf-and-scripts --name=overlord --network=p-my-net --env="constraint:node==p-node-9" {{ docker_hub_username }}/druid-overlord:{{ image_tag }}
+docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-9-conf-and-scripts -p 8084:8084 --name=overlord --network=p-my-net --env="constraint:node==p-node-9" {{ docker_hub_username }}/druid-overlord:{{ image_tag }}
 docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-10-conf-and-scripts --name=middlemanager --network=p-my-net --env="constraint:node==p-node-10" {{ docker_hub_username }}/druid-middlemanager:{{ image_tag }}
 docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-1-conf-and-scripts -p 8080:8080 --name=coordinator --network=p-my-net --env="constraint:node==p-node-1" {{ docker_hub_username }}/druid-coordinator:{{ image_tag }}
 docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ username }}/druid-segments --volumes-from=node-2-conf-and-scripts --name=historical1 --network=p-my-net --env="constraint:node==p-node-2" {{ docker_hub_username }}/druid-historical:{{ image_tag }}

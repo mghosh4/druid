@@ -24,12 +24,15 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import io.druid.client.ImmutableDruidServer;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.LoadQueuePeon;
 import io.druid.timeline.DataSegment;
 
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
@@ -160,5 +163,24 @@ public class CoordinatorResource
             }
         )
     ).build();
+  }
+
+  @GET
+  @Path("/routingTable")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getRoutingTable()
+  {
+    return Response.ok(coordinator.getSerializedRoutingTable()).build();
+  }
+
+  @POST
+  @Path("/loadSegment/{segmentId}")
+  @Produces(MediaType.TEXT_PLAIN)
+  public Response loadSegment(@PathParam("segmentId") String segmentId) {
+    ImmutableDruidServer immutableDruidServer = coordinator.loadSegment(segmentId);
+    if (immutableDruidServer == null) {
+      return Response.ok().build();
+    }
+    return Response.ok(immutableDruidServer.getMetadata().toString()).build();
   }
 }

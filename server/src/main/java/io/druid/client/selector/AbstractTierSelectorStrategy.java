@@ -20,6 +20,7 @@
 package io.druid.client.selector;
 
 import com.metamx.common.ISE;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.timeline.DataSegment;
 
 import java.util.Map;
@@ -30,6 +31,7 @@ import java.util.TreeMap;
  */
 public abstract class AbstractTierSelectorStrategy implements TierSelectorStrategy
 {
+  private static final EmittingLogger log = new EmittingLogger(AbstractTierSelectorStrategy.class);
   private final ServerSelectorStrategy serverSelectorStrategy;
 
   public AbstractTierSelectorStrategy(ServerSelectorStrategy serverSelectorStrategy)
@@ -45,6 +47,7 @@ public abstract class AbstractTierSelectorStrategy implements TierSelectorStrate
     final Map.Entry<Integer, Set<QueryableDruidServer>> priorityServers = prioritizedServers.pollFirstEntry();
 
     if (priorityServers == null) {
+      log.error("[GETAFIX ROUTING] PriorityServers are empty");
       return null;
     }
 
