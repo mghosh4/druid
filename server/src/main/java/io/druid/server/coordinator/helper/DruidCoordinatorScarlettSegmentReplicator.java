@@ -89,13 +89,11 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 
 
 	public DruidCoordinatorScarlettSegmentReplicator(
-			DruidCoordinator coordinator, 
-			HttpClient httpClient,
-			ServerDiscoveryFactory factory)
+			DruidCoordinator coordinator)
 	{
 		this.coordinator = coordinator;
-		this.httpClient = httpClient;
-		this.serverDiscoveryFactory = factory;
+		this.httpClient = coordinator.httpClient;
+		this.serverDiscoveryFactory = coordinator.serverDiscoveryFactory;
 	}
 
 	@Override
