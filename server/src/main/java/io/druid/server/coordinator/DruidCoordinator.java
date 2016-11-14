@@ -71,7 +71,7 @@ import io.druid.server.coordinator.helper.DruidCoordinatorCleanupUnneeded;
 import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import io.druid.server.coordinator.helper.DruidCoordinatorLogger;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
-import io.druid.server.coordinator.helper.DruidCoordinatorScarlettSegmentReplicator;
+import io.druid.server.coordinator.helper.DruidCoordinatorScarlettSegmentReplicatorOld;
 import io.druid.server.coordinator.helper.DruidCoordinatorBestFitSegmentReplicator;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
@@ -240,7 +240,7 @@ public class DruidCoordinator
 		else if(config.getReplicationPolicy() == "scarlett")
 		{
 			log.info("SCARLETT");
-			replicator = new DruidCoordinatorScarlettSegmentReplicator(DruidCoordinator.this);
+			replicator = new DruidCoordinatorScarlettSegmentReplicatorOld(DruidCoordinator.this);
 		}
 		else
 		{

@@ -72,11 +72,11 @@ import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 
-public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinatorHelper
+public class DruidCoordinatorScarlettSegmentReplicatorOld implements DruidCoordinatorHelper
 {
 	private final DruidCoordinator coordinator;
 
-	private static final EmittingLogger log = new EmittingLogger(DruidCoordinatorScarlettSegmentReplicator.class);
+	private static final EmittingLogger log = new EmittingLogger(DruidCoordinatorScarlettSegmentReplicatorOld.class);
 	private static final String assignedCount = "assignedCount";
 	private static final String droppedCount = "droppedCount";
 	private final ObjectMapper jsonMapper = new DefaultObjectMapper();
@@ -88,7 +88,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 	private static final long MIN_THRESHOLD = 5;
 
 
-	public DruidCoordinatorScarlettSegmentReplicator(
+	public DruidCoordinatorScarlettSegmentReplicatorOld(
 			DruidCoordinator coordinator)
 	{
 		this.coordinator = coordinator;
