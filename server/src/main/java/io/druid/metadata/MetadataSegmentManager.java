@@ -20,10 +20,13 @@
 package io.druid.metadata;
 
 import io.druid.client.DruidDataSource;
+import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+
 
 /**
  */
@@ -43,6 +46,10 @@ public interface MetadataSegmentManager
   boolean removeSegment(String ds, final String segmentID);
 
   boolean isStarted();
+
+  boolean updateSegmentsPopularities(Map<DataSegment, Long> segmentsPopularities);
+
+  Map<String, Double> retrieveSegmentsPopularitiesSnapshot();
 
   DruidDataSource getInventoryValue(String key);
 

@@ -16,50 +16,63 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package io.druid.client.cache;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
+import org.apache.commons.codec.binary.Hex;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.PriorityQueue;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
+ * Least Popularly Used(LPU) Map Cache
  */
-public class MapCache implements Cache
+public class LPUMapCache implements Cache
 {
+  private static final Logger log = new Logger(LPUMapCache.class);
   public static Cache create(long sizeInBytes)
   {
-    return new MapCache(new ByteCountingLRUMap(sizeInBytes));
+    return new LPUMapCache(new ByteCountingMap(sizeInBytes));
   }
 
   private final Map<ByteBuffer, byte[]> baseMap;
-  private final ByteCountingLRUMap byteCountingLRUMap;
+  private final ByteCountingMap byteCountingMap;
 
   private final Map<String, byte[]> namespaceId;
+  private final ConcurrentMap<String, String> reverseNamespaceId;
   private final AtomicInteger ids;
 
   private final Object clearLock = new Object();
 
   private final AtomicLong hitCount = new AtomicLong(0);
   private final AtomicLong missCount = new AtomicLong(0);
+  private final AtomicLong evictionCount = new AtomicLong(0);
 
-  MapCache(
-      ByteCountingLRUMap byteCountingLRUMap
+  private volatile Map<String, Double> segmentPopularitySnapshot;
+
+  LPUMapCache(
+      ByteCountingMap byteCountingMap
   )
   {
-    this.byteCountingLRUMap = byteCountingLRUMap;
-    this.baseMap = Collections.synchronizedMap(byteCountingLRUMap);
+    this.byteCountingMap = byteCountingMap;
+    this.baseMap = Collections.synchronizedMap(byteCountingMap);
+
+    this.segmentPopularitySnapshot = Maps.newHashMap();
 
     namespaceId = Maps.newHashMap();
+    reverseNamespaceId = Maps.newConcurrentMap();
     ids = new AtomicInteger();
   }
 
@@ -69,9 +82,9 @@ public class MapCache implements Cache
     return new CacheStats(
         hitCount.get(),
         missCount.get(),
-        byteCountingLRUMap.size(),
-        byteCountingLRUMap.getNumBytes(),
-        byteCountingLRUMap.getEvictionCount(),
+        byteCountingMap.size(),
+        byteCountingMap.getNumBytes(),
+        evictionCount.get(),
         0,
         0
     );
@@ -96,7 +109,44 @@ public class MapCache implements Cache
   public void put(NamedKey key, byte[] value)
   {
     synchronized (clearLock) {
-      baseMap.put(computeKey(getNamespaceId(key.namespace), key.key), value);
+      ByteBuffer newEntryKey = computeKey(getNamespaceId(key.namespace), key.key);
+      int newEntrySize = newEntryKey.remaining() + value.length;
+
+      // If adding the new entry could cause cache size to exceed its limit, we should decide to evict least popular entries
+      if (byteCountingMap.getNumBytes() + newEntrySize > byteCountingMap.getSizeInBytes()) {
+        PriorityQueue<CacheEntrySegmentPopularity> pq = new PriorityQueue<>(baseMap.size(), new CacheEntrySegmentPopularity.SegmentPopularityComparator());
+        for (Entry<ByteBuffer, byte[]> cacheEntry : baseMap.entrySet()) {
+          // Retrieve the namespaceId byte array
+          byte[] namespaceIdBytes = new byte[4];
+          cacheEntry.getKey().get(namespaceIdBytes);
+          cacheEntry.getKey().rewind();
+
+          // Lookup the namespaceId byte array to get the segmentIdentifier string
+          String segmentIdentifier = reverseNamespaceId.get(Hex.encodeHexString(namespaceIdBytes));
+          if (segmentIdentifier == null) {
+            throw new IllegalStateException("SegmentIdentifier not found in reverse namespaceId lookup, but exist in cache");
+          }
+
+          // Lookup segment popularity, populate priority queue
+          Double popularity = segmentPopularitySnapshot.get(segmentIdentifier);
+          if (popularity == null) {
+            throw new IllegalStateException("SegmentIdentifier not found in popularity snapshot, but exist in cache");
+          }
+          pq.add(new CacheEntrySegmentPopularity(segmentIdentifier, cacheEntry.getKey(), cacheEntry.getValue(), popularity));
+        }
+
+        // Evict
+        CacheEntrySegmentPopularity leastPopularSegment = pq.poll();
+        evictionCount.incrementAndGet();
+        log.info(
+            "Evicting segment %s with popularity=%s",
+            leastPopularSegment.getSegmentIdentifier(),
+            leastPopularSegment.getPopularity()
+        );
+        baseMap.remove(leastPopularSegment.getKey());
+      }
+
+      baseMap.put(newEntryKey, value);
     }
   }
 
@@ -124,6 +174,7 @@ public class MapCache implements Cache
       }
 
       namespaceId.remove(namespace);
+      reverseNamespaceId.remove(Hex.encodeHexString(idBytes));
     }
     synchronized (clearLock) {
       Iterator<ByteBuffer> iter = baseMap.keySet().iterator();
@@ -154,6 +205,7 @@ public class MapCache implements Cache
 
       idBytes = Ints.toByteArray(ids.getAndIncrement());
       namespaceId.put(identifier, idBytes);
+      reverseNamespaceId.put(Hex.encodeHexString(idBytes), identifier);
       return idBytes;
     }
   }
@@ -179,6 +231,6 @@ public class MapCache implements Cache
   @Override
   public void setSegmentsPopularitiesSnapshot(Map<String, Double> segmentsPopularitiesSnapshot)
   {
-
+    this.segmentPopularitySnapshot = segmentsPopularitiesSnapshot;
   }
 }

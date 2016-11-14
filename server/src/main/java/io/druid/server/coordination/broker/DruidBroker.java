@@ -23,29 +23,48 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
+import com.metamx.http.client.HttpClient;
 import io.druid.client.ServerInventoryView;
 import io.druid.client.ServerView;
+import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServiceAnnouncer;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Self;
 import io.druid.server.DruidNode;
+import io.druid.server.coordination.broker.tasks.PeriodicPollRoutingTable;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @ManageLifecycle
 public class DruidBroker
 {
   private final DruidNode self;
   private final ServiceAnnouncer serviceAnnouncer;
+  private final ServerDiscoveryFactory serverDiscoveryFactory;
+  private final HttpClient httpClient;
+
+  private final ScheduledExecutorService pool;
   private volatile boolean started = false;
+  private volatile Map<String, Map<String, Long>> routingTable;
 
   @Inject
   public DruidBroker(
       final ServerInventoryView serverInventoryView,
       final @Self DruidNode self,
-      final ServiceAnnouncer serviceAnnouncer
+      final ServiceAnnouncer serviceAnnouncer,
+      final ServerDiscoveryFactory serverDiscoveryFactory,
+      @Global HttpClient httpClient
   )
   {
     this.self = self;
     this.serviceAnnouncer = serviceAnnouncer;
+    this.serverDiscoveryFactory = serverDiscoveryFactory;
+    this.httpClient = httpClient;
 
     serverInventoryView.registerSegmentCallback(
         MoreExecutors.sameThreadExecutor(),
@@ -59,6 +78,9 @@ public class DruidBroker
           }
         }
     );
+
+    this.pool = Executors.newSingleThreadScheduledExecutor();
+    this.routingTable = new HashMap<>();
   }
 
   @LifecycleStart
@@ -69,6 +91,9 @@ public class DruidBroker
         return;
       }
       started = true;
+
+      // Scheduled Tasks
+      pool.scheduleWithFixedDelay(new PeriodicPollRoutingTable(this, serverDiscoveryFactory, httpClient), 0, 60, TimeUnit.SECONDS);
     }
   }
 
@@ -82,5 +107,19 @@ public class DruidBroker
       serviceAnnouncer.unannounce(self);
       started = false;
     }
+  }
+
+  public synchronized Map<String, Map<String, Long>> getRoutingTable()
+  {
+    return routingTable;
+  }
+
+  public synchronized void setRoutingTable(Map<String, Map<String, Long>> routingTable)
+  {
+    this.routingTable = routingTable;
+  }
+
+  public HttpClient getHttpClient() {
+    return httpClient;
   }
 }

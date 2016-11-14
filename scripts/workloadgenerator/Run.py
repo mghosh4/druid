@@ -9,6 +9,7 @@ import Queue
 import threading
 import math
 import time as tm
+import signal
 
 from timeit import default_timer as timer
 from datetime import datetime, date
@@ -47,6 +48,12 @@ def getConfig(configFile):
     configFilePath = configFile
     return ParseConfig(configFilePath)
 
+def signal_term_handler(signum, frame):
+    print signum, frame
+    print "print stack frames:"
+    traceback.print_stack(frame)
+    sys.exit(0)
+
 def applyOperation(query, config, logger):
     dbOpsHandler = AsyncDBOpsHandler(config)
     if querytype == "timeseries":
@@ -68,21 +75,16 @@ def threadoperation(queryPerSec):
         querypermin = queryPerSec * 60
         endtime = datetime.now(timezone('UTC')) + timedelta(minutes=runtime)
         popularitylist = list()
-        while True:
+        newquerylist = list()
+        if filename != "":
+            newquerylist = QueryGenerator.generateQueriesFromFile(start, end, querypermin * runtime, timeAccessGenerator, periodAccessGenerator, filename)
+        elif isbatch == True:
+            newquerylist = QueryGenerator.generateQueries(start, end, querypermin * runtime, timeAccessGenerator, periodAccessGenerator, popularitylist)
+        if filename != "" or isbatch == True:
+            count = 0
             time = datetime.now(timezone('UTC'))
             logger.info("Time: {}".format(time.strftime("%Y-%m-%d %H:%M:%S")))
-            if time >= endtime:
-                break
-
-            #Query generated every minute. This is to optimize the overhead of query generation and also because segment granularity is minute
-            newquerylist = list()
-            if filename != "":
-                newquerylist = QueryGenerator.generateQueriesFromFile(start, end, querypermin, timeAccessGenerator, periodAccessGenerator, filename)
-            elif isbatch == True:
-                newquerylist = QueryGenerator.generateQueries(start, end, querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist)
-            else:
-                newquerylist = QueryGenerator.generateQueries(start, time, querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist)
-
+            nextminute = time + timedelta(minutes=1)
             for query in newquerylist:
                 try:
                     line.append(applyOperation(query, config, logger))
@@ -93,29 +95,73 @@ def threadoperation(queryPerSec):
                     x, y = inst.args
                     logger.error('x =', x)
                     logger.error('y =', y)
+
+                count = count + 1
+                if count >= querypermin:
+                    timediff = (nextminute - datetime.now(timezone('UTC'))).total_seconds()
+                    if timediff > 0:
+                        yield gen.sleep(timediff)
+                    count = 0
+                    time = datetime.now(timezone('UTC'))
+                    logger.info("Time: {}".format(time.strftime("%Y-%m-%d %H:%M:%S")))
+                    nextminute = time + timedelta(minutes=1)
+
+        else:                    
+            while True:
+                time = datetime.now(timezone('UTC'))
+                logger.info("Time: {}".format(time.strftime("%Y-%m-%d %H:%M:%S")))
+                if time >= endtime:
+                    break
+
+                #Query generated every minute. This is to optimize the overhead of query generation and also because segment granularity is minute
+                newquerylist = QueryGenerator.generateQueries(start, time, querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist)
+    
+                for query in newquerylist:
+                    try:
+                        line.append(applyOperation(query, config, logger))
+                    except Exception as inst:
+                        logger.error(type(inst))     # the exception instance
+                        logger.error(inst.args)      # arguments stored in .args
+                        logger.error(inst)           # __str__ allows args to be printed directly
+                        x, y = inst.args
+                        logger.error('x =', x)
+                        logger.error('y =', y)
         
 
-            nextminute = time + timedelta(minutes=1)
-            timediff = (nextminute - datetime.now(timezone('UTC'))).total_seconds()
-            if timediff > 0:
-                yield gen.sleep(timediff)
-
+                nextminute = time + timedelta(minutes=1)
+                timediff = (nextminute - datetime.now(timezone('UTC'))).total_seconds()
+                if timediff > 0:
+                    yield gen.sleep(timediff)
+    
         wait_iterator = gen.WaitIterator(*line)
         while not wait_iterator.done():
             try:
                 result = yield wait_iterator.next()
             except Exception as e:
                 logger.error("Error {} from {}".format(e, wait_iterator.current_future))
-            else:
-                logger.info("Result {} received from {} at {}".format(
-                    result, wait_iterator.current_future,
-                    wait_iterator.current_index))
+            #else:
+            #    logger.info("Result {} received from {} at {}".format(
+            #        result, wait_iterator.current_future,
+            #        wait_iterator.current_index))
     
     IOLoop().run_sync(printresults)
     
 ## Main Code
+signal.signal(signal.SIGTERM, signal_term_handler)
+configFile = checkAndReturnArgs(sys.argv, '')
+config = getConfig(configFile)
+
+accessdistribution = config.getAccessDistribution()
+perioddistribution = config.getPeriodDistribution()
+querytype = config.getQueryType()
+logfolder = config.getLogFolder()
+opspersecond = config.getOpsPerSecond()
+runtime = config.getRunTime() # in minutes
+isbatch = config.getBatchExperiment()
+filename = config.getFileName()
+
 logKey = 'workloadgen'
-logfilename = 'workloadgenerator.log'
+logfilename = logfolder + '/' + 'workloadgenerator.log'
 logformat = '%(asctime)s (%(threadName)-10s) %(message)s'
 
 logger = logging.getLogger(logKey)
@@ -126,7 +172,7 @@ fh = logging.FileHandler(logfilename, 'w')
 fh.setLevel(logging.DEBUG)
 
 ch = logging.StreamHandler()
-ch.setLevel(logging.ERROR)
+ch.setLevel(logging.DEBUG)
 
 formatter = logging.Formatter(logformat)
 fh.setFormatter(formatter)
@@ -135,18 +181,9 @@ ch.setFormatter(formatter)
 logger.addHandler(fh)
 logger.addHandler(ch)
 
-configFile = checkAndReturnArgs(sys.argv, logKey)
-config = getConfig(configFile)
-
-accessdistribution = config.getAccessDistribution()
-perioddistribution = config.getPeriodDistribution()
-querytype = config.getQueryType()
-opspersecond = config.getOpsPerSecond()
-runtime = config.getRunTime() # in minutes
-isbatch = config.getBatchExperiment()
-filename = config.getFileName()
-
-SINGLE_THREAD_THROUGHPUT = 4000
+SINGLE_THREAD_THROUGHPUT = 400
+if filename != "" or isbatch == True:
+    SINGLE_THREAD_THROUGHPUT = 2000
 
 numthreads = int(math.ceil(float(opspersecond) / SINGLE_THREAD_THROUGHPUT))
 lastthreadthroughput = opspersecond % SINGLE_THREAD_THROUGHPUT

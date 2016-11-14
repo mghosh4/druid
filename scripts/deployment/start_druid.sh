@@ -386,8 +386,9 @@ do
 
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN/lib;"
         if [ ! -e $PATH_TO_DRUID_BIN/lib/sigar-1.6.5.132.jar ]; then
-                COMMAND=$COMMAND" wget https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/org/hyperic/sigar/1.6.5.132/sigar-1.6.5.132.jar;"
+            COMMAND=$COMMAND" wget https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/org/hyperic/sigar/1.6.5.132/sigar-1.6.5.132.jar;"
         fi
+        COMMAND=$COMMAND" sudo cat $PATH_TO_SOURCE/scripts/deployment/broker.properties > $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$BROKER_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Duser.timezone=UTC -Dlogfilename=broker-$counter -Dfile.encoding=UTF-8 -classpath 'conf/druid/_common:conf/druid/broker:lib/*' io.druid.cli.Main server broker;"
 

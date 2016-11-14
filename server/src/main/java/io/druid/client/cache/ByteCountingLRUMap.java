@@ -22,61 +22,22 @@ package io.druid.client.cache;
 import com.metamx.common.logger.Logger;
 
 import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 
 /**
 */
-class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
+class ByteCountingLRUMap extends ByteCountingMap
 {
   private static final Logger log = new Logger(ByteCountingLRUMap.class);
 
-  private final boolean logEvictions;
-  private final int logEvictionCount;
-  private final long sizeInBytes;
-
-  private volatile long numBytes;
-  private volatile long evictionCount;
-
-  public ByteCountingLRUMap(
-      final long sizeInBytes
-  )
+  public ByteCountingLRUMap(long sizeInBytes)
   {
-    this(16, 0, sizeInBytes);
+    super(sizeInBytes);
   }
 
-  public ByteCountingLRUMap(
-      final int initialSize,
-      final int logEvictionCount,
-      final long sizeInBytes
-  )
+  public ByteCountingLRUMap(int initialSize, int logEvictionCount, long sizeInBytes)
   {
-    super(initialSize, 0.75f, true);
-    this.logEvictionCount = logEvictionCount;
-    this.sizeInBytes = sizeInBytes;
-
-    logEvictions = logEvictionCount != 0;
-    numBytes = 0;
-    evictionCount = 0;
-  }
-
-  public long getNumBytes()
-  {
-    return numBytes;
-  }
-
-  public long getEvictionCount()
-  {
-    return evictionCount;
-  }
-
-  @Override
-  public byte[] put(ByteBuffer key, byte[] value)
-  {
-    numBytes += key.remaining() + value.length;
-    return super.put(key, value);
+    super(initialSize, logEvictionCount, sizeInBytes);
   }
 
   @Override
@@ -98,32 +59,5 @@ class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
       return true;
     }
     return false;
-  }
-
-  @Override
-  public byte[] remove(Object key)
-  {
-    byte[] value = super.remove(key);
-    if(value != null) {
-      numBytes -= ((ByteBuffer)key).remaining() + value.length;
-    }
-    return value;
-  }
-
-  /**
-   * Don't allow key removal using the underlying keySet iterator
-   * All removal operations must use ByteCountingLRUMap.remove()
-   */
-  @Override
-  public Set<ByteBuffer> keySet()
-  {
-    return Collections.unmodifiableSet(super.keySet());
-  }
-
-  @Override
-  public void clear()
-  {
-    numBytes = 0;
-    super.clear();
   }
 }

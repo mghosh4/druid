@@ -4,9 +4,9 @@ import io.druid.timeline.DataSegment;
 
 public class Tuple{
   public final DataSegment segment;
-  public final double weight;
+  public final long weight;
 
-  public Tuple(DataSegment segment, double weight)
+  public Tuple(DataSegment segment, long weight)
   {
     this.segment = segment;
     this.weight = weight;

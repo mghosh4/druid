@@ -623,4 +623,10 @@ public class MemcachedCache implements Cache
   {
     monitor.doMonitor(emitter);
   }
+
+  @Override
+  public void setSegmentsPopularitiesSnapshot(Map<String, Double> segmentsPopularitiesSnapshot)
+  {
+
+  }
 }

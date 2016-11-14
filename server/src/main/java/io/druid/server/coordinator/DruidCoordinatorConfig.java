@@ -39,6 +39,10 @@ public abstract class DruidCoordinatorConfig
   @Default("PT1800s")
   public abstract Duration getCoordinatorIndexingPeriod();
 
+  @Config("druid.replication.policy")
+  @Default("rule")
+  public abstract String getReplicationPolicy();
+
   @Config("druid.coordinator.merge.on")
   public boolean isMergeSegments()
   {

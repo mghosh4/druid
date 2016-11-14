@@ -38,6 +38,10 @@ import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
+import io.druid.guice.ManageLifecycle;
+import io.druid.metadata.MetadataSegmentManager;
+import io.druid.metadata.MetadataSegmentManagerConfig;
+import io.druid.metadata.MetadataSegmentManagerProvider;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChestWarehouse;
@@ -85,6 +89,11 @@ public class CliBroker extends ServerRunnable
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8082);
 
             binder.bind(QueryToolChestWarehouse.class).to(MapQueryToolChestWarehouse.class);
+
+            JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentManagerConfig.class);
+            binder.bind(MetadataSegmentManager.class)
+                  .toProvider(MetadataSegmentManagerProvider.class)
+                  .in(ManageLifecycle.class);
 
             binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
             binder.bind(BrokerServerView.class).in(LazySingleton.class);

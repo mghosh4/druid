@@ -45,7 +45,9 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.BaseResultSetMapper;
 import org.skife.jdbi.v2.Batch;
+import org.skife.jdbi.v2.DefaultMapper;
 import org.skife.jdbi.v2.FoldController;
+import org.skife.jdbi.v2.Folder2;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
@@ -59,6 +61,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -366,6 +369,66 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   public boolean isStarted()
   {
     return started;
+  }
+
+  @Override
+  public boolean updateSegmentsPopularities(Map<DataSegment, Long> segmentsPopularities)
+  {
+    for (final Map.Entry<DataSegment, Long> segmentPopularity : segmentsPopularities.entrySet()) {
+      final String segmentId = segmentPopularity.getKey().getIdentifier();
+      try {
+        dbi.withHandle(
+            new HandleCallback<Void>()
+            {
+              @Override
+              public Void withHandle(Handle handle) throws Exception
+              {
+                handle.createStatement(
+                    String.format("UPDATE %s SET popularity=:popularity WHERE id = :id", getSegmentsTable())
+                )
+                      .bind("id", segmentId)
+                      .bind("popularity", segmentPopularity.getValue())
+                      .execute();
+                return null;
+              }
+            }
+        );
+      }
+      catch (Exception e) {
+        log.error(e, "Exception updating popularity of segment %s", segmentId);
+      }
+    }
+
+    return true;
+  }
+
+  @Override
+  public Map<String, Double> retrieveSegmentsPopularitiesSnapshot()
+  {
+    return dbi.withHandle(
+        new HandleCallback<Map<String, Double>>()
+        {
+          @Override
+          public Map<String, Double> withHandle(Handle handle) throws Exception
+          {
+            return handle.createQuery(
+                String.format("SELECT id, popularity FROM %s", getSegmentsTable())
+            )
+                .map(new DefaultMapper())
+                .fold(new HashMap<String, Double>(), new Folder2<HashMap<String, Double>>()
+                {
+                  @Override
+                  public HashMap<String, Double> fold(
+                      HashMap<String, Double> accumulator, ResultSet rs, StatementContext ctx
+                  ) throws SQLException
+                  {
+                    accumulator.put(rs.getString("id"), rs.getDouble("popularity"));
+                    return accumulator;
+                  }
+                });
+          }
+        }
+    );
   }
 
   @Override
