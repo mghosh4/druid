@@ -21,6 +21,7 @@ package io.druid.server.coordinator;
 
 import io.druid.timeline.DataSegment;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
@@ -68,4 +69,33 @@ public class RandomBalancerStrategy implements BalancerStrategy
   )
   {
   }
+
+
+
+@Override
+public ServerHolder findNewSegmentHomeReplicatorWithPopularity(
+		DataSegment proposalSegment, List<ServerHolder> serverHolders,
+		HashMap<DataSegment, Number> weightedAccessCounts) {
+	// TODO Auto-generated method stub
+	if (serverHolders.size()==1)
+    {
+      return null;
+    }
+    else
+    {
+      ServerHolder holder = serverHolders.get(new Random().nextInt(serverHolders.size()));
+      while (holder.isServingSegment(proposalSegment))
+      {
+        holder = serverHolders.get(new Random().nextInt(serverHolders.size()));
+      }
+      return holder;
+    }
+}
+
+@Override
+public ServerHolder findNewSegmentHomeBalancerWithPopularity(
+		DataSegment proposalSegment, List<ServerHolder> serverHolders, HashMap<DataSegment, Number> weightedAccessCounts) {
+	// TODO Auto-generated method stub
+	return null;
+}
 }

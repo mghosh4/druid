@@ -25,3 +25,4 @@ build-conf-and-scripts.sh
 deploy.sh
 provision.sh
 stop.sh
+/bin
