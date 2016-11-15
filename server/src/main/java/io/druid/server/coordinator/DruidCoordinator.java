@@ -19,6 +19,64 @@
 
 package io.druid.server.coordinator;
 
+import io.druid.client.DruidDataSource;
+import io.druid.client.DruidServer;
+import io.druid.client.ImmutableDruidDataSource;
+import io.druid.client.ImmutableDruidServer;
+import io.druid.client.ServerInventoryView;
+import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.collections.CountingMap;
+import io.druid.common.config.JacksonConfigManager;
+import io.druid.concurrent.Execs;
+import io.druid.curator.discovery.ServerDiscoveryFactory;
+import io.druid.curator.discovery.ServiceAnnouncer;
+import io.druid.guice.ManageLifecycle;
+import io.druid.guice.annotations.Global;
+import io.druid.guice.annotations.Self;
+import io.druid.jackson.DefaultObjectMapper;
+import io.druid.metadata.MetadataRuleManager;
+import io.druid.metadata.MetadataSegmentManager;
+import io.druid.segment.IndexIO;
+import io.druid.server.DruidNode;
+import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
+import io.druid.server.coordinator.helper.DruidCoordinatorBestFitSegmentReplicator;
+import io.druid.server.coordinator.helper.DruidCoordinatorCleanupOvershadowed;
+import io.druid.server.coordinator.helper.DruidCoordinatorCleanupUnneeded;
+import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
+import io.druid.server.coordinator.helper.DruidCoordinatorLogger;
+import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
+import io.druid.server.coordinator.helper.DruidCoordinatorScarlettSegmentReplicator;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentPopularityDumper;
+import io.druid.server.coordinator.rules.LoadRule;
+import io.druid.server.coordinator.rules.Rule;
+import io.druid.server.initialization.ZkPathsConfig;
+import io.druid.timeline.DataSegment;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.leader.LeaderLatch;
+import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
+import org.apache.curator.framework.recipes.leader.Participant;
+import org.apache.curator.utils.ZKPaths;
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
+import org.joda.time.Interval;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
@@ -45,65 +103,6 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.http.client.HttpClient;
-
-import io.druid.client.DruidDataSource;
-import io.druid.client.DruidServer;
-import io.druid.client.ImmutableDruidDataSource;
-import io.druid.client.ImmutableDruidServer;
-import io.druid.client.ServerInventoryView;
-import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.collections.CountingMap;
-import io.druid.common.config.JacksonConfigManager;
-import io.druid.concurrent.Execs;
-import io.druid.curator.discovery.ServerDiscoveryFactory;
-import io.druid.curator.discovery.ServiceAnnouncer;
-import io.druid.guice.ManageLifecycle;
-import io.druid.guice.annotations.Global;
-import io.druid.guice.annotations.Self;
-import io.druid.jackson.DefaultObjectMapper;
-import io.druid.metadata.MetadataRuleManager;
-import io.druid.metadata.MetadataSegmentManager;
-import io.druid.segment.IndexIO;
-import io.druid.server.DruidNode;
-import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
-import io.druid.server.coordinator.helper.DruidCoordinatorCleanupOvershadowed;
-import io.druid.server.coordinator.helper.DruidCoordinatorCleanupUnneeded;
-import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
-import io.druid.server.coordinator.helper.DruidCoordinatorLogger;
-import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
-import io.druid.server.coordinator.helper.DruidCoordinatorScarlettSegmentReplicator;
-import io.druid.server.coordinator.helper.DruidCoordinatorBestFitSegmentReplicator;
-import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
-import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
-import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
-import io.druid.server.coordinator.helper.DruidCoordinatorSegmentPopularityDumper;
-
-import io.druid.server.coordinator.rules.LoadRule;
-import io.druid.server.coordinator.rules.Rule;
-import io.druid.server.initialization.ZkPathsConfig;
-import io.druid.timeline.DataSegment;
-
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.leader.LeaderLatch;
-import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
-import org.apache.curator.framework.recipes.leader.Participant;
-import org.apache.curator.utils.ZKPaths;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
-import org.joda.time.Interval;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
@@ -153,6 +152,7 @@ public class DruidCoordinator
 	private volatile HashMap<DataSegment, Long> weightedAccessCounts;
 	private volatile HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>> routingTable;
 	private volatile HashMap<ImmutableDruidServer, Long> nodeCapacities;
+	private volatile HashMap<ImmutableDruidServer, Double> nodeVolumes;
 
 	private volatile String latestSegment;
 
@@ -220,6 +220,7 @@ public class DruidCoordinator
 		this.weightedAccessCounts = new HashMap<DataSegment, Long>();
 		this.routingTable = new HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>>();
 		this.nodeCapacities = new HashMap<ImmutableDruidServer, Long>();
+		this.nodeVolumes = new HashMap<ImmutableDruidServer, Double>();
 
 		this.metadataSegmentManager = metadataSegmentManager;
 		this.serverInventoryView = serverInventoryView;
@@ -1171,6 +1172,16 @@ public class DruidCoordinator
 
 	public void setNodeCapacities(HashMap<ImmutableDruidServer, Long> nodeCapacities) {
 		this.nodeCapacities = nodeCapacities;
+	}
+
+	public HashMap<ImmutableDruidServer, Double> getNodeVolumes() {
+		// TODO Auto-generated method stub
+		return nodeVolumes;
+	}
+
+	public void setNodeVolumes(HashMap<ImmutableDruidServer, Double> nodeVolumes) {
+		// TODO Auto-generated method stub
+		this.nodeVolumes = nodeVolumes;
 	}
 }
 
