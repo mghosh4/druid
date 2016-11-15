@@ -120,7 +120,7 @@ public abstract class LoadRule implements Rule
         break;
       }
 
-      final ServerHolder holder = strategy.findNewSegmentHomeReplicatorWithPopularity(segment, serverHolderList,null);
+      final ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
 
       if (holder == null) {
         log.warn(

@@ -26,13 +26,10 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.Pair;
 import com.metamx.emitter.EmittingLogger;
-
 import io.druid.timeline.DataSegment;
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
@@ -270,27 +267,6 @@ public class CostBalancerStrategy implements BalancerStrategy
     service.shutdown();
     return bestServer;
   }
-
-@Override
-public ServerHolder findNewSegmentHomeReplicatorWithPopularity(
-		DataSegment proposalSegment, List<ServerHolder> serverHolders,
-		HashMap<DataSegment, Number> weightedAccessCounts) {
-	// TODO Auto-generated method stub
-	ServerHolder holder = chooseBestServer(proposalSegment, serverHolders, false).rhs;
-    if (holder != null && !holder.isServingSegment(proposalSegment)) {
-      return holder;
-    }
-    return null;
-}
-
-@Override
-public ServerHolder findNewSegmentHomeBalancerWithPopularity(
-		DataSegment proposalSegment, List<ServerHolder> serverHolders, HashMap<DataSegment, Number> weightedAccessCounts) {
-	// TODO Auto-generated method stub
-	return chooseBestServer(proposalSegment, serverHolders, true).rhs;
-}
-
-
 
 }
 
