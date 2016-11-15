@@ -81,6 +81,11 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   }
 
   @Override
+  public String getReplicationPolicy() {
+    return "getafix";
+  }
+
+  @Override
   public boolean isMergeSegments()
   {
     return mergeSegments;
