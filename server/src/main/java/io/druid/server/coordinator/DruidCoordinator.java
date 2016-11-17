@@ -65,6 +65,7 @@ import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataSegmentManager;
 import io.druid.segment.IndexIO;
 import io.druid.server.DruidNode;
+import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
 import io.druid.server.coordinator.helper.DruidCoordinatorCleanupOvershadowed;
 import io.druid.server.coordinator.helper.DruidCoordinatorCleanupUnneeded;
@@ -77,7 +78,6 @@ import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentPopularityDumper;
-
 import io.druid.server.coordinator.rules.LoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -151,9 +151,9 @@ public class DruidCoordinator
 	private volatile boolean leader = false;
 	private volatile SegmentReplicantLookup segmentReplicantLookup = null;
 	private volatile HashMap<DataSegment, Long> weightedAccessCounts;
-	private volatile HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>> routingTable;
-	private volatile HashMap<ImmutableDruidServer, Long> nodeCapacities;
-	private volatile HashMap<ImmutableDruidServer, Double> nodeVolumes;
+	private volatile HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable;
+	private volatile HashMap<DruidServerMetadata, Long> nodeCapacities;
+	private volatile HashMap<DruidServerMetadata, Double> nodeVolumes;
 
 	private volatile String latestSegment;
 
@@ -219,9 +219,9 @@ public class DruidCoordinator
 		this.zkPaths = zkPaths;
 		this.configManager = configManager;
 		this.weightedAccessCounts = new HashMap<DataSegment, Long>();
-		this.routingTable = new HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>>();
-		this.nodeCapacities = new HashMap<ImmutableDruidServer, Long>();
-		this.nodeVolumes = new HashMap<ImmutableDruidServer, Double>();
+		this.routingTable = new HashMap<DataSegment, HashMap<DruidServerMetadata, Long>>();
+		this.nodeCapacities = new HashMap<DruidServerMetadata, Long>();
+		this.nodeVolumes = new HashMap<DruidServerMetadata, Double>();
 
 		this.metadataSegmentManager = metadataSegmentManager;
 		this.serverInventoryView = serverInventoryView;
@@ -277,12 +277,12 @@ public class DruidCoordinator
 		this.weightedAccessCounts = counts;
 	}
 
-	public HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>> getRoutingTable()
+	public HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> getRoutingTable()
 	{
 		return routingTable;
 	}
 
-	public void setRoutingTable(HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>> table)
+	public void setRoutingTable(HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> table)
 	{
 		this.routingTable = table;
 	}
@@ -290,10 +290,10 @@ public class DruidCoordinator
 	public String getSerializedRoutingTable()
 	{
 		Map<String, Map<String, Long>> toser = new HashMap<>();
-		for (Map.Entry<DataSegment, HashMap<ImmutableDruidServer, Long>> entry : routingTable.entrySet()) {
+		for (Map.Entry<DataSegment, HashMap<DruidServerMetadata, Long>> entry : routingTable.entrySet()) {
 			Map<String, Long> m = new HashMap<>();
-			for (Map.Entry<ImmutableDruidServer, Long> hnPair : entry.getValue().entrySet()) {
-				m.put(hnPair.getKey().getMetadata().toString(), hnPair.getValue());
+			for (Map.Entry<DruidServerMetadata, Long> hnPair : entry.getValue().entrySet()) {
+				m.put(hnPair.getKey().toString(), hnPair.getValue());
 			}
 			toser.put(entry.getKey().getIdentifier(), m);
 		}
@@ -582,7 +582,7 @@ public class DruidCoordinator
 	{
 		log.info("Insert Segment [%s] [%d]", segment.getIdentifier(), 1);
 
-		HashMap<ImmutableDruidServer, Long> bootstrapRouting = new HashMap<>();
+		HashMap<DruidServerMetadata, Long> bootstrapRouting = new HashMap<>();
 		final ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
 
 		if (holder == null) {
@@ -615,7 +615,7 @@ public class DruidCoordinator
 		);
 
 		log.info("Inserted Segment [%s]", segment.getIdentifier());
-		bootstrapRouting.put(holder.getServer(), 1L);
+		bootstrapRouting.put(holder.getServer().getMetadata(), 1L);
 
 		routingTable.put(segment, bootstrapRouting);
 		return holder.getServer();
@@ -1167,20 +1167,20 @@ public class DruidCoordinator
 		}
 	}
 
-	public HashMap<ImmutableDruidServer, Long> getNodeCapacities() {
+	public HashMap<DruidServerMetadata, Long> getNodeCapacities() {
 		return nodeCapacities;
 	}
 
-	public void setNodeCapacities(HashMap<ImmutableDruidServer, Long> nodeCapacities) {
+	public void setNodeCapacities(HashMap<DruidServerMetadata, Long> nodeCapacities) {
 		this.nodeCapacities = nodeCapacities;
 	}
 	
-	public HashMap<ImmutableDruidServer, Double> getNodeVolumes() {
+	public HashMap<DruidServerMetadata, Double> getNodeVolumes() {
 		// TODO Auto-generated method stub
 		return nodeVolumes;
 	}
 
-	public void setNodeVolumes(HashMap<ImmutableDruidServer, Double> nodeVolumes) {
+	public void setNodeVolumes(HashMap<DruidServerMetadata, Double> nodeVolumes) {
 		// TODO Auto-generated method stub
 		this.nodeVolumes = nodeVolumes;
 }
