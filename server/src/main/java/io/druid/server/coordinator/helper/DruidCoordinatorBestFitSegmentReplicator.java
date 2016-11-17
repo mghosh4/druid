@@ -799,7 +799,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 					);
 
 			log.info("Inserted Segment [%s]", segment.getIdentifier());
-			bootstrapRouting.put(holder.getServer(), 1L);
+			bootstrapRouting.put(holder.getServer().getMetadata(), 1L);
 
 			stats.addToTieredStat(assignedCount, tier, 1);
 			--numReplicants;
