@@ -153,6 +153,7 @@ public class DruidCoordinator
 	private volatile HashMap<DataSegment, Long> weightedAccessCounts;
 	private volatile HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>> routingTable;
 	private volatile HashMap<ImmutableDruidServer, Long> nodeCapacities;
+	private volatile HashMap<ImmutableDruidServer, Double> nodeVolumes;
 
 	private volatile String latestSegment;
 
@@ -220,6 +221,7 @@ public class DruidCoordinator
 		this.weightedAccessCounts = new HashMap<DataSegment, Long>();
 		this.routingTable = new HashMap<DataSegment, HashMap<ImmutableDruidServer, Long>>();
 		this.nodeCapacities = new HashMap<ImmutableDruidServer, Long>();
+		this.nodeVolumes = new HashMap<ImmutableDruidServer, Double>();
 
 		this.metadataSegmentManager = metadataSegmentManager;
 		this.serverInventoryView = serverInventoryView;
@@ -1172,5 +1174,15 @@ public class DruidCoordinator
 	public void setNodeCapacities(HashMap<ImmutableDruidServer, Long> nodeCapacities) {
 		this.nodeCapacities = nodeCapacities;
 	}
+	
+	public HashMap<ImmutableDruidServer, Double> getNodeVolumes() {
+		// TODO Auto-generated method stub
+		return nodeVolumes;
+	}
+
+	public void setNodeVolumes(HashMap<ImmutableDruidServer, Double> nodeVolumes) {
+		// TODO Auto-generated method stub
+		this.nodeVolumes = nodeVolumes;
+}
 }
 
