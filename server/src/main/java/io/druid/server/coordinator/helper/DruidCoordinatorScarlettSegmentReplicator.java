@@ -312,7 +312,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 			DataSegment segment = entry.getElement();
 			int segmentCount = entry.getCount();
 
-			//this.CCAMap.put(segment, Long.valueOf(segmentCount));
+			this.CCAMap.put(segment, Long.valueOf(segmentCount));
 			
 			if (weightedAccessCounts.containsKey(segment) == false)
 				weightedAccessCounts.put(segment, (long)segmentCount > numServers? numServers : (long)segmentCount);
@@ -468,9 +468,13 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 		//log.info("Managing Replicas by inserting and removing replicas for relevant data segments");
 
 		HashMap<ImmutableDruidServer, ServerHolder> serverHolderMap = new HashMap<ImmutableDruidServer, ServerHolder>();
-		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
-            for (ServerHolder holder : serverQueue)
+		HashMap<DruidServerMetadata, ServerHolder> serverMetaDataMap = new HashMap<DruidServerMetadata, ServerHolder>();
+		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier()){
+            for (ServerHolder holder : serverQueue){
 			    serverHolderMap.put(holder.getServer(), holder);
+			    serverMetaDataMap.put(holder.getServer().getMetadata(), holder);
+            }
+		}
 		
 		if (serverHolderMap.size() == 0) {
 			log.makeAlert("Cluster has no servers! Check your cluster configuration!").emit();
@@ -508,7 +512,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 					CoordinatorStats assignStats = assign(
 							params.getReplicationManager(),
 							tier,
-							serverHolderMap.get(server),
+							serverMetaDataMap.get(server),
 							segment
 							);
 					stats.accumulate(assignStats);
@@ -527,7 +531,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 					CoordinatorStats dropStats = drop(
 							params.getReplicationManager(),
 							tier,
-							serverHolderMap.get(server),
+							serverMetaDataMap.get(server),
 							segment
 							);
 					stats.accumulate(dropStats); 
@@ -712,6 +716,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 						);
 				break;
 			}
+			log.info("replicationManager [%s] register: tier [%s] segment id [%s] host [%s]", replicationManager.toString(), tier, segment.getIdentifier(), holder.getServer().getHost() );
 
 			replicationManager.registerReplicantCreation(
 					tier, segment.getIdentifier(), holder.getServer().getHost()
@@ -735,7 +740,10 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 
 			log.info("Inserted Segment [%s] for the first time, to server [%s]", segment.getIdentifier(), holder.getServer().getHost());
 			bootstrapRouting.put(holder.getServer().getMetadata(), 0L);
-			nodeVolumes.put(pair.getKey(), nodeVolumes.get(pair.getKey())+this.CCAMap.get(segment));
+			if(!nodeVolumes.containsKey(pair.getKey())){
+				nodeVolumes.put(pair.getKey(), 0.0);	
+			}
+			nodeVolumes.put(pair.getKey(), nodeVolumes.get(pair.getKey())+1);
 			stats.addToTieredStat(assignedCount, tier, 1);
 			--numReplicants;
 			break;

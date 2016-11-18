@@ -464,9 +464,13 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		//log.info("Managing Replicas by inserting and removing replicas for relevant data segments");
 
 		HashMap<ImmutableDruidServer, ServerHolder> serverHolderMap = new HashMap<ImmutableDruidServer, ServerHolder>();
-		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
-            for (ServerHolder holder : serverQueue)
+		HashMap<DruidServerMetadata, ServerHolder> serverMetaDataMap = new HashMap<DruidServerMetadata, ServerHolder>();
+		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier()){
+            for (ServerHolder holder : serverQueue){
 			    serverHolderMap.put(holder.getServer(), holder);
+			    serverMetaDataMap.put(holder.getServer().getMetadata(), holder);
+            }
+		}
 		
 		if (serverHolderMap.size() == 0) {
 			log.makeAlert("Cluster has no servers! Check your cluster configuration!").emit();
@@ -503,7 +507,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 					CoordinatorStats assignStats = assign(
 							params.getReplicationManager(),
 							tier,
-							serverHolderMap.get(server),
+							serverMetaDataMap.get(server),
 							segment
 							);
 					stats.accumulate(assignStats);
@@ -522,7 +526,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 					CoordinatorStats dropStats = drop(
 							params.getReplicationManager(),
 							tier,
-							serverHolderMap.get(server),
+							serverMetaDataMap.get(server),
 							segment
 							);
 					stats.accumulate(dropStats); 

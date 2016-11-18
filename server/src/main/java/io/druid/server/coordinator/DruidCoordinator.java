@@ -249,6 +249,10 @@ public class DruidCoordinator
 			log.info("DEFAULT_RULE");
 			replicator = new DruidCoordinatorRuleRunner(DruidCoordinator.this);
 		}
+		//log.info("SCARLETT");
+		//replicator = new DruidCoordinatorScarlettSegmentReplicator(DruidCoordinator.this);
+		//log.info("GETAFIX");
+		//replicator = new DruidCoordinatorBestFitSegmentReplicator(DruidCoordinator.this);
 		this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
 
 		this.leaderLatch = new AtomicReference<>(null);
@@ -1147,6 +1151,7 @@ public class DruidCoordinator
 															 .build();
 								}
 							},
+							new DruidCoordinatorRuleRunner(DruidCoordinator.this),
 							replicator,
 							new DruidCoordinatorCleanupUnneeded(DruidCoordinator.this),
 							new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),
