@@ -106,7 +106,10 @@ druid.selectors.coordinator.serviceName=druid/coordinator
 #
 
 druid.monitoring.monitors=["com.metamx.metrics.JvmMonitor", "com.metamx.metrics.SysMonitor"]
-druid.emitter=graphite
+druid.emitter=composing
+druid.emitter.composing.emitters=["graphite", "logging"]
+druid.emitter.logging.logLevel=info
+
 druid.emitter.graphite.hostname=graphite
 druid.emitter.graphite.port=2004
-druid.emitter.graphite.eventConverter={"type":"all", "namespacePrefix": "druid.test", "ignoreHostname":true, "ignoreServiceName":true}
+druid.emitter.graphite.eventConverter={"type":"whiteList", "namespacePrefix": "getafix", "ignoreHostname":false, "ignoreServiceName":false, "mapFile":"{{ common_conf_dir }}/graphite/convertermap.json"}
