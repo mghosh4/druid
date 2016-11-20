@@ -15,15 +15,21 @@ ADD . {{ druid_dir }}
 
 WORKDIR {{ druid_dir }}
 RUN mvn -U -B install -DskipTests=true -Dmaven.javadoc.skip=true
+# Load graphite-emitter
+RUN java -cp "distribution/target/druid-0.9.0-SNAPSHOT/lib/*" -Ddruid.extensions.directory="extensions-tmp" io.druid.cli.Main tools pull-deps --no-default-hadoop -c "io.druid.extensions.contrib:graphite-emitter:0.9.1.1"
 WORKDIR {{ druid_dir }}/distribution/target
 RUN tar xvf druid-{{ druid_ver }}-bin.tar.gz
 WORKDIR {{ druid_dir }}/distribution/target/druid-{{ druid_ver }}
 
 # Manage extensions
 RUN tar -xvf {{ druid_dir }}/distribution/target/mysql-metadata-storage-bin.tar.gz -C extensions/
+RUN cp -r {{ druid_dir }}/extensions-tmp/graphite-emitter extensions/
 {% if is_server_aws %}
 RUN mv extensions/druid-s3-extensions .
 {% endif %}
+
+# sigar
+RUN cd lib && wget https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/org/hyperic/sigar/1.6.5.132/sigar-1.6.5.132.jar
 
 # EXPOSE
 # coordinator_node_port: 8080,

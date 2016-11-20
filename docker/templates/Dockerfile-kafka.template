@@ -14,7 +14,7 @@ cp {{ common_conf_dir }}/kafka/server.properties config/server.properties;\n\
 screen -d -m sudo ./bin/zookeeper-server-start.sh config/zookeeper.properties;\n\
 screen -d -m sudo ./bin/kafka-server-start.sh config/server.properties;\n\
 sleep 2;\n\
-./bin/kafka-topics.sh --create --zookeeper {{ kafka_node_alias }}:2181 --replication-factor 1 --partitions 1 --topic {{ kafka_topic }};\n\
+./bin/kafka-topics.sh --create --zookeeper {{ kafka_node_alias }}:2181/kafka --replication-factor 1 --partitions 1 --topic {{ kafka_topic }};\n\
 top" > run.sh \
   && chmod +x run.sh
 
