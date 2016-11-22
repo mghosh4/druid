@@ -24,6 +24,7 @@ docker run -itd -v /proj/DCSQ/{{ username }}/druid-segments:/proj/DCSQ/{{ userna
 eval $(docker-machine env --swarm p-druid-swarm-master)
 docker run -itd --name=zookeeper --network=p-my-net --env="constraint:node==p-node-7" {{ docker_hub_username }}/druid-zookeeper:{{ image_tag }}
 docker run -itd --name=mysql --network=p-my-net --env="constraint:node==p-node-8" {{ docker_hub_username }}/druid-mysql:{{ image_tag }}
+docker run -d --name=graphite --network=p-my-net --env="constraint:node==p-node-9" --restart=always -p 80:80 -p 2003-2004:2003-2004 -p 2023-2024:2023-2024 -p 8125:8125/udp -p 8126:8126 hopsoft/graphite-statsd
 
 for i in `seq 1 10`;
 do

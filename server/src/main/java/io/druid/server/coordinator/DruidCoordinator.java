@@ -234,20 +234,14 @@ public class DruidCoordinator
 		this.self = self;
 		this.httpClient = httpClient;
 		this.serverDiscoveryFactory = factory;
-		if(config.getReplicationPolicy() == "getafix")
-		{
+		if(config.getReplicationPolicy().equals("getafix")) {
 			log.info("GETAFIX");
 			replicator = new DruidCoordinatorBestFitSegmentReplicator(DruidCoordinator.this);
-		}
-		else if(config.getReplicationPolicy() == "scarlett")
-		{
+		} else if(config.getReplicationPolicy().equals("scarlett")) {
 			log.info("SCARLETT");
 			replicator = new DruidCoordinatorScarlettSegmentReplicator(DruidCoordinator.this);
-		}
-		else
-		{
-			log.info("DEFAULT_RULE");
-			replicator = new DruidCoordinatorRuleRunner(DruidCoordinator.this);
+		} else {
+			replicator = null;
 		}
 		//log.info("SCARLETT");
 		//replicator = new DruidCoordinatorScarlettSegmentReplicator(DruidCoordinator.this);

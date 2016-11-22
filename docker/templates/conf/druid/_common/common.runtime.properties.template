@@ -24,9 +24,9 @@
 # This is not the full list of Druid extensions, but common ones that people often use. You may need to change this list
 # based on your particular setup.
 {% if is_server_aws %}
-druid.extensions.loadList=["druid-kafka-eight", "druid-s3-extensions", "druid-histogram", "druid-datasketches", "druid-namespace-lookup", "mysql-metadata-storage"]
+druid.extensions.loadList=["druid-kafka-eight", "druid-s3-extensions", "druid-histogram", "druid-datasketches", "druid-namespace-lookup", "mysql-metadata-storage", "graphite-emitter"]
 {% else %}
-druid.extensions.loadList=["druid-kafka-eight", "druid-histogram", "druid-datasketches", "druid-namespace-lookup", "mysql-metadata-storage"]
+druid.extensions.loadList=["druid-kafka-eight", "druid-histogram", "druid-datasketches", "druid-namespace-lookup", "mysql-metadata-storage", "graphite-emitter"]
 {% endif %}
 # If you have a different version of Hadoop, place your Hadoop client jar files in your hadoop-dependencies directory
 # and uncomment the line below to point to your directory.
@@ -105,6 +105,11 @@ druid.selectors.coordinator.serviceName=druid/coordinator
 # Monitoring
 #
 
-druid.monitoring.monitors=["com.metamx.metrics.JvmMonitor"]
-druid.emitter=logging
+druid.monitoring.monitors=["com.metamx.metrics.JvmMonitor", "com.metamx.metrics.SysMonitor"]
+druid.emitter=composing
+druid.emitter.composing.emitters=["graphite", "logging"]
 druid.emitter.logging.logLevel=info
+
+druid.emitter.graphite.hostname=graphite
+druid.emitter.graphite.port=2004
+druid.emitter.graphite.eventConverter={"type":"whiteList", "namespacePrefix": "getafix", "ignoreHostname":false, "ignoreServiceName":false, "mapFile":"{{ common_conf_dir }}/graphite/convertermap.json"}
