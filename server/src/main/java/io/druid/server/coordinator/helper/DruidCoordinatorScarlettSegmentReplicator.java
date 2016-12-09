@@ -294,6 +294,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 	{
 		log.info("Calculating Weighted Access Counts for Segments");
 
+		long delta = 1;
 		int historicalNodeCount = 0;
 		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
 			historicalNodeCount += serverQueue.size();
@@ -314,13 +315,14 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 
 			this.CCAMap.put(segment, Long.valueOf(segmentCount));
 			
-			if (weightedAccessCounts.containsKey(segment) == false)
-				weightedAccessCounts.put(segment, (long)segmentCount > numServers? numServers : (long)segmentCount);
+			/*if (weightedAccessCounts.containsKey(segment) == false)
+				weightedAccessCounts.put(segment, (long)segmentCount+delta > numServers? numServers : (long)segmentCount+delta);
 			else
 			{
 				double popularity = weightedAccessCounts.get(segment).doubleValue();
 				weightedAccessCounts.put(segment, ((long)(segmentCount + popularity))> numServers? numServers : (long)(segmentCount + popularity));
-			}
+			}*/
+			weightedAccessCounts.put(segment, (long)segmentCount+delta > numServers? numServers : (long)segmentCount+delta);
 		}
 		
 		// Remove segments that doesn't appear in the access window
@@ -393,7 +395,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 					
 					for(Map.Entry<DruidServerMetadata, Double> pair: sortedNodeCapacities.entrySet()){
 						Long cca = this.CCAMap.get(targetSegment);
-						nodeVolumes.put(pair.getKey(), (double) (pair.getValue()+cca/(count+1)));
+						nodeVolumes.put(pair.getKey(), (double) (pair.getValue()+cca/(count)));
 						count++;
 						valuelist.put(pair.getKey(), 0L);
 						if(count>=repFactor)
@@ -567,7 +569,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 		final BalancerStrategy strategy = params.getBalancerStrategyFactory().createBalancerStrategy(referenceTimestamp);
 
 		Set<DataSegment> orderedAvailableDataSegments = coordinator.getOrderedAvailableDataSegments();
-		log.info("[GETAFIX PLACEMENT] latest segment: " + coordinator.getLatestSegment());
+		log.info("[SCARLETT PLACEMENT] latest segment: " + coordinator.getLatestSegment());
 
 		for (DataSegment segment : orderedAvailableDataSegments) {
 			if (segment.getIdentifier().equals(coordinator.getLatestSegment())) {
