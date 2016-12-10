@@ -120,7 +120,8 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 
 		// Calculate replication based on popularity
 		//calculateAdaptiveReplication(params, weightedAccessCounts, insertList, removeList);
-		HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable = new HashMap<DataSegment, HashMap<DruidServerMetadata, Long>>();
+		//HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable = new HashMap<DataSegment, HashMap<DruidServerMetadata, Long>>();
+		HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable = coordinator.getRoutingTable();
 		HashMap<DruidServerMetadata, Double> nodeVolumes = coordinator.getNodeVolumes();
 		calculateScarlettReplication(params, weightedAccessCounts, segments, routingTable, nodeVolumes, insertList, removeList);
 
