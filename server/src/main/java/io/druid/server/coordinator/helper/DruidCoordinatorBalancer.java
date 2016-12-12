@@ -153,6 +153,10 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       final DruidCoordinatorRuntimeParams params
   )
   {
+	//Bypass move segment for getafix or scarlett
+	if(this.coordinator.getConfig().getReplicationPolicy().equals("getafix") || 
+			this.coordinator.getConfig().getReplicationPolicy().equals("scarlett"))
+		return;
     final LoadQueuePeon toPeon = params.getLoadManagementPeons().get(toServer.getName());
 
     final ImmutableDruidServer fromServer = segment.getFromServer();

@@ -11,3 +11,6 @@ druid.processing.numThreads=7
 # Segment storage
 druid.segmentCache.locations=[{"path":"var/druid/segment-cache","maxSize"\:130000000000}]
 druid.server.maxSize=130000000000
+
+# Monitoring
+druid.monitoring.monitors=["com.metamx.metrics.SysMonitor","com.metamx.metrics.JvmMonitor","io.druid.server.metrics.HistoricalMetricsMonitor"]

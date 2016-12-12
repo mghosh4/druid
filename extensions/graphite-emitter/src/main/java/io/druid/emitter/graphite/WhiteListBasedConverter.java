@@ -248,8 +248,9 @@ public class WhiteListBasedConverter implements DruidToGraphiteEventConverter
     String fileContent;
     String actualPath = mapPath;
     if (Strings.isNullOrEmpty(mapPath)) {
-      actualPath = this.getClass().getClassLoader().getResource("defaultWhiteListMap.json").getFile();
-      LOGGER.warn("using default whiteList map located at [%s]", actualPath);
+//      actualPath = this.getClass().getClassLoader().getResource("defaultWhiteListMap.json").getFile();
+//      LOGGER.warn("using default whiteList map located at [%s]", actualPath);
+      actualPath = "/proj/DCSQ/xiaoyao/conf/graphite/convertermap.json";
     }
 
     try {

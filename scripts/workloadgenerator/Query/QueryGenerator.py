@@ -22,7 +22,7 @@ class QueryGenerator(object):
 		accesslist = accessGenerator.generateDistribution(0, elapsed, numQueries, popularityList)
 
 		periodlist = periodGenerator.generateDistribution(1, elapsed, numQueries, popularityList)
-
+		histogram = {}
 		for i in xrange(numQueries):
 			q = Query(QueryGenerator.queryRunningCount, elapsed)
 			QueryGenerator.queryRunningCount += 1
@@ -37,7 +37,13 @@ class QueryGenerator(object):
 			querylist.append(q)
 			#print "interval: " + q.interval
 			#print "index: " , q.index
-			#print "starttime: " , q.startTime
+			print "starttime: " , q.startTime
+			for j in xrange(periodlist[i]):
+				if (q.startTime+dt.timedelta(seconds=periodlist[i])) in historgram:
+					historgram[q.startTime+dt.timedelta(seconds=periodlist[i])] = historgram[q.startTime+dt.timedelta(seconds=periodlist[i])]+1;
+				else:
+					historgram[q.startTime+dt.timedelta(seconds=periodlist[i])] = 1
+			print histogram
 
 		return querylist
     

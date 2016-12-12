@@ -239,17 +239,28 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
         segments.add(Pair.of(selector, descriptor));
 
-        if (!REALTIME_NODE_TYPE.equals(selector.pick().getServer().getType())) {
+        // TODO: investigate there should be a way to know where the segment is without calling pick
+        QueryableDruidServer selectedDruidServer = selector.pick();
+        log.info("[GETAFIX ROUTING] selected server: " + selectedDruidServer.getServer().getHost());
+
+        log.info("[GETAFIX ROUTING] Segment: " + selector.getSegment());
+        if (REALTIME_NODE_TYPE.equals(selectedDruidServer.getServer().getType())) {
+          log.info("[GETAFIX ROUTING] it's a realtime node");
+        }
+
+        if (selectedDruidServer == null
+            || !REALTIME_NODE_TYPE.equals(selectedDruidServer.getServer().getType())
+            || REALTIME_NODE_TYPE.equals(selectedDruidServer.getServer().getType()) && selector.getSegment().getLoadSpec().size() > 0) {
           segmentCollector.addSegment(selector.getSegment());
           log.info("Adding Segment ID [%s]", selector.getSegment().getIdentifier());
         }
       }
     }
 
-    log.info("Setting segments popularities snapshot...");
-    if (metadataSegmentManager != null) {
-      cache.setSegmentsPopularitiesSnapshot(metadataSegmentManager.retrieveSegmentsPopularitiesSnapshot());
-    }
+//    log.info("Setting segments popularities snapshot...");
+//    if (metadataSegmentManager != null) {
+//      cache.setSegmentsPopularitiesSnapshot(metadataSegmentManager.retrieveSegmentsPopularitiesSnapshot());
+//    }
 
     final byte[] queryCacheKey;
 
