@@ -337,7 +337,7 @@ do
 
         echo "Setting up $node ..."
         COMMAND=''
-
+        COMMAND=$COMMAND" sudo sed -i '3s@.*@druid.replication.policy=$REPLICATION_RULE@' $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$COORDINATOR_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"   
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Dlogfilename=coordinator-$counter -classpath 'conf/druid/_common:conf/druid/coordinator:lib/*' io.druid.cli.Main server coordinator;"  
 

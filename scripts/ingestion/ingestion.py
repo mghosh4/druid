@@ -14,7 +14,7 @@ from ParseIngestionConfig import ParseIngestionConfig
 
 # Argument parsing
 parser = argparse.ArgumentParser()
-parser.add_argument('-n', metavar='count', type=int, default=1)
+#parser.add_argument('-n', metavar='count', type=int, default=1)
 parser.add_argument('file', type=argparse.FileType('r'))
 args = parser.parse_args()
 
@@ -54,6 +54,7 @@ delimiter = config.getDelimiter()
 #index_task = config.getIndexTask()
 #overlord_host = config.getOverlordHost()
 kafkahost = config.getKafkaHost()
+runtime = config.getRunTime()
 os.chdir(kafkapath)
 
 # Open the kafka console producer
@@ -65,7 +66,7 @@ producer = subprocess.Popen(
 
 # Generate random query metrics
 if(datatype == "randomstream"):
-  endtime = datetime.now() + timedelta(minutes=args.n)
+  endtime = datetime.now() + timedelta(minutes=runtime)
   while True:
     if datetime.now() >= endtime:
       break

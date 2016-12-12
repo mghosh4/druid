@@ -6,6 +6,7 @@ class ParseIngestionConfig:
 		self.datafilepath=""
 		self.kafkatopic=""
 		self.delimiter=""
+		self.runtime=0
 		self.kafkahost=""
 
 		if configFilePath is not  None:
@@ -33,6 +34,8 @@ class ParseIngestionConfig:
 					self.delimiter = value				
 				elif key == "kafkahost":
 					self.kafkahost = value
+				elif key == "runtime":
+					self.runtime = int(value)
 
 	def getKafkaPath(self):
 		return self.kafkapath
@@ -51,6 +54,9 @@ class ParseIngestionConfig:
 
 	def getKafkaHost(self):
 		return self.kafkahost
+
+	def getRunTime(self):
+		return self.runtime
 
 
 
