@@ -1183,5 +1183,9 @@ public class DruidCoordinator
 		// TODO Auto-generated method stub
 		this.nodeVolumes = nodeVolumes;
 }
+
+	public DruidCoordinatorConfig getConfig() {
+		return config;
+	}
 }
 
