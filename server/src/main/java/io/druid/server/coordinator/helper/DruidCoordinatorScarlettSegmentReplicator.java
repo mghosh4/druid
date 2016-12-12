@@ -114,7 +114,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 
 		// Calculate the popularity map
 		HashMap<DataSegment, Long> weightedAccessCounts = coordinator.getWeightedAccessCounts();
-		weightedAccessCounts = new HashMap<DataSegment, Long>();
+		//weightedAccessCounts = new HashMap<DataSegment, Long>();
 		calculateWeightedAccessCounts(params, segments, weightedAccessCounts, removeList);
 		coordinator.setWeightedAccessCounts(weightedAccessCounts);
 
@@ -332,8 +332,9 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 		while (it.hasNext())
 		{
             Map.Entry<DataSegment, Long> entry = (Map.Entry<DataSegment, Long>)it.next();
-			log.info("Segment Received [%s] Count [%f]", entry.getKey().getIdentifier(), entry.getValue().doubleValue());
+			log.info("Weighted Access Segment [%s] Count [%f]", entry.getKey().getIdentifier(), entry.getValue().doubleValue());
             if(!segments.contains(entry.getKey())){
+            	log.info("Reduce Segment Access [%s] To 1", entry.getKey());
             	weightedAccessCounts.put(entry.getKey(), 1L);
             	removeList.put(entry.getKey(), (long)(params.getSegmentReplicantLookup().getTotalReplicants(entry.getKey().getIdentifier())-1));
             }
