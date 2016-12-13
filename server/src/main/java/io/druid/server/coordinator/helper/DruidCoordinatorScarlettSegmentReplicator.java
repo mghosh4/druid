@@ -136,7 +136,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 
 		// Manage replicas
 		//manageReplicas(params, insertList, removeList, stats);
-		manageReplicas(params, routingTable, stats);
+		manageReplicas(params, routingTable, stats, currentTable);
 
 		return params.buildFromExisting() 
 				.withCoordinatorStats(stats) 
@@ -469,7 +469,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 	
 	
 	
-	private void manageReplicas(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable, CoordinatorStats stats)
+	private void manageReplicas(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable, CoordinatorStats stats, HashMap<DataSegment, List<DruidServerMetadata>> currentTable)
 	{
 		//log.info("Managing Replicas by inserting and removing replicas for relevant data segments");
 
@@ -487,7 +487,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 			return;
 		}
 		
-		HashMap<DataSegment, List<DruidServerMetadata>> currentTable = new HashMap<DataSegment, List<DruidServerMetadata>>();		
+		//HashMap<DataSegment, List<DruidServerMetadata>> currentTable = new HashMap<DataSegment, List<DruidServerMetadata>>();		
 		for (ImmutableDruidServer server : serverHolderMap.keySet())
 		{
 			for (DataSegment segment : server.getSegments().values())
