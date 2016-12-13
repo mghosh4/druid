@@ -308,7 +308,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 		Long numServers = Long.valueOf(historicalNodeCount);
 		
 		//clean up concurrency map
-		this.CCAMap = new HashMap<DataSegment, Long>();
+		//this.CCAMap = new HashMap<DataSegment, Long>();
 
 		for (Entry<DataSegment> entry : segments.entrySet())
 		{
