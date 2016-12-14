@@ -518,20 +518,25 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		for (Map.Entry<DataSegment, List<DruidServerMetadata>> entry : currentTable.entrySet())
 		{
 			DataSegment segment = entry.getKey();
-			for (DruidServerMetadata server : entry.getValue())
-			{
-				if (!routingTable.containsKey(segment) || !routingTable.get(segment).keySet().contains(server))
+			if(entry.getValue().size()>1){
+				int count = entry.getValue().size();
+				for (DruidServerMetadata server : entry.getValue())
 				{
-					log.info("[GETAFIX PLACEMENT] Dropping " + segment.getIdentifier() + " from " + server.getHost());
-					CoordinatorStats dropStats = drop(
-							params.getReplicationManager(),
-							tier,
-							serverMetaDataMap.get(server),
-							segment
-							);
-					stats.accumulate(dropStats); 
+					if ((count>1) && (!routingTable.containsKey(segment) || !routingTable.get(segment).keySet().contains(server)))
+					{
+						log.info("[GETAFIX PLACEMENT] Dropping " + segment.getIdentifier() + " from " + server.getHost());
+						CoordinatorStats dropStats = drop(
+								params.getReplicationManager(),
+								tier,
+								serverMetaDataMap.get(server),
+								segment
+								);
+						stats.accumulate(dropStats); 
+						count--;
+					}
 				}
 			}
+			
 		}
 	}
 
