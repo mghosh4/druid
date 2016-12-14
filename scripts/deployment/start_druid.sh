@@ -337,8 +337,14 @@ do
 
         echo "Setting up $node ..."
         COMMAND=''
-	COMMAND=$COMMAND" sudo cat $PATH_TO_SOURCE/scripts/deployment/coordinator.properties > $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"
+<<<<<<< HEAD
+        COMMAND=$COMMAND" sudo rm $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"
+        COMMAND=$COMMAND" sudo cat $PATH_TO_SOURCE/scripts/deployment/coordinator.properties > $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"
+        COMMAND=$COMMAND" sudo sed -i '3s@.*@druid.replication.policy=$REPLICATION_SCHEME@' $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"
+=======
+    COMMAND=$COMMAND" sudo cat $PATH_TO_SOURCE/scripts/deployment/coordinator.properties > $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '3s@.*@druid.replication.policy=$REPLICATION_RULE@' $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"
+>>>>>>> 44613f764d698d5cd4a9a66803825353c27b498a
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$COORDINATOR_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"   
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Dlogfilename=coordinator-$counter -classpath 'conf/druid/_common:conf/druid/coordinator:lib/*' io.druid.cli.Main server coordinator;"  
 
