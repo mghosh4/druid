@@ -19,10 +19,10 @@ parser.add_argument('file', type=argparse.FileType('r'))
 args = parser.parse_args()
 
 def getConfigFile(args):
-  return args[2]
+  return args[1]
 
 def checkAndReturnArgs(args):
-  requiredNumOfArgs = 2
+  requiredNumOfArgs = 1
   if len(args) < requiredNumOfArgs:
     print "Usage: python " + args[0] + " <config_file>"
     exit()
