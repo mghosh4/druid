@@ -29,8 +29,8 @@ config_generator ()
 	cp $PATH_TO_DRUID/scripts/ingestion/ingestion.conf .;
 	cp $PATH_TO_DRUID/scripts/workloadgenerator/Config/query.conf .;
 	mv $PATH_TO_DRUID/scripts/master/query.conf $PATH_TO_DRUID/scripts/master/workloadgenerator.conf;
-	sudo sed -i '5s@.*runtime=$EXPERIMENT_LENGTH@' $PATH_TO_DRUID/scripts/master/ingestion.conf;
-	sudo sed -i '18s@*runtime=$EXPERIMENT_LENGTH@' $PATH_TO_DRUID/scripts/master/workloadgenerator.conf;
+	sudo sed -i '5s@.*@runtime=$EXPERIMENT_LENGTH@' $PATH_TO_DRUID/scripts/master/ingestion.conf;
+	sudo sed -i '18s@*@runtime=$EXPERIMENT_LENGTH@' $PATH_TO_DRUID/scripts/master/workloadgenerator.conf;
 }
 
 run_experiment ()
