@@ -240,9 +240,7 @@ public class DruidCoordinator
 		} else if(config.getReplicationPolicy().equals("scarlett")) {
 			log.info("SCARLETT");
 			replicator = new DruidCoordinatorScarlettSegmentReplicator(DruidCoordinator.this);
-		} else {
-			replicator = null;
-		}
+		} 
 		//log.info("SCARLETT");
 		//replicator = new DruidCoordinatorScarlettSegmentReplicator(DruidCoordinator.this);
 		//log.info("GETAFIX");
