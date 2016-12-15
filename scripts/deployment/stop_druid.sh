@@ -10,10 +10,10 @@ then
     exit 1
 fi
 
-if [ "$1" == "-h" ]
+if [ "$1" = "-h" ]
 then
     TYPE_OF_STOP=1
-elif [ "$1" == "-s" ]
+elif [ "$1" = "-s" ]
 then
     TYPE_OF_STOP=0
 else

@@ -39,7 +39,7 @@ run_experiment ()
 		echo "DEPLOYMENT: "
         	COMMAND=''
 	        COMMAND=$COMMAND" cd $PATH_TO_DRUID/scripts/deployment;"
-	        COMMAND=$COMMAND" sh ./start_druid.sh $1;"
+	        COMMAND=$COMMAND" ./start_druid.sh $1;"
 
        	 #ssh to node and run command
         	ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no tkao4@node-8.druidthomas.dcsq.emulab.net "
@@ -91,14 +91,14 @@ run_experiment ()
     echo "DEPLOYMENT: "
         COMMAND=''
 	    COMMAND=$COMMAND" cd $PATH_TO_DRUID/scripts/deployment;"
-	    COMMAND=$COMMAND" sh ./start_druid.sh $1;"
+	    COMMAND=$COMMAND" ./start_druid.sh $1;"
 
         #ssh to node and run command
         ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no tkao4@node-8.druidthomas.dcsq.emulab.net "
             $COMMAND"
     echo ""
 
-    echo "INGESTING:"
+    echo "INGESTING AND WORKLOAD GENERATOR:"
         COMMAND=''
         COMMAND=$COMMAND" cd $PATH_TO_DRUID/scripts/ingestion;"
     	COMMAND=$COMMAND" python ingestion.py $2;"
@@ -123,7 +123,7 @@ run_experiment ()
 
     echo "PLOTTING:"
         COMMAND=''
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID/scripts/plotscript;"
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID/scripts/plotscripts;"
         COMMAND=$COMMAND" python plot.py plotconfig.conf;"
 
 
@@ -136,7 +136,7 @@ run_experiment ()
     echo "STOPPING:"
         COMMAND=''
         COMMAND=$COMMAND" cd $PATH_TO_DRUID/scripts/deployment;"
-	    COMMAND=$COMMAND" sh ./stop_druid.sh -h $1;"
+	    COMMAND=$COMMAND" ./stop_druid.sh -h $1;"
 	    COMMAND=$COMMAND" rm $1 $2 $3;"
 
 
@@ -149,5 +149,5 @@ run_experiment ()
 config_generator
 IFS=',' read -ra ADDR <<< "$REPLICATION"
 	for i in "${ADDR[@]}"; do
-		run_experiment $PATH_TO_DRUID/scripts/master/deployment_$i $PATH_TO_DRUID/scripts/master/ingestion.conf $PATH_TO_DRUID/scripts/master/workloadgenerator.conf;
+		run_experiment $PATH_TO_DRUID/scripts/master/deployment_$i.conf $PATH_TO_DRUID/scripts/master/ingestion.conf $PATH_TO_DRUID/scripts/master/workloadgenerator.conf;
 	done
