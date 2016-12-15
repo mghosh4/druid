@@ -78,6 +78,7 @@ import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentPopularityDumper;
+import io.druid.server.coordinator.helper.DruidCoordinatorVoidSegmentReplicator;
 import io.druid.server.coordinator.rules.LoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -241,7 +242,7 @@ public class DruidCoordinator
 			log.info("SCARLETT");
 			replicator = new DruidCoordinatorScarlettSegmentReplicator(DruidCoordinator.this);
 		} else {
-			replicator = null;
+			replicator = new DruidCoordinatorVoidSegmentReplicator(DruidCoordinator.this);;
 		}
 		//log.info("SCARLETT");
 		//replicator = new DruidCoordinatorScarlettSegmentReplicator(DruidCoordinator.this);
