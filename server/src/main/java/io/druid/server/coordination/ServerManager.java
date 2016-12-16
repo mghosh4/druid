@@ -249,6 +249,8 @@ public class ServerManager implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
   {
+	log.info("======1. Entering getQueryRunnerForIntervals====");
+	log.info("(1). get query runner for query [%s] and intervals [%s}", query.getIntervals());
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {
       throw new ISE("Unknown query type[%s].", query.getClass());
@@ -278,6 +280,7 @@ public class ServerManager implements QuerySegmentWalker
               @Override
               public Iterable<TimelineObjectHolder<String, ReferenceCountingSegment>> apply(Interval input)
               {
+            	log.info("(1). Lookup interval input [%s] from the timeline", input.toString());
                 return timeline.lookup(input);
               }
             }
@@ -303,6 +306,7 @@ public class ServerManager implements QuerySegmentWalker
                           @Override
                           public QueryRunner<T> apply(PartitionChunk<ReferenceCountingSegment> input)
                           {
+                        	log.info("(1). build and decorate Query Runner for [%s] ", holder.getInterval());
                             return buildAndDecorateQueryRunner(
                                 factory,
                                 toolChest,
@@ -417,6 +421,7 @@ public class ServerManager implements QuerySegmentWalker
       final AtomicLong cpuTimeAccumulator
   )
   {
+	log.info("======3. buildAndDecorateQueryRunner====");
     SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
     return CPUTimeMetricQueryRunner.safeBuild(
         new SpecificSegmentQueryRunner<T>(
