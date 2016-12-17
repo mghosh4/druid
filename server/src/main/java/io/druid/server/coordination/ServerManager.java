@@ -346,6 +346,7 @@ public class ServerManager implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
   {
+	log.info("======6. getQueryRunner For Segments [%s]====", query.toString());
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {
       log.makeAlert("Unknown query type, [%s]", query.getClass())
@@ -379,6 +380,7 @@ public class ServerManager implements QuerySegmentWalker
               public Iterable<QueryRunner<T>> apply(SegmentDescriptor input)
               {
 
+            	log.info("(6). input segment descriptor [%s]", input.getInterval());
                 final PartitionHolder<ReferenceCountingSegment> entry = timeline.findEntry(
                     input.getInterval(), input.getVersion()
                 );
