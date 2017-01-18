@@ -23,7 +23,11 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.SegmentDescriptor;
+
+
 import org.joda.time.Interval;
+
+import com.metamx.emitter.EmittingLogger;
 
 import java.util.Arrays;
 import java.util.List;
@@ -33,10 +37,12 @@ import java.util.List;
 public class SpecificSegmentSpec implements QuerySegmentSpec
 {
   private final SegmentDescriptor descriptor;
-
+  private static final EmittingLogger log = new EmittingLogger(SpecificSegmentSpec.class);
+  
   public SpecificSegmentSpec(
       SegmentDescriptor descriptor
   ) {
+	log.info("======4.specfic segment spec, construction for segment [%s]====", descriptor.getInterval());
     this.descriptor = descriptor;
   }
 
