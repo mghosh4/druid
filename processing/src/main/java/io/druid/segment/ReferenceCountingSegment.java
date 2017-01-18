@@ -48,13 +48,14 @@ public class ReferenceCountingSegment implements Segment
       if (isClosed) {
         return null;
       }
-
+      log.info("Get base segment, %s", baseSegment.getIdentifier());
       return baseSegment;
     }
   }
 
   public int getNumReferences()
   {
+	log.info("number of references", numReferences);
     return numReferences;
   }
 
@@ -70,7 +71,7 @@ public class ReferenceCountingSegment implements Segment
       if (isClosed) {
         return null;
       }
-
+      log.info("get Identifier", baseSegment.getIdentifier());
       return baseSegment.getIdentifier();
     }
   }
@@ -82,7 +83,7 @@ public class ReferenceCountingSegment implements Segment
       if (isClosed) {
         return null;
       }
-
+      log.info("get data interval", baseSegment.getDataInterval().toString());
       return baseSegment.getDataInterval();
     }
   }
@@ -139,6 +140,7 @@ public class ReferenceCountingSegment implements Segment
       }
 
       numReferences++;
+      log.info("increase number of references to %s", numReferences);
       final AtomicBoolean decrementOnce = new AtomicBoolean(false);
       return new Closeable()
       {
