@@ -84,4 +84,7 @@ public abstract class DruidCoordinatorConfig
   {
     return null;
   }
+
+  @Config("druid.coordinator.gc.threshold")
+  public double getGCThreshold() { return 0.8; }
 }

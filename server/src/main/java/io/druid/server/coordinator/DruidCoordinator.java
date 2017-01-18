@@ -74,6 +74,7 @@ import io.druid.server.coordinator.helper.DruidCoordinatorLogger;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import io.druid.server.coordinator.helper.DruidCoordinatorScarlettSegmentReplicator;
 import io.druid.server.coordinator.helper.DruidCoordinatorBestFitSegmentReplicator;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentGarbageCollector;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
@@ -1152,6 +1153,7 @@ public class DruidCoordinator
 							new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),
 							new DruidCoordinatorBalancer(DruidCoordinator.this),
 							new DruidCoordinatorSegmentPopularityDumper(DruidCoordinator.this, DruidCoordinator.this.metadataSegmentManager),
+							new DruidCoordinatorSegmentGarbageCollector(DruidCoordinator.this, config.getGCThreshold()),
 							new DruidCoordinatorLogger()
 					),
 					startingLeaderCounter
