@@ -22,6 +22,8 @@ package io.druid.query;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.ResourceClosingSequence;
 import com.metamx.common.guava.Sequence;
+import com.metamx.emitter.EmittingLogger;
+
 import io.druid.segment.ReferenceCountingSegment;
 
 import java.io.Closeable;
@@ -34,6 +36,7 @@ public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
   private final QueryRunnerFactory<T, Query<T>> factory;
   private final ReferenceCountingSegment adapter;
   private final SegmentDescriptor descriptor;
+  private static final EmittingLogger log = new EmittingLogger(ReferenceCountingSegmentQueryRunner.class);
 
   public ReferenceCountingSegmentQueryRunner(
       QueryRunnerFactory<T, Query<T>> factory,
@@ -50,6 +53,7 @@ public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
   public Sequence<T> run(final Query<T> query, Map<String, Object> responseContext)
   {
     final Closeable closeable = adapter.increment();
+    log.info("adapter plus one, query content [%s]", query.toString());
     if (closeable != null) {
       try {
         final Sequence<T> baseSequence = factory.createRunner(adapter).run(query, responseContext);
