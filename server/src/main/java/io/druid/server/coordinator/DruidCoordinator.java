@@ -1153,7 +1153,7 @@ public class DruidCoordinator
 							new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),
 							new DruidCoordinatorBalancer(DruidCoordinator.this),
 							new DruidCoordinatorSegmentPopularityDumper(DruidCoordinator.this, DruidCoordinator.this.metadataSegmentManager),
-							new DruidCoordinatorSegmentGarbageCollector(DruidCoordinator.this, config.getGCThreshold()),
+							new DruidCoordinatorSegmentGarbageCollector(DruidCoordinator.this, config.getGCThreshold(), config.isGCAggressive()),
 							new DruidCoordinatorLogger()
 					),
 					startingLeaderCounter

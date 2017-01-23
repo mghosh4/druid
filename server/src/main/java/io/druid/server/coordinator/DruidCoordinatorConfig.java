@@ -87,4 +87,9 @@ public abstract class DruidCoordinatorConfig
 
   @Config("druid.coordinator.gc.threshold")
   public double getGCThreshold() { return 0.8; }
+
+  @Config("druid.coordinator.gc.aggressive")
+  public boolean isGCAggressive() {
+    return true;
+  }
 }

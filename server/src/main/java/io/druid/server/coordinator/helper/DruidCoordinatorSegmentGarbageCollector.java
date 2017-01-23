@@ -23,6 +23,7 @@ import java.util.TreeMap;
 public class DruidCoordinatorSegmentGarbageCollector implements DruidCoordinatorHelper
 {
   private final double gcThreshold;
+  private final boolean isGCAggressive;
   private final DruidCoordinator coordinator;
 
   private static final String droppedCount = "droppedCount";
@@ -30,11 +31,13 @@ public class DruidCoordinatorSegmentGarbageCollector implements DruidCoordinator
 
   public DruidCoordinatorSegmentGarbageCollector(
       DruidCoordinator coordinator,
-      double gcThreshold
+      double gcThreshold,
+      boolean isGCAggressive
   )
   {
     this.coordinator = coordinator;
     this.gcThreshold = gcThreshold;
+    this.isGCAggressive = isGCAggressive;
   }
 
   @Override
@@ -42,9 +45,11 @@ public class DruidCoordinatorSegmentGarbageCollector implements DruidCoordinator
   {
     for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier()) {
       for (ServerHolder holder : serverQueue) {
-        if (holder.getPercentUsed() > gcThreshold) {
-          log.info("Found server %s(%s) using more than gcThreshold. Dropping...",
-                  holder.getServer().getName(), holder.getServer().getHost());
+        long currSize = holder.getCurrServerSize();
+        double maxSize = holder.getMaxSize().doubleValue();
+        while (currSize / maxSize > gcThreshold) {
+          log.info("Found server %s(%s) with size %d/%d(%f), which is more than gcThreshold. Dropping...",
+                  holder.getServer().getName(), currSize, holder.getMaxSize(), currSize/maxSize, holder.getServer().getHost());
 
           // find the segment that is owned by this server holder, and has the lowest weighted access count
           DataSegment segmentToDrop = null;
@@ -87,6 +92,11 @@ public class DruidCoordinatorSegmentGarbageCollector implements DruidCoordinator
                   holder,
                   segmentToDrop
           );
+          currSize -= segmentToDrop.getSize();
+          if (!this.isGCAggressive) {
+            log.info("[GETAFIX GC] Not Aggressive");
+            break;
+          }
         }
       }
     }
