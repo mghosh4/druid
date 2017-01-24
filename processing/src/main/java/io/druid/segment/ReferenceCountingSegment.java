@@ -140,7 +140,8 @@ public class ReferenceCountingSegment implements Segment
       }
 
       numReferences++;
-      log.info("increase number of references to %s", numReferences);
+      log.info("baseSegment %s",baseSegment.getIdentifier());
+      log.info("increase number of references to %d", numReferences);
       final AtomicBoolean decrementOnce = new AtomicBoolean(false);
       return new Closeable()
       {
