@@ -47,10 +47,10 @@ public class DruidCoordinatorSegmentGarbageCollector implements DruidCoordinator
       for (ServerHolder holder : serverQueue) {
         long currSize = holder.getCurrServerSize();
         double maxSize = holder.getMaxSize().doubleValue();
+        int iter = 0;
         while (currSize / maxSize > gcThreshold) {
-          log.info("Found server %s(%s) with size %d/%d(%f), which is more than gcThreshold. Dropping...",
-                  holder.getServer().getName(), currSize, holder.getMaxSize(), currSize/maxSize, holder.getServer().getHost());
-
+          log.info("[GETAFIX GC] Found server %s(%s) with size %s/%s(%s), which is more than gcThreshold. Dropping iter %s...",
+                  holder.getServer().getName(), holder.getServer().getHost(), currSize, holder.getMaxSize(), currSize/maxSize, iter);
           // find the segment that is owned by this server holder, and has the lowest weighted access count
           DataSegment segmentToDrop = null;
           Long lowestWeightedAccessCount = Long.MAX_VALUE;
@@ -97,6 +97,7 @@ public class DruidCoordinatorSegmentGarbageCollector implements DruidCoordinator
             log.info("[GETAFIX GC] Not Aggressive");
             break;
           }
+          iter++;
         }
       }
     }
