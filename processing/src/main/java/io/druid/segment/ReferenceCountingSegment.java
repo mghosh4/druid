@@ -36,6 +36,9 @@ public class ReferenceCountingSegment implements Segment
 
   private volatile int numReferences = 0;
   private volatile boolean isClosed = false;
+  
+  private volatile int NumPerSecReferences = 0;
+  private volatile long lastUpdatedTime = System.currentTimeMillis();
 
   public ReferenceCountingSegment(Segment baseSegment)
   {
@@ -55,8 +58,18 @@ public class ReferenceCountingSegment implements Segment
 
   public int getNumReferences()
   {
-	log.info("number of references", numReferences);
+	log.info("number of references %d", numReferences);
     return numReferences;
+  }
+  
+  public int getNumPerSecReferences(){
+	  long currentTime = System.currentTimeMillis();
+	  if(currentTime-lastUpdatedTime >1000){
+		  NumPerSecReferences = numReferences;
+		  lastUpdatedTime = currentTime;
+		  return NumPerSecReferences;
+	  }
+	  return NumPerSecReferences;
   }
 
   public boolean isClosed()
@@ -162,9 +175,10 @@ public class ReferenceCountingSegment implements Segment
       if (isClosed) {
         return;
       }
-
+      log.info("decrement count for segment %s",getIdentifier());
       if (--numReferences < 0) {
         try {
+          log.info("segment %s reference count less than 0, close it",getIdentifier());
           innerClose();
         }
         catch (Exception e) {
