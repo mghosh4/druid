@@ -19,22 +19,6 @@
 
 package io.druid.server.coordinator.helper;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.util.Charsets;
-import com.google.common.base.Throwables;
-import com.google.common.collect.HashMultiset;
-import com.google.common.collect.Lists;
-import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.collect.Multiset;
-import com.google.common.collect.Multiset.Entry;
-import com.metamx.common.ISE;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.response.StatusResponseHandler;
-import com.metamx.http.client.response.StatusResponseHolder;
-
 import io.druid.client.ImmutableDruidServer;
 import io.druid.client.selector.Server;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
@@ -51,18 +35,16 @@ import io.druid.server.coordinator.ServerHolder;
 import io.druid.server.router.TieredBrokerConfig;
 import io.druid.timeline.DataSegment;
 
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.joda.time.DateTime;
-
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -74,6 +56,26 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.joda.time.DateTime;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.client.util.Charsets;
+import com.google.common.base.Throwables;
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Lists;
+import com.google.common.collect.MinMaxPriorityQueue;
+import com.google.common.collect.Multiset;
+import com.google.common.collect.Multiset.Entry;
+import com.metamx.common.ISE;
+import com.metamx.emitter.EmittingLogger;
+import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.Request;
+import com.metamx.http.client.response.StatusResponseHandler;
+import com.metamx.http.client.response.StatusResponseHolder;
 
 public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinatorHelper
 {
@@ -875,5 +877,103 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 				break;
 		}
 		return stats;
+	}
+	
+	
+	private int[] hungarianMethod(int[][] costMatrix){
+		int[] ret = new int[costMatrix.length];
+		if(costMatrix.length==0){
+			return ret;
+		}
+		Arrays.fill(ret, -1);
+		//deduct smallest from each row and coloumn
+		int size = costMatrix.length;
+		int[] rowMin = new int[size];
+		int[] colMin = new int[size];
+		Arrays.fill(rowMin, Integer.MAX_VALUE);
+		Arrays.fill(colMin, Integer.MAX_VALUE);
+		for(int i=0; i<size;i++){
+			for(int j=0;j<size;j++){
+				if(costMatrix[i][j]<rowMin[i]){
+					rowMin[i] = costMatrix[i][j];
+				}
+				if(costMatrix[i][j]<rowMin[j]){
+					colMin[j] = costMatrix[i][j];
+				}
+			}
+		}
+		while(true){
+			//deduct and find the uncovered minimum
+			HashSet<Integer> coveredRow = new HashSet<Integer>();
+			HashSet<Integer> coveredCol = new HashSet<Integer>();
+			boolean[] markedRows = new boolean[size];
+			boolean[] markedCols = new boolean[size];
+			
+			for(int i = 0;i<size;i++){
+				for(int j = 0; j<size; j++){
+					costMatrix[i][j] = costMatrix[i][j] - rowMin[i];
+					costMatrix[i][j] = costMatrix[i][j] - colMin[j];
+					if(costMatrix[i][j]==0){
+						if(!coveredCol.contains(j) && !coveredRow.contains(i)){
+							coveredCol.add(j);
+							coveredRow.add(i);
+							ret[i]=j;
+						}
+						
+					}
+				}
+			}
+			
+			if(coveredCol.size()>=size){
+				return ret;
+			}
+			
+			//mark the matrix
+			for(int i=0;i<size;i++){
+				if(!coveredRow.contains(i)){
+					//no assignment for this row
+					markedRows[i]=true;
+					for(int j=0;j<size;j++){
+						if(costMatrix[i][j]==0){
+							//mark all column on this row that has 0
+							markedCols[j]=true;
+							for(int k = 0;k<size;k++){
+								if(costMatrix[k][j]==0){
+									markedRows[k]=true;
+								}
+							}
+						}
+					}
+				}
+			}
+			
+			
+			//find unmarked minimum
+			int unmarkedMin = Integer.MAX_VALUE;
+			for(int i = 0; i<size; i++){
+				for(int j = 0;j<size;j++){
+					if(markedRows[i]==false && markedCols[j]==true){
+						//unmarked rows and marked column
+						if(costMatrix[i][j]<unmarkedMin){
+							unmarkedMin = costMatrix[i][j];
+						}
+					}
+				}
+			}
+			//deduct min from unmarked entry and add to marked entry
+			for(int i = 0; i<size; i++){
+				for(int j = 0;j<size;j++){
+					if(markedRows[i]==false && markedCols[j]==true){
+						costMatrix[i][j] -= unmarkedMin;
+					}
+					else{
+						costMatrix[i][j] += unmarkedMin;
+					}
+				}
+			}
+		}
+		
+		//PriorityQueue<Integer> minQueue = new PriorityQueue<Integer>();
+
 	}
 }
