@@ -242,14 +242,16 @@ public class DruidCoordinator
 		} else if(config.getReplicationPolicy().equals("scarlett")) {
 			log.info("SCARLETT");
 			replicator = new DruidCoordinatorScarlettSegmentReplicator(DruidCoordinator.this);
-		} else {
-			replicator = new DruidCoordinatorVoidSegmentReplicator(DruidCoordinator.this);;
+		} else if(config.getReplicationPolicy().equals("rulebased")){
+            log.info("RULEBASED");
+			replicator = new DruidCoordinatorRuleRunner(DruidCoordinator.this);
 		}
-		//log.info("SCARLETT");
-		//replicator = new DruidCoordinatorScarlettSegmentReplicator(DruidCoordinator.this);
-		//log.info("GETAFIX");
-		//replicator = new DruidCoordinatorBestFitSegmentReplicator(DruidCoordinator.this);
-		this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
+		else{
+			log.makeAlert("No replication policy specified!").emit();
+			replicator = null;			
+		}
+		
+        this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
 
 		this.leaderLatch = new AtomicReference<>(null);
 		this.loadManagementPeons = loadQueuePeonMap;
@@ -1147,7 +1149,6 @@ public class DruidCoordinator
 															 .build();
 								}
 							},
-							new DruidCoordinatorRuleRunner(DruidCoordinator.this),
 							replicator,
 							new DruidCoordinatorCleanupUnneeded(DruidCoordinator.this),
 							new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),

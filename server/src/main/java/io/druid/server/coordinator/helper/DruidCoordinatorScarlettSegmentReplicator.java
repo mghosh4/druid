@@ -89,6 +89,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 	private final HttpClient httpClient;
 	private final ServerDiscoveryFactory serverDiscoveryFactory;
 	private HashMap<DataSegment, Long> CCAMap = new HashMap<DataSegment, Long>();
+    private final ReplicationThrottler replicatorThrottler;
 
 	private static final long MIN_THRESHOLD = 5;
 
@@ -98,13 +99,22 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 		this.coordinator = coordinator;
 		this.httpClient = coordinator.httpClient;
 		this.serverDiscoveryFactory = coordinator.serverDiscoveryFactory;
+        this.replicatorThrottler = new ReplicationThrottler(
+                coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
+                coordinator.getDynamicConfigs().getReplicantLifetime()
+            );
 	}
 
 	@Override
 	public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
 	{
 		log.info("Starting replication. Getting Segment Popularity");
-		final CoordinatorStats stats = new CoordinatorStats();
+        replicatorThrottler.updateParams(
+                coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
+                coordinator.getDynamicConfigs().getReplicantLifetime()
+            );
+
+        final CoordinatorStats stats = new CoordinatorStats();
 		HashMap<DataSegment, Long> insertList = new HashMap<DataSegment, Long>();
 		HashMap<DataSegment, Long> removeList = new HashMap<DataSegment, Long>();
 
@@ -139,6 +149,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 		manageReplicas(params, routingTable, stats, currentTable);
 
 		return params.buildFromExisting() 
+                .withReplicationManager(replicatorThrottler)
 				.withCoordinatorStats(stats) 
 				.build();
 	}
@@ -516,7 +527,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 				{
 					log.info("Server [%s] add segment [%s]", server.getHost(), segment.getIdentifier());
 					CoordinatorStats assignStats = assign(
-							params.getReplicationManager(),
+							replicatorThrottler,
 							tier,
 							serverMetaDataMap.get(server),
 							segment
@@ -535,7 +546,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 				{
 					log.info("Server [%s] drop segment [%s]", server.getHost(), segment.getIdentifier());
 					CoordinatorStats dropStats = drop(
-							params.getReplicationManager(),
+							replicatorThrottler,
 							tier,
 							serverMetaDataMap.get(server),
 							segment
@@ -582,7 +593,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 			}
 
 			CoordinatorStats assignStats = assign(
-					params.getReplicationManager(),
+					replicatorThrottler,
 					tier,
 					strategy,
 					serverHolderList,

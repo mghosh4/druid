@@ -86,6 +86,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 	private final StatusResponseHandler responseHandler = new StatusResponseHandler(Charsets.UTF_8);
 	private final HttpClient httpClient;
 	private final ServerDiscoveryFactory serverDiscoveryFactory;
+    private final ReplicationThrottler replicatorThrottler;
 
 	private static final long MIN_THRESHOLD = 5;
 
@@ -95,12 +96,22 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		this.coordinator = coordinator;
 		this.httpClient = coordinator.httpClient;
 		this.serverDiscoveryFactory = coordinator.serverDiscoveryFactory;
+        this.replicatorThrottler = new ReplicationThrottler(
+            coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
+            coordinator.getDynamicConfigs().getReplicantLifetime()
+        );
+                
 	}
 
 	@Override
 	public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
 	{
 		//log.info("Starting replication. Getting Segment Popularity");
+        replicatorThrottler.updateParams(
+            coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
+            coordinator.getDynamicConfigs().getReplicantLifetime()
+        );
+
 		final CoordinatorStats stats = new CoordinatorStats();
 		HashMap<DataSegment, Long> insertList = new HashMap<DataSegment, Long>();
 		HashMap<DataSegment, Long> removeList = new HashMap<DataSegment, Long>();
@@ -129,6 +140,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		manageReplicas(params, routingTable, stats);
 
 		return params.buildFromExisting() 
+                .withReplicationManager(replicatorThrottler)
 				.withCoordinatorStats(stats) 
 				.build();
 	}
@@ -505,7 +517,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 				if (!currentTable.containsKey(segment) || !currentTable.get(segment).contains(server))
 				{
 					CoordinatorStats assignStats = assign(
-							params.getReplicationManager(),
+							replicatorThrottler,
 							tier,
 							serverMetaDataMap.get(server),
 							segment
@@ -526,7 +538,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 					{
 						log.info("[GETAFIX PLACEMENT] Dropping " + segment.getIdentifier() + " from " + server.getHost());
 						CoordinatorStats dropStats = drop(
-								params.getReplicationManager(),
+								replicatorThrottler,
 								tier,
 								serverMetaDataMap.get(server),
 								segment
@@ -574,7 +586,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 			}
 
 			CoordinatorStats assignStats = assign(
-					params.getReplicationManager(),
+					replicatorThrottler,
 					tier,
 					strategy,
 					serverHolderList,
@@ -629,134 +641,6 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		return stats;
 	}
 	
-	private CoordinatorStats drop(
-			final ReplicationThrottler replicationManager,
-			final String tier,
-			final ServerHolder holder,
-			final DataSegment segment
-			)
-	{
-		log.info("Remove Segment [%s] from [%s]", segment.getIdentifier(), holder.getServer().getHost());
-		CoordinatorStats stats = new CoordinatorStats();
-
-		//log.info("Removing Segment from [%s] because it has [%d] segments", entry.getValue().getServer().getMetadata().toString(), entry.getKey().intValue());
-		stats.addToTieredStat(droppedCount, tier, 0);
-
-		if (holder.isServingSegment(segment)) {
-			replicationManager.registerReplicantTermination(
-					tier,
-					segment.getIdentifier(),
-					holder.getServer().getHost()
-					);
-		}
-
-		holder.getPeon().dropSegment(
-				segment,
-				new LoadPeonCallback()
-				{
-					@Override
-					public void execute()
-					{
-						replicationManager.unregisterReplicantTermination(
-								tier,
-								segment.getIdentifier(),
-								holder.getServer().getHost()
-								);
-					}
-				}
-				);
-			
-		stats.addToTieredStat(droppedCount, tier, 1);
-		log.info("Removed Segment [%s]", segment.getIdentifier());
-			
-		return stats;
-	}
-
-	private void manageReplicas(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, Long> insertList, HashMap<DataSegment, Long> removeList, CoordinatorStats stats)
-	{
-		//log.info("Managing Replicas by inserting and removing replicas for relevant data segments");
-
-		List<ServerHolder> serverHolderList = new ArrayList<ServerHolder>();
-		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
-			serverHolderList.addAll(serverQueue);
-
-		if (serverHolderList.size() == 0) {
-			log.makeAlert("Cluster has no servers! Check your cluster configuration!").emit();
-			return;
-		}
-
-		final List<String> tierNameList = Lists.newArrayList(params.getDruidCluster().getTierNames());
-		if (tierNameList.size() == 0) {
-			log.makeAlert("Cluster has multiple tiers! Check your cluster configuration!").emit();
-			return;
-		}
-		final String tier = tierNameList.get(0);
-
-		final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
-		final BalancerStrategy strategy = params.getBalancerStrategyFactory().createBalancerStrategy(referenceTimestamp);
-
-		for (Map.Entry<DataSegment, Long> entry : insertList.entrySet())
-		{
-			String id = entry.getKey().getIdentifier();
-            DataSegment segment = null;
-            for (DataSegment candidate : coordinator.getAvailableDataSegments())
-            {
-		        //log.info("Comparing candidate: %s to incumbent %s", candidate.getIdetifier(), id);
-                if (candidate.getIdentifier().equals(id))
-                {
-                    segment = candidate;
-                    break;
-                }
-            }
-
-            if (segment == null)
-                continue;
-
-			CoordinatorStats assignStats = assign(
-					params.getReplicationManager(),
-					tier,
-					strategy,
-					serverHolderList,
-					segment,
-					entry.getValue(),
-					null
-					);
-			stats.accumulate(assignStats);
-		}
-
-		for (Map.Entry<DataSegment, Long> entry : removeList.entrySet())
-		{
-			String id = entry.getKey().getIdentifier();
-            DataSegment segment = null;
-            for (DataSegment candidate : coordinator.getAvailableDataSegments())
-            {
-                if (candidate.getIdentifier().equals(id))
-                {
-                    segment = candidate;
-                    break;
-                }
-            }
-
-            if (segment == null)
-                continue;
-
-			int totalReplicantsInCluster = params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier());
-			if (totalReplicantsInCluster <= 0) {
-				continue;
-			}
-
-			long numReplicantsToRemove = entry.getValue() == -1 ? totalReplicantsInCluster : entry.getValue();
-			CoordinatorStats dropStats = drop(
-					params.getReplicationManager(),
-					tier,
-					serverHolderList,
-					segment,
-					numReplicantsToRemove
-					);
-			stats.accumulate(dropStats);      
-		}
-	}
-
 	private CoordinatorStats assign(
 			final ReplicationThrottler replicationManager,
 			final String tier,
@@ -818,62 +702,47 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 
 		return stats;
 	}
-
+	
 	private CoordinatorStats drop(
 			final ReplicationThrottler replicationManager,
 			final String tier,
-			final List<ServerHolder> serverHolderList,
-			final DataSegment segment,
-			final long numReplicantsToRemove
+			final ServerHolder holder,
+			final DataSegment segment
 			)
 	{
-		log.info("Remove Segment [%s] [%d]", segment.getIdentifier(), numReplicantsToRemove);
+		log.info("Remove Segment [%s] from [%s]", segment.getIdentifier(), holder.getServer().getHost());
 		CoordinatorStats stats = new CoordinatorStats();
 
-		// Pick the server which has the maximum number of segments for load balance
-		Map<Number, ServerHolder> segmentCountMap = new TreeMap<Number, ServerHolder>(Collections.reverseOrder());
-		for (ServerHolder serverHolder : serverHolderList)
-			if (serverHolder.getServer().getSegment(segment.getIdentifier()) != null)
-				segmentCountMap.put(serverHolder.getServer().getSegments().size(), serverHolder);
+		//log.info("Removing Segment from [%s] because it has [%d] segments", entry.getValue().getServer().getMetadata().toString(), entry.getKey().intValue());
+		stats.addToTieredStat(droppedCount, tier, 0);
 
-		long numReplicants = numReplicantsToRemove;
-		for (Map.Entry<Number, ServerHolder> entry : segmentCountMap.entrySet())
-		{
-			//log.info("Removing Segment from [%s] because it has [%d] segments", entry.getValue().getServer().getMetadata().toString(), entry.getKey().intValue());
-			final ServerHolder holder = entry.getValue();
-			stats.addToTieredStat(droppedCount, tier, 0);
-
-			if (holder.isServingSegment(segment)) {
-				replicationManager.registerReplicantTermination(
-						tier,
-						segment.getIdentifier(),
-						holder.getServer().getHost()
-						);
-			}
-
-			holder.getPeon().dropSegment(
-					segment,
-					new LoadPeonCallback()
-					{
-						@Override
-						public void execute()
-						{
-							replicationManager.unregisterReplicantTermination(
-									tier,
-									segment.getIdentifier(),
-									holder.getServer().getHost()
-									);
-						}
-					}
+		if (holder.isServingSegment(segment)) {
+			replicationManager.registerReplicantTermination(
+					tier,
+					segment.getIdentifier(),
+					holder.getServer().getHost()
 					);
-			
-            --numReplicants;
-			stats.addToTieredStat(droppedCount, tier, 1);
-			log.info("Removed Segment [%s]", segment.getIdentifier());
-			
-            if (numReplicants == 0)
-				break;
 		}
+
+		holder.getPeon().dropSegment(
+				segment,
+				new LoadPeonCallback()
+				{
+					@Override
+					public void execute()
+					{
+						replicationManager.unregisterReplicantTermination(
+								tier,
+								segment.getIdentifier(),
+								holder.getServer().getHost()
+								);
+					}
+				}
+				);
+			
+		stats.addToTieredStat(droppedCount, tier, 1);
+		log.info("Removed Segment [%s]", segment.getIdentifier());
+			
 		return stats;
 	}
 }
