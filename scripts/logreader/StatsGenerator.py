@@ -61,6 +61,16 @@ for metric in ["segment/count", "sys/mem/used"]:
 	filename = resultfolder + "/historical" + "-" + newmetrics + ".log"
 	Utils.writeTimeSeriesMetricStats(filename, aggValues, stats, headerStr)
 
+for metric in ["query/time", "query/wait/time"]:
+	overallStats = historicalmetrics.getOverallMetric(metric)
+	if "/" in metric:
+		newmetrics = metric.replace("/", "-")
+	else:
+		newmetrics = metric
+
+	filename = resultfolder + "/historical" + "-" + newmetrics + ".cdf"
+	Utils.writeCDF(filename, overallStats)
+
 ### Broker Metrics ###
 stats = [numpy.mean, numpy.median, Utils.percentile99, Utils.percentile90, Utils.percentile75]
 headerStr = "\tMean\tMedian\t99th Percentile\t95th Percentile\t75th Percentile\n"
@@ -74,5 +84,15 @@ for metric in ["query/time"]:
 		
 	filename = resultfolder + "/broker" + "-" + newmetrics + ".log"
 	Utils.writeOverallMetricStats(filename, overallStats, stats, headerStr)
+
+for metric in ["query/time"]:
+	overallStats = brokermetrics.getOverallMetric(metric)
+	if "/" in metric:
+		newmetrics = metric.replace("/", "-")
+	else:
+		newmetrics = metric
+
+	filename = resultfolder + "/broker" + "-" + newmetrics + ".cdf"
+	Utils.writeCDF(filename, overallStats)
 
 ### Coordinator Metrics ###

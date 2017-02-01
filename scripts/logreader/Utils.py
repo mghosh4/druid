@@ -1,4 +1,4 @@
-import os
+import os,sys
 import numpy
 
 class Utils(object):
@@ -31,7 +31,7 @@ class Utils(object):
     def writeOverallMetricStats(filename, metricstats, stats, headerString):
         if not os.path.exists(os.path.dirname(filename)):
             os.makedirs(os.path.dirname(filename))
-            
+
         f = open(filename, 'w')
         f.write(headerString)
         statsString = ""
@@ -39,6 +39,49 @@ class Utils(object):
             statsString = statsString + "\t" + str(metricstats[stat])
         f.write(statsString + "\n")
         f.close()
+
+    # Code from internship
+    @staticmethod
+    def createCDF(values):
+        sortedList = sorted(values)
+        valueHist = dict()
+
+        try:
+            for val in values:
+                roundedVal = float(int(val * 100)) / 100
+                if roundedVal not in valueHist:
+                    valueHist[roundedVal] = 1
+                else:
+                    valueHist[roundedVal] += 1
+        except:
+            pass
+
+        latencyHistCum = []
+        total = 0
+        for val in sorted(valueHist.keys()):
+            total += valueHist[val]
+            latencyHistCum.append((val, total))
+
+        valueCDF = []
+        for (val, num) in latencyHistCum:
+            valueCDF.append((val, float(num) / total))
+
+        return valueCDF
+
+    @staticmethod
+    def writeToFile(filename, data):
+        if not os.path.exists(os.path.dirname(filename)):
+            os.makedirs(os.path.dirname(filename))
+
+        file = open(filename, "w")
+        for (k, v) in data:
+            file.write(str(k))
+            file.write(' ' + str(v) + '\n')
+
+    @staticmethod
+    def writeCDF(values, filename):
+        valueCDF = Utils.createCDF(values)
+        Utils.writeToFile(filename, valueCDF)
         
     @staticmethod
     def percentile99(l):
