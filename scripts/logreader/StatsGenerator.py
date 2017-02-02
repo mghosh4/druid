@@ -61,7 +61,7 @@ for metric in ["segment/count", "sys/mem/used"]:
 	filename = resultfolder + "/historical" + "-" + newmetrics + ".log"
 	Utils.writeTimeSeriesMetricStats(filename, aggValues, stats, headerStr)
 
-for metric in ["query/time", "query/wait/time"]:
+for metric in ["query/time", "query/wait/time", "query/segment/time", "query/segmentAndCache/time", "query/cpu/time"]:
 	overallStats = historicalmetrics.getOverallMetric(metric)
 	if "/" in metric:
 		newmetrics = metric.replace("/", "-")
@@ -85,7 +85,7 @@ for metric in ["query/time"]:
 	filename = resultfolder + "/broker" + "-" + newmetrics + ".log"
 	Utils.writeOverallMetricStats(filename, overallStats, stats, headerStr)
 
-for metric in ["query/time"]:
+for metric in ["query/time", "query/node/time", "query/intervalChunk/time"]:
 	overallStats = brokermetrics.getOverallMetric(metric)
 	if "/" in metric:
 		newmetrics = metric.replace("/", "-")
