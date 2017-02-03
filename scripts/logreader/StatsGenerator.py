@@ -85,7 +85,7 @@ for metric in ["query/time"]:
 	filename = resultfolder + "/broker" + "-" + newmetrics + ".log"
 	Utils.writeOverallMetricStats(filename, overallStats, stats, headerStr)
 
-for metric in ["query/time", "query/node/time", "query/intervalChunk/time"]:
+for metric in ["query/time", "query/node/time"]:
 	overallStats = brokermetrics.getOverallMetric(metric)
 	if "/" in metric:
 		newmetrics = metric.replace("/", "-")

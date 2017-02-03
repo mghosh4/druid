@@ -87,6 +87,7 @@ class DruidNodeLogReader:
         overalllist = list()
         for count in xrange(self.numnodes):
             overalllist.extend(self.metricvalues[count][metric].values())
+	return overalllist
 
     def getOverallStats(self, metric, stats):
         overalllist = self.getOverallMetric(metric)

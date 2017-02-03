@@ -71,6 +71,7 @@ class Utils(object):
     @staticmethod
     def writeToFile(filename, data):
         if not os.path.exists(os.path.dirname(filename)):
+	    print "filename 2: " + filename
             os.makedirs(os.path.dirname(filename))
 
         file = open(filename, "w")
@@ -79,7 +80,8 @@ class Utils(object):
             file.write(' ' + str(v) + '\n')
 
     @staticmethod
-    def writeCDF(values, filename):
+    def writeCDF(filename, values):
+	print "filename 3: " + filename
         valueCDF = Utils.createCDF(values)
         Utils.writeToFile(filename, valueCDF)
         
