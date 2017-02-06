@@ -20,9 +20,11 @@
 package io.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
@@ -30,6 +32,7 @@ import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+
 import io.druid.client.CachingQueryRunner;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
@@ -64,12 +67,15 @@ import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.PartitionHolder;
+
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
@@ -336,6 +342,32 @@ public class ServerManager implements QuerySegmentWalker
         cpuTimeAccumulator,
         true
     );
+  }
+  
+  public String getConcurrentAccessMap()
+  {
+	String result = null;
+	
+	try {
+		Map<String, Integer> concurrentAccessMap = Maps.newHashMap();
+		for (Map.Entry<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> dataSource : dataSources.entrySet())
+		{
+			List<PartitionHolder<ReferenceCountingSegment>> partitionList = dataSource.getValue().getAllObjects();
+            for (PartitionHolder<ReferenceCountingSegment> partition : partitionList)
+            {
+                for (ReferenceCountingSegment segment : partition.payloads())
+                    concurrentAccessMap.put(segment.getIdentifier(), segment.getAndClearMaxConcurrentAccess());
+            }
+		}
+		
+		result = objectMapper.writeValueAsString(concurrentAccessMap);
+		log.info("Serializing Concurrent Access Map [%d]", result.length());
+	} catch (JsonProcessingException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+	
+	return result;	
   }
 
   private String getDataSourceName(DataSource dataSource)

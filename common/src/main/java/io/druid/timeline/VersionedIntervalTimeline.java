@@ -374,6 +374,20 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
     return retVal;
   }
 
+  public List<PartitionHolder<ObjectType>> getAllObjects()
+  {
+      List<PartitionHolder<ObjectType>> objectList = Lists.newArrayList();
+      for (Map.Entry<Interval, TreeMap<VersionType, TimelineEntry>> entry : allTimelineEntries.entrySet()) 
+      {
+          for (Map.Entry<VersionType, TimelineEntry> segmentEntry : entry.getValue().entrySet())
+          {
+            objectList.add(segmentEntry.getValue().getPartitionHolder());
+          }
+      }
+
+      return objectList;
+  }
+
   private void addIntervalToTimeline(
       Interval interval,
       TimelineEntry entry,

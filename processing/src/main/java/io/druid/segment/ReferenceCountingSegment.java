@@ -37,8 +37,7 @@ public class ReferenceCountingSegment implements Segment
   private volatile int numReferences = 0;
   private volatile boolean isClosed = false;
   
-  private volatile int NumPerSecReferences = 0;
-  private volatile long lastUpdatedTime = System.currentTimeMillis();
+  private volatile int maxReference = 0;
 
   public ReferenceCountingSegment(Segment baseSegment)
   {
@@ -62,14 +61,10 @@ public class ReferenceCountingSegment implements Segment
     return numReferences;
   }
   
-  public int getNumPerSecReferences(){
-	  long currentTime = System.currentTimeMillis();
-	  if(currentTime-lastUpdatedTime >1000){
-		  NumPerSecReferences = numReferences;
-		  lastUpdatedTime = currentTime;
-		  return NumPerSecReferences;
-	  }
-	  return NumPerSecReferences;
+  public int getAndClearMaxConcurrentAccess(){
+	int returnValue = maxReference;
+	maxReference = numReferences;
+	return returnValue;
   }
 
   public boolean isClosed()
@@ -152,7 +147,10 @@ public class ReferenceCountingSegment implements Segment
         return null;
       }
 
-      numReferences++;
+      numReferences++;      
+      if (maxReference > numReferences)
+    	  maxReference = numReferences;
+      
       log.info("baseSegment %s",baseSegment.getIdentifier());
       log.info("increase number of references to %d", numReferences);
       final AtomicBoolean decrementOnce = new AtomicBoolean(false);
