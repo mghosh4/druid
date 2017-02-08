@@ -530,11 +530,11 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		for (Map.Entry<DataSegment, List<DruidServerMetadata>> entry : currentTable.entrySet())
 		{
 			DataSegment segment = entry.getKey();
-			if(entry.getValue().size()>1){
-				int count = entry.getValue().size();
+			if(entry.getValue().size() > 1)
+			{			
 				for (DruidServerMetadata server : entry.getValue())
 				{
-					if ((count>1) && (!routingTable.containsKey(segment) || !routingTable.get(segment).keySet().contains(server)))
+					if (!routingTable.containsKey(segment) || !routingTable.get(segment).keySet().contains(server))
 					{
 						log.info("[GETAFIX PLACEMENT] Dropping " + segment.getIdentifier() + " from " + server.getHost());
 						CoordinatorStats dropStats = drop(
@@ -544,11 +544,10 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 								segment
 								);
 						stats.accumulate(dropStats); 
-						count--;
+						break;
 					}
 				}
-			}
-			
+			}			
 		}
 	}
 
