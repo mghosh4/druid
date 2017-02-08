@@ -21,6 +21,7 @@ package io.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
 import io.druid.server.coordination.ZkCoordinator;
+import io.druid.server.coordination.ServerManager;
 
 import javax.inject.Inject;
 import javax.ws.rs.GET;
@@ -33,13 +34,16 @@ import javax.ws.rs.core.Response;
 public class HistoricalResource
 {
   private final ZkCoordinator coordinator;
+  private final ServerManager manager;
 
   @Inject
   public HistoricalResource(
-      ZkCoordinator coordinator
+      ZkCoordinator coordinator,
+      ServerManager manager
   )
   {
     this.coordinator = coordinator;
+    this.manager = manager;
   }
 
   @GET
@@ -49,4 +53,11 @@ public class HistoricalResource
   {
     return Response.ok(ImmutableMap.of("cacheInitialized", coordinator.isStarted())).build();
   }
-}
+
+  @GET
+  @Path("/concurrentAccess")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getConcurrentAccess()
+  {
+    return Response.ok(manager.getConcurrentAccessMap()).build();
+  }}
