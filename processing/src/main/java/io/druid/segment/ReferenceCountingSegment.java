@@ -148,7 +148,7 @@ public class ReferenceCountingSegment implements Segment
       }
 
       numReferences++;      
-      if (maxReference > numReferences)
+      if (maxReference < numReferences)
     	  maxReference = numReferences;
       
       log.info("baseSegment %s",baseSegment.getIdentifier());

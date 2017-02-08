@@ -179,37 +179,35 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 		}
 	}
 
-	private List<String> getHistoricalURLs()
+	private List<String> getHistoricalURLs(DruidCoordinatorRuntimeParams params)
 	{
-		String historicalservice = "druid/historical";
-		ServerDiscoverySelector selector = serverDiscoveryFactory.createSelector(historicalservice);
-		try {
-			selector.start();
-		} catch (Exception e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+		List<ImmutableDruidServer> historicals = new ArrayList<ImmutableDruidServer>();
+		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier()){
+            for (ServerHolder holder : serverQueue){
+			    historicals.add(holder.getServer());
+            }
 		}
 		
-		Collection<Server> historicals = selector.getAll();
-		
 		List<String> uris = new ArrayList<String>(historicals.size());
-		for (Server historical : historicals)
+		for (ImmutableDruidServer historical : historicals)
 		{
 			// Should use threads to fetch in parallel from all brokers
 			URI uri = null;
 			try {
 				uri = new URI(
-						historical.getScheme(),
+					    "http",
 						null,
-						historical.getAddress(),
-						historical.getPort(),
+						historical.getHost().split(":")[0],
+						Integer.parseInt(historical.getHost().split(":")[1]),
 						"/druid/historical/v1/concurrentAccess",
 						null,
 						null);
 			} catch (URISyntaxException e) {
+                log.warn("URI did not get created [%s]", historical.getHost());
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+
 			log.info("URI [%s]", uri.toString());
 			
 			uris.add(uri.toString());
@@ -222,8 +220,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 
 	private void getSegmentsWithLargestContention(DruidCoordinatorRuntimeParams params, Map<DataSegment, Integer> contendedSegments)
 	{
-		log.info("Starting replication. Getting Segment Popularity");
-		List<String> urls = getHistoricalURLs();
+		List<String> urls = getHistoricalURLs(params);
 
 		ExecutorService pool = Executors.newFixedThreadPool(urls.size());
 		List<Future<Map<String, Integer>>> futures = new ArrayList<Future<Map<String, Integer>>>();
