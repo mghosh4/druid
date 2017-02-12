@@ -136,7 +136,6 @@ do
 
         echo "Setting up $node ..."
         COMMAND=''
-        COMMAND=$COMMAND" sudo cat $PATH_TO_SOURCE/scripts/deployment/common.runtime.properties > $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
 
         if [ "$AWS" == "FALSE" ]
         then
