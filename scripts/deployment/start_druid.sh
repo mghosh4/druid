@@ -136,6 +136,7 @@ do
 
         echo "Setting up $node ..."
         COMMAND=''
+        COMMAND=$COMMAND" sudo cat $PATH_TO_SOURCE/scripts/deployment/common.runtime.properties > $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
 
         if [ "$AWS" == "FALSE" ]
         then
@@ -294,7 +295,6 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        COMMAND=$COMMAND" sudo cat $PATH_TO_SOURCE/scripts/deployment/common.runtime.properties > $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '105s@.*@druid.monitoring.monitors=[\"com.metamx.metrics.SysMonitor\",\"com.metamx.metrics.JvmMonitor\"]@' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$OVERLORD_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/overlord/runtime.properties;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -Duser.timezone=UTC -Dlogfilename=overlord-$counter -Dfile.encoding=UTF-8 -classpath 'conf/druid/_common:conf/druid/overlord:lib/*' io.druid.cli.Main server overlord;"
