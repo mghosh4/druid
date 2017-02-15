@@ -21,9 +21,6 @@ package io.druid.segment.realtime;
 
 import com.google.common.base.Throwables;
 import com.metamx.common.Pair;
-import com.metamx.emitter.EmittingLogger;
-
-import io.druid.query.ReferenceCountingSegmentQueryRunner;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.Segment;
@@ -40,7 +37,6 @@ public class FireHydrant
   private volatile IncrementalIndex index;
   private volatile ReferenceCountingSegment adapter;
   private Object swapLock = new Object();
-  private static final EmittingLogger log = new EmittingLogger(FireHydrant.class);
 
   public FireHydrant(
       IncrementalIndex index,
@@ -103,7 +99,6 @@ public class FireHydrant
   {
     // Prevent swapping of index before increment is called
     synchronized (swapLock) {
-      //log.info("adapter plus one, hydrant id [%s], count [%s], segment content [%s]", this.index.toString(), this.count, this.adapter.getIdentifier());
       Closeable closeable = adapter.increment();
       return new Pair<Segment, Closeable>(adapter, closeable);
     }
