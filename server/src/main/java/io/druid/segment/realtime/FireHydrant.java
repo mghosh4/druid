@@ -103,7 +103,7 @@ public class FireHydrant
   {
     // Prevent swapping of index before increment is called
     synchronized (swapLock) {
-      log.info("adapter plus one, hydrant id [%s], count [%s], segment content [%s]", this.index.toString(), this.count, this.adapter.getIdentifier());
+      //log.info("adapter plus one, hydrant id [%s], count [%s], segment content [%s]", this.index.toString(), this.count, this.adapter.getIdentifier());
       Closeable closeable = adapter.increment();
       return new Pair<Segment, Closeable>(adapter, closeable);
     }
