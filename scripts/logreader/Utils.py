@@ -81,13 +81,12 @@ class Utils(object):
 
     @staticmethod
     def writeCDF(filename, values):
-	print "filename 3: " + filename
         valueCDF = Utils.createCDF(values)
         Utils.writeToFile(filename, valueCDF)
         
     @staticmethod
-    def percentile99(l):
-        return numpy.percentile(l, 99)
+    def percentile95(l):
+        return numpy.percentile(l, 95)
         
     @staticmethod
     def percentile90(l):

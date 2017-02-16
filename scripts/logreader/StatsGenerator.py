@@ -37,56 +37,54 @@ num_c_nodes = config.getNumCoordinatorNodes()
 resultfolder = config.getResultFolder()
 
 ### Parse Logs ###
-coordinatormetrics = DruidNodeLogReader("coordinator", coordinatormetrics, num_c_nodes, logpath, resultfolder)
-brokermetrics = DruidNodeLogReader("broker", brokermetrics, num_b_nodes, logpath, resultfolder)
-historicalmetrics = DruidNodeLogReader("historical", historicalmetrics, num_h_nodes, logpath, resultfolder)
+coordinatormetric = DruidNodeLogReader("coordinator", coordinatormetrics, num_c_nodes, logpath, resultfolder)
+brokermetric = DruidNodeLogReader("broker", brokermetrics, num_b_nodes, logpath, resultfolder)
+historicalmetric = DruidNodeLogReader("historical", historicalmetrics, num_h_nodes, logpath, resultfolder)
 
 ### Print Metrics ###
-coordinatormetrics.writeMetrics()
-brokermetrics.writeMetrics()
-historicalmetrics.writeMetrics()
+coordinatormetric.writeMetrics()
+brokermetric.writeMetrics()
+historicalmetric.writeMetrics()
 
 ### Historical Metrics ###
 stats = [sum, numpy.mean, max, min]
 headerStr = "Time\tTotal\tMean\tMax\tMin\n"
 
-for metric in ["segment/count", "sys/mem/used"]:
-	aggValues = historicalmetrics.getAggregateStats(metric, stats)
-	
-	if "/" in metric:
-		newmetrics = metric.replace("/", "-")
-	else:
-		newmetrics = metric
-		
-	filename = resultfolder + "/historical" + "-" + newmetrics + ".log"
-	Utils.writeTimeSeriesMetricStats(filename, aggValues, stats, headerStr)
+for metric in historicalmetrics:
+    aggValues = historicalmetric.getAggregateStats(metric, stats)
+    
+    if "/" in metric:
+        newmetrics = metric.replace("/", "-")
+    else:
+        newmetrics = metric
 
-for metric in ["query/time", "query/wait/time", "query/segment/time", "query/segmentAndCache/time", "query/cpu/time"]:
-	overallStats = historicalmetrics.getOverallMetric(metric)
-	if "/" in metric:
-		newmetrics = metric.replace("/", "-")
-	else:
-		newmetrics = metric
-
-	filename = resultfolder + "/historical" + "-" + newmetrics + ".cdf"
-	Utils.writeCDF(filename, overallStats)
+    filename = resultfolder + "/historical" + "-" + newmetrics + ".log"
+    Utils.writeTimeSeriesMetricStats(filename, aggValues, stats, headerStr)
 
 ### Broker Metrics ###
-stats = [numpy.mean, numpy.median, Utils.percentile99, Utils.percentile90, Utils.percentile75]
-headerStr = "\tMean\tMedian\t99th Percentile\t95th Percentile\t75th Percentile\n"
+
+##Query Runtime
+stats = [numpy.median, Utils.percentile75, Utils.percentile90, Utils.percentile95]
+headerStr = "Median\t75th Percentile\t90th Percentile\t95th Percentile\n"
+overallStats = brokermetric.getOverallStats("query/time", stats)
+newmetrics = "query/time".replace("/", "-")
+filename = resultfolder + "/broker" + "-" + newmetrics + ".log"
+Utils.writeOverallMetricStats(filename, overallStats, stats, headerStr)
+
+##Query Throughput
+#totalqueries = len(brokermetric.getOverallMetric("query/time"))
+#throughputstats = dict()
+#percentage = [0.5, 0.75, 0.9, 0.95]
+#count = 0
+#for stat in stats:
+#    print(count, stat)
+#    throughputstats[stat] = totalqueries * percentage[count] / overallStats[stat]
+#    count = count + 1
+#filename = resultfolder + "/query-throughput.log"
+#Utils.writeOverallMetricStats(filename, throughputstats, stats, headerStr)
 
 for metric in ["query/time"]:
-	overallStats = brokermetrics.getOverallStats(metric, stats)
-	if "/" in metric:
-		newmetrics = metric.replace("/", "-")
-	else:
-		newmetrics = metric
-		
-	filename = resultfolder + "/broker" + "-" + newmetrics + ".log"
-	Utils.writeOverallMetricStats(filename, overallStats, stats, headerStr)
-
-for metric in ["query/time", "query/node/time"]:
-	overallStats = brokermetrics.getOverallMetric(metric)
+	overallStats = brokermetric.getOverallMetric(metric)
 	if "/" in metric:
 		newmetrics = metric.replace("/", "-")
 	else:

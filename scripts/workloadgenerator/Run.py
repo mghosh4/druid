@@ -54,8 +54,8 @@ def signal_term_handler(signum, frame):
     traceback.print_stack(frame)
     sys.exit(0)
 
-def applyOperation(query, config, logger):
-    dbOpsHandler = AsyncDBOpsHandler(config)
+def applyOperation(query, config, brokerNameUrl, logger):
+    dbOpsHandler = AsyncDBOpsHandler(config, brokerNameUrl)
     if querytype == "timeseries":
         return dbOpsHandler.timeseries(query, logger)
     elif querytype == "topn":
@@ -87,7 +87,7 @@ def threadoperation(queryPerSec):
             nextminute = time + timedelta(minutes=1)
             for query in newquerylist:
                 try:
-                    line.append(applyOperation(query, config, logger))
+                    line.append(applyOperation(query, config, brokernameurl, logger))
                 except Exception as inst:
                     logger.error(type(inst))     # the exception instance
                     logger.error(inst.args)      # arguments stored in .args
@@ -118,7 +118,7 @@ def threadoperation(queryPerSec):
     
                 for query in newquerylist:
                     try:
-                        line.append(applyOperation(query, config, logger))
+                        line.append(applyOperation(query, config, brokernameurl, logger))
                     except Exception as inst:
                         logger.error(type(inst))     # the exception instance
                         logger.error(inst.args)      # arguments stored in .args
@@ -159,9 +159,19 @@ opspersecond = config.getOpsPerSecond()
 runtime = config.getRunTime() # in minutes
 isbatch = config.getBatchExperiment()
 filename = config.getFileName()
+brokernameurl = config.getBrokerNodeUrl()
+outputfilename = 'workloadgenerator.log'
+
+if len(sys.argv) == 4:
+    outputfilename = sys.argv[3]
+
+if len(sys.argv) >= 3:
+    brokernameurl = sys.argv[2]
+
+print(outputfilename, brokernameurl)
 
 logKey = 'workloadgen'
-logfilename = logfolder + '/' + 'workloadgenerator.log'
+logfilename = logfolder + '/' + outputfilename
 logformat = '%(asctime)s (%(threadName)-10s) %(message)s'
 
 logger = logging.getLogger(logKey)
@@ -190,7 +200,7 @@ lastthreadthroughput = opspersecond % SINGLE_THREAD_THROUGHPUT
 timeAccessGenerator = DistributionFactory.createSegmentDistribution(accessdistribution)
 periodAccessGenerator = DistributionFactory.createSegmentDistribution(perioddistribution)
 
-newquery = PyDruid(config.getBrokerNodeUrl(), config.getBrokerEndpoint())
+newquery = PyDruid(brokernameurl, config.getBrokerEndpoint())
 tb = newquery.time_boundary(datasource=config.getDataSource())
 
 startdict = tb[0]
@@ -204,7 +214,7 @@ end = utc.localize(end)
 minqueryperiod = 0
 maxqueryperiod = int((end - start).total_seconds())
 
-AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient", max_clients=100)
+AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient", max_clients=(opspersecond + 20))
 
 t1 = datetime.now()
 for i in xrange(numthreads): 

@@ -10,15 +10,16 @@ from Query import Query
 
 class AsyncDBOpsHandler:
 
-    def __init__(self, config):
+    def __init__(self, config, brokerNameUrl):
         self.config = config
+        self.brokerNameUrl = brokerNameUrl
 
     def getConfig(self):
         return self.config
 
     def getAsyncPyDruid(self):
         config = self.getConfig()
-        newquery = AsyncPyDruid(config.getBrokerNodeUrl(), config.getBrokerEndpoint())
+        newquery = AsyncPyDruid(self.brokerNameUrl, config.getBrokerEndpoint())
         return newquery
 
     @gen.coroutine

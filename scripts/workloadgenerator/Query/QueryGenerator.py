@@ -37,13 +37,13 @@ class QueryGenerator(object):
 			querylist.append(q)
 			#print "interval: " + q.interval
 			#print "index: " , q.index
-			print "starttime: " , q.startTime
-			for j in xrange(periodlist[i]):
-				if (q.startTime+dt.timedelta(seconds=periodlist[i])) in historgram:
-					historgram[q.startTime+dt.timedelta(seconds=periodlist[i])] = historgram[q.startTime+dt.timedelta(seconds=periodlist[i])]+1;
-				else:
-					historgram[q.startTime+dt.timedelta(seconds=periodlist[i])] = 1
-			print histogram
+			#print "starttime: " , q.startTime
+			#for j in xrange(int(periodlist[i])):
+			#	if (q.startTime+dt.timedelta(seconds=int(periodlist[i]))) in historgram:
+			#		historgram[q.startTime+dt.timedelta(seconds=int(periodlist[i]))] = historgram[q.startTime+dt.timedelta(seconds=periodlist[i])]+1;
+			#	else:
+			#		historgram[q.startTime+dt.timedelta(seconds=int(periodlist[i]))] = 1
+			#print histogram
 
 		return querylist
     

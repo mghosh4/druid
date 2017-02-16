@@ -218,6 +218,7 @@ do
     if [ $TYPE_OF_STOP -eq 1 ]
     then
         COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/middlemanager-$counter.log;"
+        COMMAND=$COMMAND"sudo rm -r -f /mnt/*;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "middle manager server shutdown command is $COMMAND"
@@ -237,6 +238,7 @@ do
     if [ $TYPE_OF_STOP -eq 1 ]
     then
         COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/overlord-$counter.log;"
+        COMMAND=$COMMAND"sudo rm -r -f /mnt/*;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "overlord server shutdown command is $COMMAND"
@@ -256,6 +258,7 @@ do
     if [ $TYPE_OF_STOP -eq 1 ]
     then
         COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/broker-$counter.log;"
+        COMMAND=$COMMAND"sudo rm -r -f /mnt/*;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "Broker server shutdown command is $COMMAND"
@@ -275,6 +278,7 @@ do
     if [ $TYPE_OF_STOP -eq 1 ]
     then
         COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/realtime-$counter.log;"
+        COMMAND=$COMMAND"sudo rm -r -f /mnt/*;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "Realtime server shutdown command is $COMMAND"
@@ -295,6 +299,7 @@ do
     if [ $TYPE_OF_STOP -eq 1 ]
     then
         COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/coordinator-$counter.log;"
+        COMMAND=$COMMAND"sudo rm -r -f /mnt/*;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "Config server shutdown command is $COMMAND"
@@ -314,7 +319,7 @@ do
     if [ $TYPE_OF_STOP -eq 1 ]
     then
         COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/historical-$counter.log;"
-        COMMAND=$COMMAND" sudo rm -rf /mnt/druid;"
+        COMMAND=$COMMAND"sudo rm -r -f /mnt/*;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "Historical server shutdown command is $COMMAND"
