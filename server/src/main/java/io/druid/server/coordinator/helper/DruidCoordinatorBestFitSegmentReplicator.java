@@ -407,11 +407,11 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		//3. construct after map
 		HashMap< Integer, HashMap<DataSegment, Integer>>  afterMap = DruidCoordinatorReplicatorHelper.constructReverseMap(routingTable, metadataToIDMap);
 
-		//4. build costMatrix
-		int[][] costMatrix = DruidCoordinatorReplicatorHelper.buildCostMatrix(beforeMap, afterMap);
+		if(beforeMap.size()>0 && afterMap.size()>0 && beforeMap.size()==afterMap.size()) {
+			//4. build costMatrix
+			int[][] costMatrix = DruidCoordinatorReplicatorHelper.buildCostMatrix(beforeMap, afterMap);
 
-		//5. Hungarian Matching
-		if(costMatrix.length>=1) {
+			//5. Hungarian Matching
 			int[] hungarianMap = DruidCoordinatorReplicatorHelper.hungarianMatching(costMatrix);
 
 			//6. replace all modified variable based on map
