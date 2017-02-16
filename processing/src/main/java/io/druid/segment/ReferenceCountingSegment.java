@@ -50,14 +50,12 @@ public class ReferenceCountingSegment implements Segment
       if (isClosed) {
         return null;
       }
-      log.info("Get base segment, %s", baseSegment.getIdentifier());
       return baseSegment;
     }
   }
 
   public int getNumReferences()
   {
-	log.info("number of references %d", numReferences);
     return numReferences;
   }
   
@@ -79,7 +77,6 @@ public class ReferenceCountingSegment implements Segment
       if (isClosed) {
         return null;
       }
-      log.info("get Identifier", baseSegment.getIdentifier());
       return baseSegment.getIdentifier();
     }
   }
@@ -91,7 +88,6 @@ public class ReferenceCountingSegment implements Segment
       if (isClosed) {
         return null;
       }
-      log.info("get data interval", baseSegment.getDataInterval().toString());
       return baseSegment.getDataInterval();
     }
   }
@@ -125,16 +121,13 @@ public class ReferenceCountingSegment implements Segment
   {
     synchronized (lock) {
       if (isClosed) {
-        log.info("Failed to close, %s is closed already", baseSegment.getIdentifier());
         return;
       }
 
       if (numReferences > 0) {
-        log.info("%d references to %s still exist. Decrementing.", numReferences, baseSegment.getIdentifier());
 
         decrement();
       } else {
-        log.info("Closing %s", baseSegment.getIdentifier());
         innerClose();
       }
     }
@@ -151,8 +144,6 @@ public class ReferenceCountingSegment implements Segment
       if (maxReference < numReferences)
     	  maxReference = numReferences;
       
-      log.info("baseSegment %s",baseSegment.getIdentifier());
-      log.info("increase number of references to %d", numReferences);
       final AtomicBoolean decrementOnce = new AtomicBoolean(false);
       return new Closeable()
       {
@@ -173,14 +164,11 @@ public class ReferenceCountingSegment implements Segment
       if (isClosed) {
         return;
       }
-      log.info("decrement count for segment %s",getIdentifier());
       if (--numReferences < 0) {
         try {
-          log.info("segment %s reference count less than 0, close it",getIdentifier());
           innerClose();
         }
         catch (Exception e) {
-          log.error("Unable to close queryable index %s", getIdentifier());
         }
       }
     }
@@ -189,7 +177,6 @@ public class ReferenceCountingSegment implements Segment
   private void innerClose() throws IOException
   {
     synchronized (lock) {
-      log.info("Closing %s, numReferences: %d", baseSegment.getIdentifier(), numReferences);
 
       isClosed = true;
       baseSegment.close();
