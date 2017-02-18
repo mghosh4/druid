@@ -158,7 +158,6 @@ do
     then
         COMMAND=$COMMAND" sudo rm -rf /mnt/kafkalogs;"
         COMMAND=$COMMAND" sudo rm -rf /tmp/*;"
-        COMMAND=$COMMAND" sudo rm -rf $LOG_FILE/workloadgenerator.log;" 
     fi
     echo "kafka server shutdown command is $COMMAND"
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
@@ -218,7 +217,7 @@ do
     if [ $TYPE_OF_STOP -eq 1 ]
     then
         COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/middlemanager-$counter.log;"
-        COMMAND=$COMMAND"sudo rm -r -f /mnt/*;"
+        COMMAND=$COMMAND" sudo rm -r -f /mnt/*;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "middle manager server shutdown command is $COMMAND"
@@ -238,7 +237,7 @@ do
     if [ $TYPE_OF_STOP -eq 1 ]
     then
         COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/overlord-$counter.log;"
-        COMMAND=$COMMAND"sudo rm -r -f /mnt/*;"
+        COMMAND=$COMMAND" sudo rm -r -f /mnt/*;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "overlord server shutdown command is $COMMAND"
@@ -258,7 +257,9 @@ do
     if [ $TYPE_OF_STOP -eq 1 ]
     then
         COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/broker-$counter.log;"
-        COMMAND=$COMMAND"sudo rm -r -f /mnt/*;"
+        COMMAND=$COMMAND" sudo rm -r -f /mnt/*;"
+        COMMAND=$COMMAND" sudo rm -r -f $LOG_FILE/broker;"
+        COMMAND=$COMMAND" sudo rm -rf $LOG_FILE/workloadgenerator-${node}.log;" 
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "Broker server shutdown command is $COMMAND"
@@ -278,7 +279,8 @@ do
     if [ $TYPE_OF_STOP -eq 1 ]
     then
         COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/realtime-$counter.log;"
-        COMMAND=$COMMAND"sudo rm -r -f /mnt/*;"
+        COMMAND=$COMMAND" sudo rm -r -f /mnt/*;"
+        COMMAND=$COMMAND" sudo rm -r -f $LOG_FILE/realtime;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "Realtime server shutdown command is $COMMAND"
@@ -299,7 +301,7 @@ do
     if [ $TYPE_OF_STOP -eq 1 ]
     then
         COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/coordinator-$counter.log;"
-        COMMAND=$COMMAND"sudo rm -r -f /mnt/*;"
+        COMMAND=$COMMAND" sudo rm -r -f /mnt/*;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "Config server shutdown command is $COMMAND"
@@ -319,7 +321,8 @@ do
     if [ $TYPE_OF_STOP -eq 1 ]
     then
         COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/historical-$counter.log;"
-        COMMAND=$COMMAND"sudo rm -r -f /mnt/*;"
+        COMMAND=$COMMAND" sudo rm -r -f /mnt/*;"
+        COMMAND=$COMMAND" sudo rm -r -f $LOG_FILE/historical-$counter;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     echo "Historical server shutdown command is $COMMAND"

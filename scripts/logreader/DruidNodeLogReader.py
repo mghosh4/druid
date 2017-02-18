@@ -28,6 +28,9 @@ class DruidNodeLogReader:
                         event = line[eventindex+6:]
                         y = json.loads(event)
 
+			if y[0]['metric'] != metric:
+				continue
+
                         if (metric not in self.metricvalues[count]):
                             self.metricvalues[count][metric] = dict()
                         timestamp = datetime.strptime(y[0]['timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ')

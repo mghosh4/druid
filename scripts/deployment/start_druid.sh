@@ -181,8 +181,8 @@ do
         COMMAND=$COMMAND" sudo sed -i '7s@.*@        <File name=\"File\" fileName=\"$LOG_FILE/\${sys:logfilename}.log\">@' $COMMON_LOG4J2/log4j2.xml;"
         COMMAND=$COMMAND" cd $PATH_TO_ZOOKEEPER;"
         COMMAND=$COMMAND" sudo sed -i '36s/.*/druid.zk.service.host=$ZOOKEEPER_NODE_HOST/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
-        COMMAND=$COMMAND" sudo sed -i '86s/.*/druid.request.logging.type=file/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
-        COMMAND=$COMMAND" sudo sed -i '87s@.*@druid.request.logging.dir=$LOG_FILE@' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+        #COMMAND=$COMMAND" sudo sed -i '86s/.*/druid.request.logging.type=file/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+        #COMMAND=$COMMAND" sudo sed -i '87s@.*@druid.request.logging.dir=$LOG_FILE@' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
         COMMAND=$COMMAND" sudo ZOO_LOG_DIR=$LOG_FILE ZOO_LOG4J_PROP='INFO,ROLLINGFILE' ./bin/zkServer.sh start;"
 
         echo "zookeeper node startup command is $COMMAND"
@@ -366,6 +366,7 @@ do
         #COMMAND=$COMMAND" mkdir $PATH_TO_DRUID_BIN/conf/druid/historical;"
         COMMAND=$COMMAND" sudo cat $PATH_TO_SOURCE/scripts/deployment/historical.properties > $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$HISTORICAL_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"      
+        COMMAND=$COMMAND" sudo sed -i '18s@.*@druid.request.logging.dir=$LOG_FILE/historical-$counter@' $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"      
 
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Dlogfilename=historical-$counter -Djava.io.tmpdir='/mnt' -classpath 'conf/druid/_common:conf/druid/historical:lib/*' io.druid.cli.Main server historical;"
 
@@ -395,12 +396,14 @@ do
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$BROKER_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         if [ "$REPLICATION_RULE" == "getafix" ]
         then
-            COMMAND=$COMMAND" sudo sed -i '18s@.*druid.broker.balancer.type=getafix@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
+            COMMAND=$COMMAND" sudo sed -i '12s@.*druid.broker.balancer.type=getafix@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         fi 
+        COMMAND=$COMMAND" sudo sed -i '15s@.*@druid.request.logging.dir=$LOG_FILE/broker@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Duser.timezone=UTC -Dlogfilename=broker-$counter -Dfile.encoding=UTF-8 -Djava.io.tmpdir='/mnt' -classpath 'conf/druid/_common:conf/druid/broker:lib/*' io.druid.cli.Main server broker;"
 
         echo "Broker node startup command is $COMMAND"
         let counter=counter+1
+	sleep 1
     #ssh to node and run command
         ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
@@ -454,6 +457,7 @@ do
         COMMAND=$COMMAND" mkdir $PATH_TO_DRUID_BIN/conf/druid/realtime;"
         COMMAND=$COMMAND" sudo cat $PATH_TO_SOURCE/scripts/deployment/realtime.properties > $PATH_TO_DRUID_BIN/conf/druid/realtime/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$REALTIME_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/realtime/runtime.properties;"
+        COMMAND=$COMMAND" sudo sed -i '12s@.*@druid.request.logging.dir=$LOG_FILE/realtime@' $PATH_TO_DRUID_BIN/conf/druid/realtime/runtime.properties;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Dlogfilename=realtime-$counter -Ddruid.realtime.specFile=$SPEC_FILE -Djava.io.tmpdir='/mnt' -classpath 'conf/druid/_common:conf/druid/realtime:lib/*' io.druid.cli.Main server realtime;"
         echo "Realtime node startup command is $COMMAND"
 
