@@ -110,22 +110,24 @@ def threadoperation(queryPerSec):
             while True:
                 time = datetime.now(timezone('UTC'))
                 logger.info("Time: {}".format(time.strftime("%Y-%m-%d %H:%M:%S")))
-                if time >= endtime:
+                querytime = time - timedelta(minutes=3)
+                if querytime >= endtime:
                     break
 
-                #Query generated every minute. This is to optimize the overhead of query generation and also because segment granularity is minute
-                newquerylist = QueryGenerator.generateQueries(start, time, querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist)
+                if start < querytime:
+                    #Query generated every minute. This is to optimize the overhead of query generation and also because segment granularity is minute
+                    newquerylist = QueryGenerator.generateQueries(start, querytime, querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist)
     
-                for query in newquerylist:
-                    try:
-                        line.append(applyOperation(query, config, brokernameurl, logger))
-                    except Exception as inst:
-                        logger.error(type(inst))     # the exception instance
-                        logger.error(inst.args)      # arguments stored in .args
-                        logger.error(inst)           # __str__ allows args to be printed directly
-                        x, y = inst.args
-                        logger.error('x =', x)
-                        logger.error('y =', y)
+                    for query in newquerylist:
+                        try:
+                            line.append(applyOperation(query, config, brokernameurl, logger))
+                        except Exception as inst:
+                            logger.error(type(inst))     # the exception instance
+                            logger.error(inst.args)      # arguments stored in .args
+                            logger.error(inst)           # __str__ allows args to be printed directly
+                            x, y = inst.args
+                            logger.error('x =', x)
+                            logger.error('y =', y)
         
 
                 nextminute = time + timedelta(minutes=1)
