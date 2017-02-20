@@ -220,6 +220,7 @@ do
         COMMAND=$COMMAND" sudo rm -r -f /mnt/*;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
+    COMMAND=$COMMAND" sudo pkill -9 \"python\";"
     echo "middle manager server shutdown command is $COMMAND"
     let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
@@ -240,6 +241,7 @@ do
         COMMAND=$COMMAND" sudo rm -r -f /mnt/*;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
+    COMMAND=$COMMAND" sudo pkill -9 \"python\";"
     echo "overlord server shutdown command is $COMMAND"
     let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
@@ -262,6 +264,7 @@ do
         COMMAND=$COMMAND" sudo rm -rf $LOG_FILE/workloadgenerator-${node}.log;" 
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
+    COMMAND=$COMMAND" sudo pkill -9 \"python\";"
     echo "Broker server shutdown command is $COMMAND"
     let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
@@ -283,6 +286,7 @@ do
         COMMAND=$COMMAND" sudo rm -r -f $LOG_FILE/realtime;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
+    COMMAND=$COMMAND" sudo pkill -9 \"python\";"
     echo "Realtime server shutdown command is $COMMAND"
     let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
@@ -304,6 +308,7 @@ do
         COMMAND=$COMMAND" sudo rm -r -f /mnt/*;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
+    COMMAND=$COMMAND" sudo pkill -9 \"python\";"
     echo "Config server shutdown command is $COMMAND"
     let counter=counter+1;
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
@@ -325,6 +330,7 @@ do
         COMMAND=$COMMAND" sudo rm -r -f $LOG_FILE/historical-$counter;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
+    COMMAND=$COMMAND" sudo pkill -9 \"python\";"
     echo "Historical server shutdown command is $COMMAND"
     let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
