@@ -64,8 +64,8 @@ for metric in historicalmetrics:
 ### Broker Metrics ###
 
 ##Query Runtime
-stats = [numpy.median, Utils.percentile75, Utils.percentile90, Utils.percentile95]
-headerStr = "Median\t75th Percentile\t90th Percentile\t95th Percentile\n"
+stats = [numpy.median, Utils.percentile75, Utils.percentile90, Utils.percentile95, Utils.percentile99]
+headerStr = "Median\t75th Percentile\t90th Percentile\t95th Percentile\t99th Percentile\n"
 overallStats = brokermetric.getOverallStats("query/time", stats)
 newmetrics = "query/time".replace("/", "-")
 filename = resultfolder + "/broker" + "-" + newmetrics + ".log"

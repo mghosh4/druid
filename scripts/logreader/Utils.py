@@ -85,6 +85,10 @@ class Utils(object):
         Utils.writeToFile(filename, valueCDF)
         
     @staticmethod
+    def percentile99(l):
+        return numpy.percentile(l, 99)
+        
+    @staticmethod
     def percentile95(l):
         return numpy.percentile(l, 95)
         
