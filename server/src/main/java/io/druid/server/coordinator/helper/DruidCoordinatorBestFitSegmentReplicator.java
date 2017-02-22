@@ -75,6 +75,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import static io.druid.server.coordinator.helper.DruidCoordinatorReplicatorHelper.buildCostMatrix;
+import static io.druid.server.coordinator.helper.DruidCoordinatorReplicatorHelper.constructReverseMap;
+
 public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinatorHelper
 {
 	private final DruidCoordinator coordinator;
@@ -378,7 +381,17 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		{
 			maxheap.add(new Tuple(entry.getKey(), entry.getValue()));
 		}
-		
+
+		//1.1 map all server metadata to IDs
+		HashMap<DruidServerMetadata, Integer> metadataToIDMap = DruidCoordinatorReplicatorHelper.metadataToID(nodeCapacities);
+		//1.2 map all ID to server metadata
+		HashMap<Integer, DruidServerMetadata> IDToMetadataMap = DruidCoordinatorReplicatorHelper.IDToMetadata(metadataToIDMap);
+		//2. construct before map
+
+		log.info("Construct Before Map");
+		HashMap< Integer, HashMap<DataSegment, Integer>>  beforeMap = DruidCoordinatorReplicatorHelper.constructReverseMap(coordinator.getRoutingTable(), metadataToIDMap);
+
+
 		Multiset<DataSegment> expectedCount = HashMultiset.create();
 		while (maxheap.peek() != null)
 		{
@@ -392,7 +405,39 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 				maxheap.add(new Tuple(candidate.segment, valleft));
 			}
 		}
+		log.info("Routing table before hungarian:");
+		for(Map.Entry<DataSegment, HashMap<DruidServerMetadata, Long>> entry : coordinator.getRoutingTable().entrySet()){
+			log.info("Segment [%s]:", entry.getKey().getIdentifier());
+			for(Map.Entry<DruidServerMetadata, Long> e: entry.getValue().entrySet()){
+				log.info("[%s]: [%s]", e.getKey().getHost(), e.getValue());
+			}
+		}
+		//3. construct after map
+		log.info("Construct After Map");
+		HashMap< Integer, HashMap<DataSegment, Integer>>  afterMap = DruidCoordinatorReplicatorHelper.constructReverseMap(routingTable, metadataToIDMap);
 
+		if(beforeMap.size()>0 && afterMap.size()>0 && beforeMap.size()==afterMap.size()) {
+			//4. build costMatrix
+			int[][] costMatrix = DruidCoordinatorReplicatorHelper.buildCostMatrix(beforeMap, afterMap);
+
+			//5. Hungarian Matching
+			int[] hungarianMap = DruidCoordinatorReplicatorHelper.hungarianMatching(costMatrix);
+
+			log.info("calculateBestFitReplication: Result Mapping:");
+			for(int i=0;i<hungarianMap.length;i++)
+				log.info("Original [%s] New [%s]", i, hungarianMap[i]);
+
+			//6. replace all modified variable based on map
+			//HashMap<DataSegment, HashMap<DruidServerMetadata,Long>>
+			routingTable = DruidCoordinatorReplicatorHelper.rebuildRouting(routingTable, hungarianMap, metadataToIDMap, IDToMetadataMap);
+			log.info("Routing table after hungarian:");
+			for(Map.Entry<DataSegment, HashMap<DruidServerMetadata, Long>> entry : routingTable.entrySet()){
+				log.info("Segment [%s]:", entry.getKey().getIdentifier());
+				for(Map.Entry<DruidServerMetadata, Long> e: entry.getValue().entrySet()){
+					log.info("[%s]: [%s]", e.getKey().getHost(), e.getValue());
+				}
+			}
+		}
 		/*for (Entry<DataSegment> entry : expectedCount.entrySet())
 		{
 			long totalReplicantsInCluster = params.getSegmentReplicantLookup().getTotalReplicants(entry.getElement().getIdentifier());
@@ -456,7 +501,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 				}
 			}
 		}
-		
+
 		if (fits == true)
 		{
 			routingTable.get(candidate.segment).put(minfitServer, val);

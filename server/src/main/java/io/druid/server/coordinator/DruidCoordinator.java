@@ -968,6 +968,8 @@ public class DruidCoordinator
 		return ImmutableList.copyOf(helpers);
 	}
 
+
+
 	public static class DruidCoordinatorVersionConverter implements DruidCoordinatorHelper
 	{
 		private final IndexingServiceClient indexingServiceClient;

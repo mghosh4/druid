@@ -179,6 +179,19 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 		}
 	}
 
+	private void printCurrentTable(HashMap<DataSegment, List<DruidServerMetadata>> currentTable) {
+		log.info("===== CurrentTable =====");
+
+		for(Map.Entry<DataSegment, List<DruidServerMetadata>> entry : currentTable.entrySet()){
+			String list = "";
+			log.info("Segment: [%s]", entry.getKey().getIdentifier());
+			for(DruidServerMetadata m : entry.getValue()){
+				list = list + m.getHost()+';';
+			}
+			log.info("[%s]", list);
+		}
+	}
+
 	private List<String> getHistoricalURLs(DruidCoordinatorRuntimeParams params)
 	{
 		List<ImmutableDruidServer> historicals = new ArrayList<ImmutableDruidServer>();
@@ -345,8 +358,13 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 		{
 			DataSegment segment = entry.getKey();
 			int segmentCount = entry.getValue();
+			if(segmentCount!=0){
+				this.CCAMap.put(segment, Long.valueOf(segmentCount));
+			}
+			else{
+				this.CCAMap.put(segment, 1L);
+			}
 
-			this.CCAMap.put(segment, Long.valueOf(segmentCount));
 			
 			/*if (weightedAccessCounts.containsKey(segment) == false)
 				weightedAccessCounts.put(segment, (long)segmentCount+delta > numServers? numServers : (long)segmentCount+delta);
@@ -356,10 +374,13 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 				weightedAccessCounts.put(segment, ((long)(segmentCount + popularity))> numServers? numServers : (long)(segmentCount + popularity));
 			}*/
 			weightedAccessCounts.put(segment, (long)segmentCount+delta > numServers? numServers : (long)segmentCount+delta);
+			if(weightedAccessCounts.get(segment)==1){
+				log.info("Reduce Segment Access [%s] To 1", segment.getInterval());
+			}
 		}
 		
 		// Remove segments that doesn't appear in the access window
-        Iterator it = weightedAccessCounts.entrySet().iterator();
+        /*Iterator it = weightedAccessCounts.entrySet().iterator();
 		while (it.hasNext())
 		{
             Map.Entry<DataSegment, Long> entry = (Map.Entry<DataSegment, Long>)it.next();
@@ -369,7 +390,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
             	weightedAccessCounts.put(entry.getKey(), 1L);
             	removeList.put(entry.getKey(), (long)(params.getSegmentReplicantLookup().getTotalReplicants(entry.getKey().getIdentifier())-1));
             }
-		}
+		}*/
 	}
 
 	
@@ -399,22 +420,25 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 			log.makeAlert("Cluster has no servers! Check your cluster configuration!").emit();
 			return;
 		}
+
 		
 		//HashMap<DataSegment, List<DruidServerMetadata>> currentTable = new HashMap<DataSegment, List<DruidServerMetadata>>();		
 		for (ImmutableDruidServer server : serverHolderMap.keySet())
 		{
-			/*for (DataSegment segment : server.getSegments().values())
+			for (DataSegment segment : server.getSegments().values())
 			{
                 log.info("Server [%s] has segment [%s]", server.getHost(), segment.getIdentifier());
 				if (!currentTable.containsKey(segment))
 					currentTable.put(segment, new ArrayList<DruidServerMetadata>());
 				currentTable.get(segment).add(server.getMetadata());
-			}*/
+			}
 			
 			if(!nodeVolumes.containsKey(server.getMetadata())){
 				nodeVolumes.put(server.getMetadata(), 0.0);	
 			}
 		}
+
+		printCurrentTable(currentTable);
 
 		for(Map.Entry<DataSegment, Long> entry : weightedAccessCounts.entrySet()){
 			DataSegment targetSegment = entry.getKey();
@@ -428,12 +452,14 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 					HashMap<DruidServerMetadata, Long> valuelist = new HashMap<DruidServerMetadata, Long>();
 					
 					for(Map.Entry<DruidServerMetadata, Double> pair: sortedNodeCapacities.entrySet()){
-						Long cca = this.CCAMap.get(targetSegment);
-						nodeVolumes.put(pair.getKey(), (double) (pair.getValue()+cca/(count)));
-						count++;
-						valuelist.put(pair.getKey(), 0L);
-						if(count>=repFactor)
-							break;
+						if(!currentLocations.contains(pair.getKey())){
+							Long cca = this.CCAMap.get(targetSegment);
+							nodeVolumes.put(pair.getKey(), (double) (pair.getValue()+cca/(double)(count)));
+							count++;
+							valuelist.put(pair.getKey(), 0L);
+							if(count>=repFactor)
+								break;
+						}
 					}
 					
 					//also add current location to the routing list
@@ -442,7 +468,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 						valuelist.put(currentLocation, 0L);
 						logentry = logentry + currentLocation.getHost()+".";
 					}
-					logentry = "Adding target segment " + targetSegment.getIdentifier() + " with value: " + logentry + " to routing table";
+					logentry = "1. Adding target segment " + targetSegment.getIdentifier() + " with value: " + logentry + " to routing table";
 					log.info(logentry);
 					routingTable.put(targetSegment, valuelist); 
 				}
@@ -452,14 +478,15 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 					HashMap<DruidServerMetadata, Long> valuelist = new HashMap<DruidServerMetadata, Long>();
 					
 					for(Map.Entry<DruidServerMetadata, Double> pair: sortedNodeCapacitiesReverse.entrySet()){
-						if(currentLocations.contains(pair.getKey())){//current heaviest loaded server that contains this segment
+						if(currentLocations.contains(pair.getKey())) {//current heaviest loaded server that contains this segment
 							currentLocations.remove(pair.getKey());
+							Long cca = this.CCAMap.get(targetSegment);
+							nodeVolumes.put(pair.getKey(), (double) (pair.getValue() - cca / (double) count));
+							count--;
+							log.info("remove segment [%s] from node [%s]", targetSegment.getIdentifier(), pair.getKey().getHost());
+							if (count <= repFactor)
+								break;
 						}
-						Long cca = this.CCAMap.get(targetSegment);
-						nodeVolumes.put(pair.getKey(), (double) (pair.getValue()-cca/count));
-						count--;
-						if(count<=repFactor)
-							break;
 					}
 					
 					//add the rest of the current loaction to the routing list
@@ -468,7 +495,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 						valuelist.put(currentLocation, 0L);
 						logentry = logentry + currentLocation.getHost()+".";
 					}
-					logentry = "Adding target segment " + targetSegment.getIdentifier() + " with value: " + logentry + " to routing table";
+					logentry = "2. Adding target segment " + targetSegment.getIdentifier() + " with value: " + logentry + " to routing table";
 					log.info(logentry);
 					routingTable.put(targetSegment, valuelist);
 				}
@@ -481,7 +508,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 				String logentry = "";
 				for(Map.Entry<DruidServerMetadata, Double> pair:sortedNodeCapacities.entrySet()){
 					Long cca = this.CCAMap.get(targetSegment);	
-					nodeVolumes.put(pair.getKey(), (double) (pair.getValue()+cca/(count+1)));
+					nodeVolumes.put(pair.getKey(), (double) (pair.getValue()+cca/(double)(count+1)));
 					count++;
 					valuelist.put(pair.getKey(), 0L);
 					logentry = logentry + pair.getKey().getHost()+".";
@@ -489,16 +516,17 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 						break;
 				}
 				routingTable.put(targetSegment, valuelist);
-				logentry = "Creating target segment " + targetSegment.getIdentifier() + " with value: " + logentry + " to routing table";
+				logentry = "3. Creating target segment " + targetSegment.getIdentifier() + " with value: " + logentry + " to routing table";
 				log.info(logentry);
 			}
 		}
 		
 
 	}
-	
-	
-	
+
+
+
+
 	private void manageReplicas(DruidCoordinatorRuntimeParams params, HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable, CoordinatorStats stats, HashMap<DataSegment, List<DruidServerMetadata>> currentTable)
 	{
 		//log.info("Managing Replicas by inserting and removing replicas for relevant data segments");
