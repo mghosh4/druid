@@ -387,6 +387,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		//1.2 map all ID to server metadata
 		HashMap<Integer, DruidServerMetadata> IDToMetadataMap = DruidCoordinatorReplicatorHelper.IDToMetadata(metadataToIDMap);
 		//2. construct before map
+		log.info("Construct Before Map");
 		HashMap< Integer, HashMap<DataSegment, Integer>>  beforeMap = DruidCoordinatorReplicatorHelper.constructReverseMap(coordinator.getRoutingTable(), metadataToIDMap);
 
 
@@ -405,6 +406,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		}
 
 		//3. construct after map
+		log.info("Construct After Map");
 		HashMap< Integer, HashMap<DataSegment, Integer>>  afterMap = DruidCoordinatorReplicatorHelper.constructReverseMap(routingTable, metadataToIDMap);
 
 		if(beforeMap.size()>0 && afterMap.size()>0 && beforeMap.size()==afterMap.size()) {

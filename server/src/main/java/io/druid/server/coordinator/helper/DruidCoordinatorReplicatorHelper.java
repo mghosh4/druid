@@ -74,6 +74,14 @@ public class DruidCoordinatorReplicatorHelper {
             }
         }
 
+        log.info("pringReverseMap:");
+        for(Map.Entry<Integer, HashMap<DataSegment, Integer>> e : ret.entrySet()){
+            log.info("server: [%s] segmentList: ", e.getKey());
+            for(Map.Entry<DataSegment, Integer> entry : e.getValue().entrySet()){
+                log.info("[%s]: [%s]", entry.getKey().getIdentifier(), entry.getValue());
+            }
+        }
+
         return ret;
     }
 
