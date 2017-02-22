@@ -416,9 +416,19 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 			//5. Hungarian Matching
 			int[] hungarianMap = DruidCoordinatorReplicatorHelper.hungarianMatching(costMatrix);
 
+			log.info("calculateBestFitReplication: Result Mapping:");
+			for(int i=0;i<hungarianMap.length;i++)
+				log.info("Original [%s] New [%s]", i, hungarianMap[i]);
+
 			//6. replace all modified variable based on map
 			//HashMap<DataSegment, HashMap<DruidServerMetadata,Long>>
 			routingTable = DruidCoordinatorReplicatorHelper.rebuildRouting(routingTable, hungarianMap, metadataToIDMap, IDToMetadataMap);
+			for(Map.Entry<DataSegment, HashMap<DruidServerMetadata, Long>> entry : routingTable.entrySet()){
+				log.info("Segment [%s]:", entry.getKey().getIdentifier());
+				for(Map.Entry<DruidServerMetadata, Long> e: entry.getValue().entrySet()){
+					log.info("[%s]: [%s]", e.getKey().getHost(), e.getValue());
+				}
+			}
 		}
 		/*for (Entry<DataSegment> entry : expectedCount.entrySet())
 		{
