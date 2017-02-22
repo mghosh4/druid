@@ -106,17 +106,22 @@ def threadoperation(queryPerSec):
                     logger.info("Time: {}".format(time.strftime("%Y-%m-%d %H:%M:%S")))
                     nextminute = time + timedelta(minutes=1)
 
-        else:                    
+        else:
+            queryendtime = start
             while True:
                 time = datetime.now(timezone('UTC'))
                 logger.info("Time: {}".format(time.strftime("%Y-%m-%d %H:%M:%S")))
-                querytime = time - timedelta(minutes=3)
+                querytime = time - timedelta(minutes=5)
                 if querytime >= endtime:
                     break
 
-                if start < querytime:
+                elapsedtimeinmins = (querytime - queryendtime).total_seconds() / 60
+                if elapsedtimeinmins >= 5:
+                    queryendtime = querytime
+
+                if start < queryendtime:
                     #Query generated every minute. This is to optimize the overhead of query generation and also because segment granularity is minute
-                    newquerylist = QueryGenerator.generateQueries(start, querytime, querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist)
+                    newquerylist = QueryGenerator.generateQueries(start, queryendtime, querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist)
     
                     for query in newquerylist:
                         try:
@@ -127,8 +132,7 @@ def threadoperation(queryPerSec):
                             logger.error(inst)           # __str__ allows args to be printed directly
                             x, y = inst.args
                             logger.error('x =', x)
-                            logger.error('y =', y)
-        
+                            logger.error('y =', y) 
 
                 nextminute = time + timedelta(minutes=1)
                 timediff = (nextminute - datetime.now(timezone('UTC'))).total_seconds()
