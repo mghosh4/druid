@@ -478,14 +478,15 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 					HashMap<DruidServerMetadata, Long> valuelist = new HashMap<DruidServerMetadata, Long>();
 					
 					for(Map.Entry<DruidServerMetadata, Double> pair: sortedNodeCapacitiesReverse.entrySet()){
-						if(currentLocations.contains(pair.getKey())){//current heaviest loaded server that contains this segment
+						if(currentLocations.contains(pair.getKey())) {//current heaviest loaded server that contains this segment
 							currentLocations.remove(pair.getKey());
+							Long cca = this.CCAMap.get(targetSegment);
+							nodeVolumes.put(pair.getKey(), (double) (pair.getValue() - cca / (double) count));
+							count--;
+							log.info("remove segment [%s] from node [%s]", targetSegment.getIdentifier(), pair.getKey().getHost());
+							if (count <= repFactor)
+								break;
 						}
-						Long cca = this.CCAMap.get(targetSegment);
-						nodeVolumes.put(pair.getKey(), (double) (pair.getValue()-cca/(double)count));
-						count--;
-						if(count<=repFactor)
-							break;
 					}
 					
 					//add the rest of the current loaction to the routing list
