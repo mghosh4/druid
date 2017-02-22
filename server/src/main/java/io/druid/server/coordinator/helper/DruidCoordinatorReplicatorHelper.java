@@ -86,6 +86,8 @@ public class DruidCoordinatorReplicatorHelper {
             log.info("buildCostMatrix: before and after map have different sizes");
         }
 
+        printRoutingMaps(before, "BEFORE MAP:");
+        printRoutingMaps(after, "AFTER MAP:");
         int[][] ret = new int[before.size()][after.size()];
 
         for(Map.Entry<Integer, HashMap<DataSegment, Integer>> entryA : before.entrySet()){
@@ -93,18 +95,9 @@ public class DruidCoordinatorReplicatorHelper {
                 int row = entryA.getKey();
                 int col = entryB.getKey();
                 int cost = 0;
-                HashSet<DataSegment> traversed = new HashSet<DataSegment>();
-                for(Map.Entry<DataSegment, Integer> e : entryA.getValue().entrySet()){
-                    if(!entryB.getValue().containsKey(e.getKey())){
-                        cost = cost + e.getValue();
-                    }
-                    else{
-                        cost = cost + Math.abs(e.getValue()-entryB.getValue().get(e.getKey()));
-                    }
-                    traversed.add(e.getKey());
-                }
+
                 for(Map.Entry<DataSegment, Integer> e : entryB.getValue().entrySet()){
-                    if(!traversed.contains(e.getKey())){
+                    if(!entryA.getValue().containsKey(e.getKey())){
                         cost = cost + e.getValue();
                     }
                 }
@@ -118,6 +111,16 @@ public class DruidCoordinatorReplicatorHelper {
         }
 
         return ret;
+    }
+
+    private static void printRoutingMaps(HashMap<Integer, HashMap<DataSegment, Integer>> map, String arg) {
+        log.info("pringRoutingMap: [%s]", arg);
+        for(Map.Entry<Integer, HashMap<DataSegment, Integer>> e : map.entrySet()){
+            log.info("server: [%s] segmentList: ", e.getKey());
+            for(Map.Entry<DataSegment, Integer> entry : e.getValue().entrySet()){
+                log.info("[%s]: [%s]", entry.getKey().getIdentifier(), entry.getValue());
+            }
+        }
     }
 
     public static int[] hungarianMatching(int[][] m){
