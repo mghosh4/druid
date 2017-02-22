@@ -34,8 +34,11 @@ public class DruidCoordinatorReplicatorHelper {
                 ret.put(entry.getValue(), entry.getKey());
             }
             else{
-                log.info("IDToMetaData: ID [%s] contains multiple server map to it");
+                log.info("IDToMetaData: ID [%s] contains multiple server map to it", entry.getValue());
             }
+        }
+        for(Map.Entry<Integer,DruidServerMetadata> e : ret.entrySet()){
+            log.info("IDToMetaData: ID [%s] maps to metadata [%s]", e.getKey(), e.getValue().getHost());
         }
         return ret;
     }
