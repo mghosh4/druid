@@ -345,8 +345,13 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 		{
 			DataSegment segment = entry.getKey();
 			int segmentCount = entry.getValue();
+			if(segmentCount!=0){
+				this.CCAMap.put(segment, Long.valueOf(segmentCount));
+			}
+			else{
+				this.CCAMap.put(segment, 1L);
+			}
 
-			this.CCAMap.put(segment, Long.valueOf(segmentCount));
 			
 			/*if (weightedAccessCounts.containsKey(segment) == false)
 				weightedAccessCounts.put(segment, (long)segmentCount+delta > numServers? numServers : (long)segmentCount+delta);
@@ -356,10 +361,13 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 				weightedAccessCounts.put(segment, ((long)(segmentCount + popularity))> numServers? numServers : (long)(segmentCount + popularity));
 			}*/
 			weightedAccessCounts.put(segment, (long)segmentCount+delta > numServers? numServers : (long)segmentCount+delta);
+			if(weightedAccessCounts.get(segment)==1){
+				log.info("Reduce Segment Access [%s] To 1", segment.getInterval());
+			}
 		}
 		
 		// Remove segments that doesn't appear in the access window
-        Iterator it = weightedAccessCounts.entrySet().iterator();
+        /*Iterator it = weightedAccessCounts.entrySet().iterator();
 		while (it.hasNext())
 		{
             Map.Entry<DataSegment, Long> entry = (Map.Entry<DataSegment, Long>)it.next();
@@ -369,7 +377,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
             	weightedAccessCounts.put(entry.getKey(), 1L);
             	removeList.put(entry.getKey(), (long)(params.getSegmentReplicantLookup().getTotalReplicants(entry.getKey().getIdentifier())-1));
             }
-		}
+		}*/
 	}
 
 	
@@ -429,7 +437,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 					
 					for(Map.Entry<DruidServerMetadata, Double> pair: sortedNodeCapacities.entrySet()){
 						Long cca = this.CCAMap.get(targetSegment);
-						nodeVolumes.put(pair.getKey(), (double) (pair.getValue()+cca/(count)));
+						nodeVolumes.put(pair.getKey(), (double) (pair.getValue()+cca/(double)(count)));
 						count++;
 						valuelist.put(pair.getKey(), 0L);
 						if(count>=repFactor)
@@ -456,7 +464,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 							currentLocations.remove(pair.getKey());
 						}
 						Long cca = this.CCAMap.get(targetSegment);
-						nodeVolumes.put(pair.getKey(), (double) (pair.getValue()-cca/count));
+						nodeVolumes.put(pair.getKey(), (double) (pair.getValue()-cca/(double)count));
 						count--;
 						if(count<=repFactor)
 							break;
@@ -481,7 +489,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 				String logentry = "";
 				for(Map.Entry<DruidServerMetadata, Double> pair:sortedNodeCapacities.entrySet()){
 					Long cca = this.CCAMap.get(targetSegment);	
-					nodeVolumes.put(pair.getKey(), (double) (pair.getValue()+cca/(count+1)));
+					nodeVolumes.put(pair.getKey(), (double) (pair.getValue()+cca/(double)(count+1)));
 					count++;
 					valuelist.put(pair.getKey(), 0L);
 					logentry = logentry + pair.getKey().getHost()+".";
