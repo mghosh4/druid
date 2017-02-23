@@ -7,4 +7,4 @@ ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no node-1 "$COMMAND
 
 sleep 3
 
-./runMultiWorkloadGen.sh $@
+./runMultiWorkloadGen_mghosh4.sh $@

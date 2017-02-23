@@ -396,7 +396,7 @@ do
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$BROKER_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         if [ "$REPLICATION_RULE" == "getafix" ]
         then
-            COMMAND=$COMMAND" sudo sed -i '12s@.*druid.broker.balancer.type=getafix@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
+            COMMAND=$COMMAND" sudo sed -i '12s@.*@druid.broker.balancer.type=getafix@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         fi 
         COMMAND=$COMMAND" sudo sed -i '15s@.*@druid.request.logging.dir=$LOG_FILE/broker@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Duser.timezone=UTC -Dlogfilename=broker-$counter -Dfile.encoding=UTF-8 -Djava.io.tmpdir='/mnt' -classpath 'conf/druid/_common:conf/druid/broker:lib/*' io.druid.cli.Main server broker;"
