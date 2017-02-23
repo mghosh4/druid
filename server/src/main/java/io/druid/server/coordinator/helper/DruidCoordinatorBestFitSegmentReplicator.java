@@ -25,6 +25,7 @@ import com.google.api.client.util.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Multiset.Entry;
@@ -121,7 +122,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 
 		// Acquire Query Workload in the last window
 		Multiset<DataSegment> segments = HashMultiset.create();
-		calculateSegmentCounts(segments);
+		calculateSegmentCounts(params, segments);
 
 		// Calculate the popularity map
 		HashMap<DataSegment, Long> weightedAccessCounts = coordinator.getWeightedAccessCounts();
@@ -148,7 +149,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 				.build();
 	}
 	
-	private List<String> getBrokerURLs()
+	/*private List<String> getBrokerURLs()
 	{
 		String brokerservice = TieredBrokerConfig.DEFAULT_BROKER_SERVICE_NAME;
 		ServerDiscoverySelector selector = serverDiscoveryFactory.createSelector(brokerservice);
@@ -235,10 +236,10 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 				        throw Throwables.propagate(e);
 				      }
 				    
-				    /*for (DataSegment segment:segments)
-				    {
-				        log.info("Segment Received [%s]", segment.getIdentifier());
-				    }*/
+				    //for (DataSegment segment:segments)
+				    //{
+				    //    log.info("Segment Received [%s]", segment.getIdentifier());
+				    //}
 				    
 				    return segments;
 				}
@@ -265,12 +266,161 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 			}
 		}
 		
-		/*for (Entry<DataSegment> entry : segmentCounts.entrySet())
+		//for (Entry<DataSegment> entry : segmentCounts.entrySet())
+		//{
+		//	if (entry != null)
+		//		log.info("Segment Received [%s] Count [%d]", entry.getElement().getIdentifier(), entry.getCount());
+		//}
+	}*/
+	
+	private List<String> getHistoricalURLs(DruidCoordinatorRuntimeParams params)
+	{
+		List<ImmutableDruidServer> historicals = new ArrayList<ImmutableDruidServer>();
+		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier()){
+            for (ServerHolder holder : serverQueue){
+			    historicals.add(holder.getServer());
+            }
+		}
+		
+		List<String> uris = new ArrayList<String>(historicals.size());
+		for (ImmutableDruidServer historical : historicals)
+		{
+			// Should use threads to fetch in parallel from all brokers
+			URI uri = null;
+			try {
+				uri = new URI(
+					    "http",
+						null,
+						historical.getHost().split(":")[0],
+						Integer.parseInt(historical.getHost().split(":")[1]),
+						"/druid/historical/v1/concurrentAccess",
+						null,
+						null);
+			} catch (URISyntaxException e) {
+                log.warn("URI did not get created [%s]", historical.getHost());
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			log.info("URI [%s]", uri.toString());
+			
+			uris.add(uri.toString());
+		}
+
+		log.info("Number of Historical Servers [%d]", historicals.size());
+
+		return uris;
+  	}
+
+	private void calculateSegmentCounts(DruidCoordinatorRuntimeParams params, Multiset<DataSegment> segmentCounts)
+	{
+		List<String> urls = getHistoricalURLs(params);
+
+		ExecutorService pool = Executors.newFixedThreadPool(urls.size());
+		List<Future<Map<String, Integer>>> futures = new ArrayList<Future<Map<String, Integer>>>();
+			
+		for (final String url: urls)
+		{
+			futures.add(pool.submit(new Callable<Map<String, Integer>> (){
+				@Override
+				public Map<String, Integer> call()
+				{
+					Map<String, Integer> totalAccessMap = Maps.newHashMap();
+				    try {
+				    	StatusResponseHolder response = httpClient.go(
+				            new Request(
+				                HttpMethod.GET,
+				                new URL(url)
+				            ),
+				            responseHandler
+				        ).get();
+
+				        if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+				          throw new ISE(
+				              "Error while querying[%s] status[%s] content[%s]",
+				              url,
+				              response.getStatus(),
+				              response.getContent()
+				          );
+				        }
+				        
+				        log.info("Response Length [%d]", response.getContent().length());
+				        
+				        totalAccessMap = jsonMapper.readValue(
+				            response.getContent(), new TypeReference<Map<String, Integer>>()
+				            {
+				            }
+				        );
+				      }
+				      catch (Exception e) {
+				    	e.printStackTrace();
+				        throw Throwables.propagate(e);
+				      }
+				    
+				    for (Map.Entry<String, Integer> entry : totalAccessMap.entrySet())
+				    {
+				        log.info("Segment Received [%s] with value [%d]", entry.getKey(), entry.getValue());
+				    }
+				    
+				    return totalAccessMap;
+				}
+			}));
+		}
+		
+		HashMap<ImmutableDruidServer, ServerHolder> serverHolderMap = new HashMap<ImmutableDruidServer, ServerHolder>();
+		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier()){
+            for (ServerHolder holder : serverQueue){
+			    serverHolderMap.put(holder.getServer(), holder);
+            }
+		}
+		
+		if (serverHolderMap.size() == 0) {
+			log.makeAlert("Cluster has no servers! Check your cluster configuration!").emit();
+			return;
+		}
+		
+		Map<String, DataSegment> datasegments = Maps.newHashMap();		
+		for (ImmutableDruidServer server : serverHolderMap.keySet())
+		{
+			for (DataSegment segment : server.getSegments().values())
+			{
+				datasegments.put(segment.getIdentifier(), segment);
+			}
+		}
+		
+		Map<String, Integer> segments = Maps.newHashMap();
+		for (Future<Map<String, Integer>> future: futures)
+		{
+			try {
+				segments = future.get();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (ExecutionException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			for (Map.Entry<String, Integer> entry : segments.entrySet())
+			{
+				DataSegment segment = datasegments.get(entry.getKey());
+				if (segmentCounts.contains(segment))
+				{
+					int currentCount = segmentCounts.count(segment);
+					segmentCounts.setCount(segment, currentCount + entry.getValue());
+				}
+				else
+					segmentCounts.add(segment, entry.getValue());
+			}
+		}
+		
+		for (Entry<DataSegment> entry : segmentCounts.entrySet())
 		{
 			if (entry != null)
 				log.info("Segment Received [%s] Count [%d]", entry.getElement().getIdentifier(), entry.getCount());
-		}*/
+		}
 	}
+
 
 	private void calculateWeightedAccessCounts(DruidCoordinatorRuntimeParams params, Multiset<DataSegment> segments, HashMap<DataSegment, Long> weightedAccessCounts, HashMap<DataSegment, Long> removeList)
 	{
