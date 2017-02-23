@@ -38,6 +38,7 @@ public class ReferenceCountingSegment implements Segment
   private volatile boolean isClosed = false;
   
   private volatile int maxReference = 0;
+  private volatile int totalReference = 0;
 
   public ReferenceCountingSegment(Segment baseSegment)
   {
@@ -62,6 +63,12 @@ public class ReferenceCountingSegment implements Segment
   public int getAndClearMaxConcurrentAccess(){
 	int returnValue = maxReference;
 	maxReference = numReferences;
+	return returnValue;
+  }
+
+  public int getAndClearTotalAccess(){
+	int returnValue = totalReference;
+	totalReference = 0;
 	return returnValue;
   }
 
@@ -140,7 +147,8 @@ public class ReferenceCountingSegment implements Segment
         return null;
       }
 
-      numReferences++;      
+      numReferences++;
+      totalReference++;      
       if (maxReference < numReferences)
     	  maxReference = numReferences;
       

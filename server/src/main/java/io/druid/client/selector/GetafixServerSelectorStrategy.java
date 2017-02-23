@@ -3,6 +3,7 @@ package io.druid.client.selector;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.util.Charsets;
+import com.google.common.collect.Iterators;
 import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.Request;
@@ -22,6 +23,7 @@ import java.net.URL;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.io.IOException;
 
 public class GetafixServerSelectorStrategy implements ServerSelectorStrategy
 {
@@ -36,7 +38,6 @@ public class GetafixServerSelectorStrategy implements ServerSelectorStrategy
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private final StatusResponseHandler responseHandler = new StatusResponseHandler(Charsets.UTF_8);
 
-
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
   {
@@ -47,48 +48,39 @@ public class GetafixServerSelectorStrategy implements ServerSelectorStrategy
 
     Map<String, Map<String, Long>> routingTable = druidBroker.getRoutingTable();
     Map<String, Long> hnList = routingTable.get(segment.getIdentifier());
-    if (hnList == null) {
-      for (QueryableDruidServer server : servers) {
-        if (server.getServer().getSegment(segment.getIdentifier()) != null) {
-          return server;
+    if (hnList != null) {
+        long N = 0L;
+        for (Map.Entry<String, Long> hnPair : hnList.entrySet()) {
+          N += hnPair.getValue();
         }
-      }
 
-      log.error("[GETAFIX ROUTING] Segment " + segment + " unknown in routing table, also unknown in any realtime node");
-      return null;
+        long randCounter = ThreadLocalRandom.current().nextLong(N);
+        String chosenServer = null;
+        for (Map.Entry<String, Long> hnPair : hnList.entrySet()) {
+          randCounter -= hnPair.getValue();
+          if (randCounter < 0) {
+            chosenServer = hnPair.getKey();
+            break;
+          }
+        }
+
+        if (chosenServer == null) {
+          log.error("[GETAFIX ROUTING] Cannot find a server in routingTable to match");
+          return null;
+        }
+
+        log.info("Chosen server: " + chosenServer);
+        for (QueryableDruidServer server : servers) {
+          log.info("Looking at QueryableDruidServer: " + server.getServer().getMetadata().toString());
+          if (chosenServer.equals(server.getServer().getMetadata().toString())) {
+            log.info("[GETAFIX ROUTING] SUCCESS");
+            return server;
+          }
+        }
     }
 
-    long N = 0L;
-    for (Map.Entry<String, Long> hnPair : hnList.entrySet()) {
-      N += hnPair.getValue();
-    }
-
-    long randCounter = ThreadLocalRandom.current().nextLong(N);
-    String chosenServer = null;
-    for (Map.Entry<String, Long> hnPair : hnList.entrySet()) {
-      randCounter -= hnPair.getValue();
-      if (randCounter < 0) {
-        chosenServer = hnPair.getKey();
-        break;
-      }
-    }
-
-    if (chosenServer == null) {
-      log.error("[GETAFIX ROUTING] Cannot find a server in routingTable to match");
-      return null;
-    }
-
-    log.info("Chosen server: " + chosenServer);
-    for (QueryableDruidServer server : servers) {
-      log.info("Looking at QueryableDruidServer: " + server.getServer().getMetadata().toString());
-      if (chosenServer.equals(server.getServer().getMetadata().toString())) {
-        log.info("[GETAFIX ROUTING] SUCCESS");
-        return server;
-      }
-    }
-
-    log.error("[GETAFIX ROUTING] routing table: " + routingTable);
-    log.error("[GETAFIX ROUTING] Cannot find a matching historical node: " + chosenServer);
+    if (servers.size() > 0)
+        return Iterators.get(servers.iterator(), ThreadLocalRandom.current().nextInt(servers.size()));
 
     log.error("[GETAFIX ROUTING] Trying to load segment on demand");
     String druidServerMetadata = loadSegmentOnDemand(segment);
@@ -96,6 +88,7 @@ public class GetafixServerSelectorStrategy implements ServerSelectorStrategy
       log.error("[GETAFIX ROUTING] Cannot find even with loading on demand");
       return null;
     }
+    
     for (QueryableDruidServer server : servers) {
       if (druidServerMetadata.equals(server.getServer().getMetadata().toString())) {
         log.info("[GETAFIX ROUTING] SUCCESS");
@@ -144,9 +137,18 @@ public class GetafixServerSelectorStrategy implements ServerSelectorStrategy
 
       String resp = response.getContent();
       log.info("[GETAFIX PLACEMENT] Load segment " + segment.getIdentifier() + " on demand. " + resp);
+      selector.stop();
       return resp;
     } catch (Exception e) {
       log.error("[GETAFIX PLACEMENT] On demand loading error: " + e.getMessage());
+      try
+      {
+        selector.stop();
+      }
+      catch(IOException ex)
+      {
+        log.error("[GETAFIX PLACEMENT] Error stopping selector");
+      }
       return null;
     }
   }

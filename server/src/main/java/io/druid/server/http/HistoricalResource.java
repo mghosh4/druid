@@ -60,4 +60,13 @@ public class HistoricalResource
   public Response getConcurrentAccess()
   {
     return Response.ok(manager.getConcurrentAccessMap()).build();
-  }}
+  }
+
+  @GET
+  @Path("/totalAccess")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getTotalAccess()
+  {
+    return Response.ok(manager.getTotalAccessMap()).build();
+  }
+}

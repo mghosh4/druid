@@ -370,6 +370,32 @@ public class ServerManager implements QuerySegmentWalker
 	return result;	
   }
 
+  public String getTotalAccessMap()
+  {
+	String result = null;
+	
+	try {
+		Map<String, Integer> totalAccessMap = Maps.newHashMap();
+		for (Map.Entry<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> dataSource : dataSources.entrySet())
+		{
+			List<PartitionHolder<ReferenceCountingSegment>> partitionList = dataSource.getValue().getAllObjects();
+            for (PartitionHolder<ReferenceCountingSegment> partition : partitionList)
+            {
+                for (ReferenceCountingSegment segment : partition.payloads())
+                    totalAccessMap.put(segment.getIdentifier(), segment.getAndClearTotalAccess());
+            }
+		}
+		
+		result = objectMapper.writeValueAsString(totalAccessMap);
+		log.info("Serializing Total Access Map [%d]", result.length());
+	} catch (JsonProcessingException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+	
+	return result;	
+  }
+
   private String getDataSourceName(DataSource dataSource)
   {
     return Iterables.getOnlyElement(dataSource.getNames());
