@@ -568,7 +568,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 
 		if(beforeMap.size()>0 && afterMap.size()>0 && beforeMap.size()==afterMap.size()) {
 			//4. build costMatrix
-			int[][] costMatrix = DruidCoordinatorReplicatorHelper.buildCostMatrix(beforeMap, afterMap);
+			double[][] costMatrix = DruidCoordinatorReplicatorHelper.buildCostMatrix(beforeMap, afterMap);
 
 			//5. Hungarian Matching
 			int[] hungarianMap = DruidCoordinatorReplicatorHelper.hungarianMatching(costMatrix);
