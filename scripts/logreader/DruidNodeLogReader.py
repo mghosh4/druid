@@ -1,4 +1,6 @@
 import json
+import threading
+import _strptime
 from datetime import datetime, timedelta
 from collections import OrderedDict
 from Utils import Utils
@@ -18,28 +20,38 @@ class DruidNodeLogReader:
             self.readMetricsWithinTimeRange(timeinterval)
 
     def readMetrics(self):
+        threads = list()
         for count in xrange(self.numnodes):
-            filename = self.logpath + "/" + self.nodetype + "-" + str(count) + ".log"
-            self.metricvalues[count] = dict()
-            for line in open(filename):
-                for metric in self.metrics:
-                    if metric in line:
-                        eventindex = line.find("Event")
-                        event = line[eventindex+6:]
-                        y = json.loads(event)
+            t = threading.Thread(target=self.readData, args=(count,))
+            t.daemon = True
+            t.start()
+            threads.append(t)
 
-			if y[0]['metric'] != metric:
-				continue
+        for t in threads:
+            t.join()
 
-                        if (metric not in self.metricvalues[count]):
-                            self.metricvalues[count][metric] = dict()
-                        timestamp = datetime.strptime(y[0]['timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ')
-                        self.metricvalues[count][metric][timestamp] = float(y[0]['value'])
-                        break
-
+    def readData(self, count):
+        filename = self.logpath + "/" + self.nodetype + "-" + str(count) + ".log"
+        self.metricvalues[count] = dict()
+        for line in open(filename):
             for metric in self.metrics:
-                if metric in self.metricvalues[count]:
-                    self.metricvalues[count][metric] = OrderedDict(sorted(self.metricvalues[count][metric].items()))
+                if metric in line:
+                    eventindex = line.find("Event")
+                    event = line[eventindex+6:]
+                    y = json.loads(event)
+
+                    if y[0]['metric'] != metric:
+                        continue
+
+                    if (metric not in self.metricvalues[count]):
+                        self.metricvalues[count][metric] = dict()
+                    timestamp = datetime.strptime(y[0]['timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                    self.metricvalues[count][metric][timestamp] = float(y[0]['value'])
+                    break
+
+        for metric in self.metrics:
+            if metric in self.metricvalues[count]:
+                self.metricvalues[count][metric] = OrderedDict(sorted(self.metricvalues[count][metric].items()))
 
     def readMetricsWithinTimeRange(self, timerange):
         for count in xrange(self.numnodes):
@@ -67,18 +79,28 @@ class DruidNodeLogReader:
                     self.metricvalues[count][metric] = OrderedDict(sorted(self.metricvalues[count][metric].items()))
 
     def writeMetrics(self):
+        threads = list()
         for count in xrange(self.numnodes):
-            for metric in self.metrics:
-                if metric not in self.metricvalues[count]:
-                    continue
+            t = threading.Thread(target=self.writeData, args=(count,))
+            t.daemon = True
+            t.start()
+            threads.append(t)
 
-                if "/" in metric:
-                    newmetrics = metric.replace("/", "-")
-                else:
-                    newmetrics = metric
+        for t in threads:
+            t.join()
 
-                filename = self.resultpath + "/" + self.nodetype + "-" + str(count) + "-" + newmetrics + ".log"
-                Utils.writeTimeSeriesData(filename, self.metricvalues[count][metric])
+    def writeData(self, count):
+        for metric in self.metrics:
+            if metric not in self.metricvalues[count]:
+                continue
+
+            if "/" in metric:
+                newmetrics = metric.replace("/", "-")
+            else:
+                newmetrics = metric
+
+            filename = self.resultpath + "/" + self.nodetype + "-" + str(count) + "-" + newmetrics + ".log"
+            Utils.writeTimeSeriesData(filename, self.metricvalues[count][metric])
 
     def getMetricValues(self, count, metric):
         if metric not in self.metricvalues[count]:

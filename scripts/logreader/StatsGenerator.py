@@ -1,6 +1,6 @@
 import os, sys
 import numpy
-
+import threading
 from ParseConfig import ParseConfig
 from DruidNodeLogReader import DruidNodeLogReader
 from Utils import Utils
@@ -24,6 +24,11 @@ def getConfig(configFile):
     configFilePath = configFile
     return ParseConfig(configFilePath)
 
+def parseLogAndWriteMetrics(nodetype, metrics, numnodes, logpath, resultfolder, resultmetrics):
+    nodemetric = DruidNodeLogReader(nodetype, metrics, numnodes, logpath, resultfolder)
+    nodemetric.writeMetrics()
+    resultmetrics[nodetype] = nodemetric
+
 configFile = checkAndReturnArgs(sys.argv)
 config = getConfig(configFile)
 
@@ -33,14 +38,23 @@ logpath = config.getLogPath()
 num_h_nodes = config.getNumHistoricalNodes()
 num_b_nodes = config.getNumBrokerNodes()
 resultfolder = config.getResultFolder()
+if not os.path.exists(resultfolder):
+    os.makedirs(resultfolder)
 
 ### Parse Logs ###
-brokermetric = DruidNodeLogReader("broker", brokermetrics, num_b_nodes, logpath, resultfolder)
-historicalmetric = DruidNodeLogReader("historical", historicalmetrics, num_h_nodes, logpath, resultfolder)
+resultmetrics = dict()
+broker = threading.Thread(target=parseLogAndWriteMetrics, args=("broker", brokermetrics, num_b_nodes, logpath, resultfolder, resultmetrics))
+broker.daemon = True
+broker.start()
+historical = threading.Thread(target=parseLogAndWriteMetrics, args=("historical", historicalmetrics, num_h_nodes, logpath, resultfolder, resultmetrics))
+historical.daemon = True
+historical.start()
 
-### Print Metrics ###
-brokermetric.writeMetrics()
-historicalmetric.writeMetrics()
+#broker.join()
+historical.join()
+
+#brokermetric = resultmetrics["broker"]
+historicalmetric = resultmetrics["historical"]
 
 ### Historical Metrics ###
 stats = [sum, numpy.mean, max, min]
@@ -67,7 +81,7 @@ for metric in historicalmetrics:
         newmetrics = metric
 
     filename = resultfolder + "/historical" + "-" + newmetrics + ".cdf"
-    Utils.writeCDF(filename, overallStats)
+    Utils.writeCDF(filename, overallStats.values())
 
     statfile = resultfolder + "/historical" + "-" + newmetrics + ".log"
     metricstats = dict()
