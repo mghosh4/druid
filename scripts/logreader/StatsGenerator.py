@@ -50,10 +50,10 @@ historical = threading.Thread(target=parseLogAndWriteMetrics, args=("historical"
 historical.daemon = True
 historical.start()
 
-#broker.join()
+broker.join()
 historical.join()
 
-#brokermetric = resultmetrics["broker"]
+brokermetric = resultmetrics["broker"]
 historicalmetric = resultmetrics["historical"]
 
 ### Historical Metrics ###
