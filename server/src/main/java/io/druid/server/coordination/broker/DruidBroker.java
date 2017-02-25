@@ -93,7 +93,7 @@ public class DruidBroker
       started = true;
 
       // Scheduled Tasks
-      pool.scheduleWithFixedDelay(new PeriodicPollRoutingTable(this, serverDiscoveryFactory, httpClient), 0, 60, TimeUnit.SECONDS);
+      pool.scheduleWithFixedDelay(new PeriodicPollRoutingTable(this, serverDiscoveryFactory, httpClient), 0, 20, TimeUnit.SECONDS);
     }
   }
 
