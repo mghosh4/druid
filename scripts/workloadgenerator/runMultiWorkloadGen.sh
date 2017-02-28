@@ -1,5 +1,7 @@
 #!/bin/sh
 
+NUM_HISTORICALS=25
+
 COMMAND="cd /proj/DCSQ/lexu/druid/scripts/ingestion/;"
 COMMAND=$COMMAND" screen -d -m python ingestion.py le.conf;"
 echo $COMMAND
@@ -15,3 +17,6 @@ do
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "$COMMAND"
     sleep 1
 done
+
+
+./checkAndLog.sh "$@"
