@@ -77,13 +77,13 @@ public class DruidCoordinatorReplicatorHelper {
             }
         }
 
-        log.info("pringReverseMap:");
+        /*log.info("pringReverseMap:");
         for(Map.Entry<Integer, HashMap<DataSegment, Integer>> e : ret.entrySet()){
             log.info("server: [%s] segmentList: ", e.getKey());
             for(Map.Entry<DataSegment, Integer> entry : e.getValue().entrySet()){
                 log.info("[%s]: [%s]", entry.getKey().getIdentifier(), entry.getValue());
             }
-        }
+        }*/
 
         return ret;
     }
@@ -97,8 +97,8 @@ public class DruidCoordinatorReplicatorHelper {
             log.info("buildCostMatrix: before and after map have different sizes");
         }
 
-        printRoutingMaps(before, "BEFORE MAP:");
-        printRoutingMaps(after, "AFTER MAP:");
+        //printRoutingMaps(before, "BEFORE MAP:");
+        //printRoutingMaps(after, "AFTER MAP:");
         double[][] ret = new double[before.size()][after.size()];
 
         for(Map.Entry<Integer, HashMap<DataSegment, Integer>> entryA : before.entrySet()){
@@ -116,10 +116,10 @@ public class DruidCoordinatorReplicatorHelper {
             }
         }
 
-        log.info("------ buildCostMatrix: printing matrix -------");
+        /*log.info("------ buildCostMatrix: printing matrix -------");
         for(int i = 0; i<before.size();i++){
             log.info("row %s: %s", i, Arrays.toString(ret[i]));
-        }
+        }*/
 
         return ret;
     }

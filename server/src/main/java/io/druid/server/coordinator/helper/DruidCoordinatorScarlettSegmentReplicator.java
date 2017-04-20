@@ -278,7 +278,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 				    
 				    for (Map.Entry<String, Integer> entry : concurrentAccessMap.entrySet())
 				    {
-				        log.info("Segment Received [%s] with value [%d]", entry.getKey(), entry.getValue());
+				        //log.info("Segment Received [%s] with value [%d]", entry.getKey(), entry.getValue());
 				    }
 				    
 				    return concurrentAccessMap;
@@ -417,7 +417,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 			    serverHolderMap.put(holder.getServer(), holder);
 		
 		if (serverHolderMap.size() == 0) {
-			log.makeAlert("Cluster has no servers! Check your cluster configuration!").emit();
+			//log.makeAlert("Cluster has no servers! Check your cluster configuration!").emit();
 			return;
 		}
 
@@ -427,7 +427,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 		{
 			for (DataSegment segment : server.getSegments().values())
 			{
-                log.info("Server [%s] has segment [%s]", server.getHost(), segment.getIdentifier());
+                //log.info("Server [%s] has segment [%s]", server.getHost(), segment.getIdentifier());
 				if (!currentTable.containsKey(segment))
 					currentTable.put(segment, new ArrayList<DruidServerMetadata>());
 				currentTable.get(segment).add(server.getMetadata());
@@ -469,7 +469,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 						logentry = logentry + currentLocation.getHost()+".";
 					}
 					logentry = "1. Adding target segment " + targetSegment.getIdentifier() + " with value: " + logentry + " to routing table";
-					log.info(logentry);
+					//log.info(logentry);
 					routingTable.put(targetSegment, valuelist); 
 				}
 				else if(currentLocations.size()>repFactor){//if we have more replicas than we need
@@ -483,7 +483,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 							Long cca = this.CCAMap.get(targetSegment);
 							nodeVolumes.put(pair.getKey(), (double) (pair.getValue() - cca / (double) count));
 							count--;
-							log.info("remove segment [%s] from node [%s]", targetSegment.getIdentifier(), pair.getKey().getHost());
+							//log.info("remove segment [%s] from node [%s]", targetSegment.getIdentifier(), pair.getKey().getHost());
 							if (count <= repFactor)
 								break;
 						}
@@ -496,7 +496,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 						logentry = logentry + currentLocation.getHost()+".";
 					}
 					logentry = "2. Adding target segment " + targetSegment.getIdentifier() + " with value: " + logentry + " to routing table";
-					log.info(logentry);
+					//log.info(logentry);
 					routingTable.put(targetSegment, valuelist);
 				}
 				
@@ -517,7 +517,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 				}
 				routingTable.put(targetSegment, valuelist);
 				logentry = "3. Creating target segment " + targetSegment.getIdentifier() + " with value: " + logentry + " to routing table";
-				log.info(logentry);
+				//log.info(logentry);
 			}
 		}
 		
@@ -550,7 +550,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 		{
 			for (DataSegment segment : server.getSegments().values())
 			{
-                log.info("Server [%s] has segment [%s]", server.getHost(), segment.getIdentifier());
+                //log.info("Server [%s] has segment [%s]", server.getHost(), segment.getIdentifier());
 				if (!currentTable.containsKey(segment))
 					currentTable.put(segment, new ArrayList<DruidServerMetadata>());
 				currentTable.get(segment).add(server.getMetadata());
@@ -559,7 +559,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 
 		final List<String> tierNameList = Lists.newArrayList(params.getDruidCluster().getTierNames());
 		if (tierNameList.size() == 0) { //!!!!!!!!!!!!!!!!!!!!!!CHECK LATER
-			log.makeAlert("Cluster has multiple tiers! Check your cluster configuration!").emit();
+			//log.makeAlert("Cluster has multiple tiers! Check your cluster configuration!").emit();
 			return;
 		}
 		final String tier = tierNameList.get(0);
@@ -569,10 +569,10 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 			DataSegment segment = entry.getKey();
 			for (DruidServerMetadata server : entry.getValue().keySet())
 			{
-                log.info("Server [%s] should have segment [%s]", server.getHost(), segment.getIdentifier());
+                //log.info("Server [%s] should have segment [%s]", server.getHost(), segment.getIdentifier());
 				if (!currentTable.containsKey(segment) || !currentTable.get(segment).contains(server))
 				{
-					log.info("Server [%s] add segment [%s]", server.getHost(), segment.getIdentifier());
+					//log.info("Server [%s] add segment [%s]", server.getHost(), segment.getIdentifier());
 					CoordinatorStats assignStats = assign(
 							replicatorThrottler,
 							tier,
@@ -591,7 +591,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 			{
 				if (!routingTable.containsKey(segment) || !routingTable.get(segment).keySet().contains(server))
 				{
-					log.info("Server [%s] drop segment [%s]", server.getHost(), segment.getIdentifier());
+					//log.info("Server [%s] drop segment [%s]", server.getHost(), segment.getIdentifier());
 					CoordinatorStats dropStats = drop(
 							replicatorThrottler,
 							tier,
