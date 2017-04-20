@@ -366,7 +366,7 @@ do
         #COMMAND=$COMMAND" mkdir $PATH_TO_DRUID_BIN/conf/druid/historical;"
         COMMAND=$COMMAND" sudo cat $PATH_TO_SOURCE/scripts/deployment/historical.properties > $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$HISTORICAL_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"      
-        COMMAND=$COMMAND" sudo sed -i '18s@.*@druid.request.logging.dir=$LOG_FILE/historical-$counter@' $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"      
+        #COMMAND=$COMMAND" sudo sed -i '18s@.*@druid.request.logging.dir=$LOG_FILE/historical-$counter@' $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"      
 
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Dlogfilename=historical-$counter -Djava.io.tmpdir='/mnt' -classpath 'conf/druid/_common:conf/druid/historical:lib/*' io.druid.cli.Main server historical;"
 
@@ -457,7 +457,7 @@ do
         COMMAND=$COMMAND" mkdir $PATH_TO_DRUID_BIN/conf/druid/realtime;"
         COMMAND=$COMMAND" sudo cat $PATH_TO_SOURCE/scripts/deployment/realtime.properties > $PATH_TO_DRUID_BIN/conf/druid/realtime/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$REALTIME_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/realtime/runtime.properties;"
-        COMMAND=$COMMAND" sudo sed -i '12s@.*@druid.request.logging.dir=$LOG_FILE/realtime@' $PATH_TO_DRUID_BIN/conf/druid/realtime/runtime.properties;"
+        #COMMAND=$COMMAND" sudo sed -i '12s@.*@druid.request.logging.dir=$LOG_FILE/realtime@' $PATH_TO_DRUID_BIN/conf/druid/realtime/runtime.properties;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Dlogfilename=realtime-$counter -Ddruid.realtime.specFile=$SPEC_FILE -Djava.io.tmpdir='/mnt' -classpath 'conf/druid/_common:conf/druid/realtime:lib/*' io.druid.cli.Main server realtime;"
         echo "Realtime node startup command is $COMMAND"
 
