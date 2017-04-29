@@ -85,7 +85,7 @@ class QueryGenerator(object):
 		truelength = (endTime-startTime).total_seconds()
 		#accesslist = accessGenerator.generateDistribution(0, elapsed, numQueries)
 		fullcount=len(fullist)
-		print "fullcount: ", fullcount
+		##print "fullcount: ", fullcount
 		originallist = list()
 		for count2 in xrange(numQueries):
 			#querylist.append(fulllist[random.randint(0,querycount-1)])
@@ -104,20 +104,20 @@ class QueryGenerator(object):
 			newstart = truestart
 			startstring = newstart.strftime('%Y-%m-%dT%H:%M:%S')
 			period_interval_inSec = (originallist[i][1]-originallist[i][0]).total_seconds()
-			print "original period in seconds", period_interval_inSec
+			##print "original period in seconds", period_interval_inSec
 			factor = (originallength)/(float(truelength))
 			period_interval_inSec = (period_interval_inSec)/(float(factor))
 			if period_interval_inSec < 1.0:
 				period_interval_inSec = 1
 			period_interval_inSec = int(period_interval_inSec)
 
-			print "final period in seconds", period_interval_inSec
+			##print "final period in seconds", period_interval_inSec
 
 			#for count1 in range(0, period_count):
 			#	querylist.append(q)
 				#print "interval: " + q.interval
 			q.setInterval(startstring + "/" + Utils.iso8601(dt.timedelta(seconds=period_interval_inSec)))
 			querylist.append(q)
-			print "interval: " + q.interval
-			print "index: " , q.index
+			##print "interval: " + q.interval
+			##print "index: " , q.index
 		return querylist

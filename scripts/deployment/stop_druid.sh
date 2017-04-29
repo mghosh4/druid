@@ -279,14 +279,14 @@ for node in ${NEW_REALTIME_NODE//,/ }
 do
     echo "Shutting down $node ..."
     COMMAND=''
+    COMMAND=$COMMAND"sudo pkill -9 \"java\";"
+    COMMAND=$COMMAND" sudo pkill -9 \"python\";"
     if [ $TYPE_OF_STOP -eq 1 ]
     then
-        COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/realtime-$counter.log;"
+        COMMAND=$COMMAND" sudo rm -r -f $LOG_FILE/realtime-$counter.log;"
         COMMAND=$COMMAND" sudo rm -r -f /mnt/*;"
         COMMAND=$COMMAND" sudo rm -r -f $LOG_FILE/realtime;"
     fi
-    COMMAND=$COMMAND" sudo pkill -9 \"java\";"
-    COMMAND=$COMMAND" sudo pkill -9 \"python\";"
     echo "Realtime server shutdown command is $COMMAND"
     let counter=counter+1
     ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
@@ -306,6 +306,7 @@ do
     then
         COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/coordinator-$counter.log;"
         COMMAND=$COMMAND" sudo rm -r -f /mnt/*;"
+        COMMAND=$COMMAND" sudo rm -r -f $PATH_TO_DRUID_BIN/var;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     COMMAND=$COMMAND" sudo pkill -9 \"python\";"
