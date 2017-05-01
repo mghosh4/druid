@@ -37,10 +37,10 @@ class AsyncDBOpsHandler:
         raise gen.Return(tb.export_pandas())
 
     @gen.coroutine
-    def topn(self, query):
+    def topn(self, query, logger):
         config = self.getConfig()
         newquery = self.getAsyncPyDruid()
-        tn = yield newquery.topn(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, aggregations=ast.literal_eval(config.getAggregations), dimension=config.getDimension(), metric=config.getMetric(), threshold=config.getThreshold())
+        tn = yield newquery.topn(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, aggregations={"count": aggregators.doublesum("count")}, dimension=config.getDimension().split(",")[0], metric=config.getMetric(), threshold=config.getThreshold())
         raise gen.Return(tn.export_pandas())
 
     #FILTER AND POST_AGGREGATIONS ARE OPTIONAL
@@ -53,8 +53,8 @@ class AsyncDBOpsHandler:
     
     #FILTER AND POST_AGGREGATIONS ARE OPTIONAL
     @gen.coroutine
-    def groupby(self, query):
+    def groupby(self, query, logger):
         config = self.getConfig()
         newquery = self.getAsyncPyDruid()
-        gb = yield newquery.groupby(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, dimensions=(config.getDimension()).split(","), aggregations=ast.literal_eval(config.getAggregations))
+        gb = yield newquery.groupby(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, dimensions=(config.getDimension()).split(","), aggregations={"count": aggregators.doublesum("count")})
         raise gen.Return(gb.export_pandas())

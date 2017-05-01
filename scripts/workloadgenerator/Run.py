@@ -25,6 +25,7 @@ sys.path.append(os.path.abspath('DBOpsHandler'))
 sys.path.append(os.path.abspath('Utils'))
 from ParseConfig import ParseConfig
 from AsyncDBOpsHandler import AsyncDBOpsHandler
+from DBOpsHandler import DBOpsHandler
 from QueryGenerator import QueryGenerator
 from DistributionFactory import DistributionFactory
 
@@ -66,6 +67,24 @@ def applyOperation(query, config, brokerNameUrl, logger):
         return dbOpsHandler.segmentmetadata(query, logger)
     elif querytype == "timeboundary":
         return dbOpsHandler.timeboundary(query, logger)
+    elif querytype == "mixture":
+        return generateRandomQuery(query, logger, config)
+
+def generateRandomQuery(query, logger, dbOpsHandler):
+    randomNumber = random.randint(0, 100);
+    qtype = 0
+    for queryweight in queryratio:
+        if randomNumber <= queryweight:
+            break
+        qtype = qtype + 1
+        randomNumber = randomNumber - queryweight
+
+    if qtype == 0:
+        return dbOpsHandler.timeseries(query, logger)
+    elif qtype == 1:
+        return dbOpsHandler.topn(query, logger)
+    elif qtype == 2:
+        return dbOpsHandler.groupby(query, logger)
 
 def threadoperation(queryPerSec):
     @gen.coroutine
@@ -160,6 +179,9 @@ config = getConfig(configFile)
 accessdistribution = config.getAccessDistribution()
 perioddistribution = config.getPeriodDistribution()
 querytype = config.getQueryType()
+queryratio = list()
+if querytype == "mixture":
+    queryratio = [int(n) for n in config.getQueryRatio().split(":")]
 logfolder = config.getLogFolder()
 opspersecond = config.getOpsPerSecond()
 runtime = config.getRunTime() # in minutes
