@@ -34,6 +34,10 @@ import io.druid.guice.annotations.Self;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.broker.tasks.PeriodicPollRoutingTable;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -52,6 +56,19 @@ public class DruidBroker
   private volatile boolean started = false;
   private volatile Map<String, Map<String, Long>> routingTable;
 
+
+  //QueryTime distribution data structures
+  String loadingPath = "/proj/ISS/lexu/distribution/";
+  String[] fullpaths = {loadingPath+"groupby.cdf", loadingPath+"timeseries.cdf", loadingPath+"topn.cdf"};
+
+
+  HashMap<String, ArrayList<Double>> percentileCollection;
+  HashMap<String, HashMap<Double, Double>> histogramCollection;
+
+
+  String[] queryTypes = {"groupby", "timeseries", "topn"};
+
+
   @Inject
   public DruidBroker(
       final ServerInventoryView serverInventoryView,
@@ -59,8 +76,7 @@ public class DruidBroker
       final ServiceAnnouncer serviceAnnouncer,
       final ServerDiscoveryFactory serverDiscoveryFactory,
       @Global HttpClient httpClient
-  )
-  {
+  ) throws IOException {
     this.self = self;
     this.serviceAnnouncer = serviceAnnouncer;
     this.serverDiscoveryFactory = serverDiscoveryFactory;
@@ -81,6 +97,15 @@ public class DruidBroker
 
     this.pool = Executors.newSingleThreadScheduledExecutor();
     this.routingTable = new HashMap<>();
+
+    //populate all query time distribution data structures
+    for(int i = 0 ; i < queryTypes.length; i++){
+      String key = queryTypes[i];
+      HashMap<Double, Double> histogram = new HashMap<Double, Double>();
+      ArrayList<Double> percentile = loadAndParse(fullpaths[i], histogram);
+      percentileCollection.put(key, percentile);
+      histogramCollection.put(key, histogram);
+    }
   }
 
   @LifecycleStart
@@ -109,6 +134,14 @@ public class DruidBroker
     }
   }
 
+  public HashMap<String, ArrayList<Double>> getPercentileCollection() {
+    return percentileCollection;
+  }
+
+  public HashMap<String, HashMap<Double, Double>> getHistogramCollection() {
+    return histogramCollection;
+  }
+
   public synchronized Map<String, Map<String, Long>> getRoutingTable()
   {
     return routingTable;
@@ -121,5 +154,26 @@ public class DruidBroker
 
   public HttpClient getHttpClient() {
     return httpClient;
+  }
+
+  public ArrayList<Double> loadAndParse(String filename, HashMap<Double, Double> histogram) throws IOException {
+    ArrayList<Double> percentileArr = new ArrayList<Double>();
+
+    /*********************************************************************/
+        /* http://stackoverflow.com/questions/5819772/java-parsing-text-file */
+    FileReader input = new FileReader(filename);
+    BufferedReader bufRead = new BufferedReader(input);
+    String myLine = null;
+
+    while ( (myLine = bufRead.readLine()) != null)
+    {
+      String[] array = myLine.split("\t");
+      double querytime = Double.valueOf(array[0]);
+      double percentile = Double.valueOf(array[1]);
+      percentileArr.add(percentile);
+      histogram.put(percentile, querytime);
+    }
+    /*********************************************************************/
+    return percentileArr;
   }
 }
