@@ -31,6 +31,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 
 import java.io.IOException;
 import java.util.Map;
+import io.druid.segment.ReferenceCountingSegment;
 
 /**
  */
@@ -44,6 +45,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
   private final long creationTime;
   private final String metricName;
   private final Map<String, String> userDimensions;
+  private final ReferenceCountingSegment adapter;
 
   public MetricsEmittingQueryRunner(
       ServiceEmitter emitter,
@@ -51,7 +53,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
       QueryRunner<T> queryRunner
   )
   {
-    this(emitter, builderFn, queryRunner, DEFAULT_METRIC_NAME, Maps.<String, String>newHashMap());
+    this(emitter, builderFn, queryRunner, DEFAULT_METRIC_NAME, Maps.<String, String>newHashMap(), null);
   }
 
   public MetricsEmittingQueryRunner(
@@ -60,7 +62,8 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
       QueryRunner<T> queryRunner,
       long creationTime,
       String metricName,
-      Map<String, String> userDimensions
+      Map<String, String> userDimensions,
+      ReferenceCountingSegment adapter
   )
   {
     this.emitter = emitter;
@@ -69,6 +72,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
     this.creationTime = creationTime;
     this.metricName = metricName;
     this.userDimensions = userDimensions;
+    this.adapter = adapter;
   }
 
   public MetricsEmittingQueryRunner(
@@ -76,10 +80,11 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
       Function<Query<T>, ServiceMetricEvent.Builder> builderFn,
       QueryRunner<T> queryRunner,
       String metricName,
-      Map<String, String> userDimensions
+      Map<String, String> userDimensions,
+      ReferenceCountingSegment adapter
   )
   {
-    this(emitter, builderFn, queryRunner, -1, metricName, userDimensions);
+    this(emitter, builderFn, queryRunner, -1, metricName, userDimensions, adapter);
   }
 
 
@@ -91,7 +96,8 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
         queryRunner,
         System.currentTimeMillis(),
         metricName,
-        userDimensions
+        userDimensions,
+        adapter
     );
   }
 
@@ -129,6 +135,8 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
           long timeTaken = System.currentTimeMillis() - startTime;
 
           emitter.emit(builder.build(metricName, timeTaken));
+          if (metricName == "query/segment/time" && adapter != null)
+            adapter.updateSegmentQueryTime(timeTaken);
 
           if (creationTime > 0) {
             emitter.emit(builder.build("query/wait/time", startTime - creationTime));
@@ -205,6 +213,8 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
 
               long timeTaken = System.currentTimeMillis() - startTime;
               emitter.emit(builder.build(metricName, timeTaken));
+              if (metricName == "query/segment/time" && adapter != null)
+                adapter.updateSegmentQueryTime(timeTaken);
 
               if (creationTime > 0) {
                 emitter.emit(builder.build("query/wait/time", startTime - creationTime));

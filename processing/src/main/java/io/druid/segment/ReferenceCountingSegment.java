@@ -25,6 +25,9 @@ import org.joda.time.Interval;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ReferenceCountingSegment implements Segment
 {
@@ -36,9 +39,11 @@ public class ReferenceCountingSegment implements Segment
 
   private volatile int numReferences = 0;
   private volatile boolean isClosed = false;
-  
+
   private volatile int maxReference = 0;
   private volatile int totalReference = 0;
+
+  private List<Long> segmentQueryTimes = Collections.synchronizedList(new ArrayList<Long>());
 
   public ReferenceCountingSegment(Segment baseSegment)
   {
@@ -59,7 +64,7 @@ public class ReferenceCountingSegment implements Segment
   {
     return numReferences;
   }
-  
+
   public int getAndClearMaxConcurrentAccess(){
 	int returnValue = maxReference;
 	maxReference = numReferences;
@@ -70,6 +75,24 @@ public class ReferenceCountingSegment implements Segment
 	int returnValue = totalReference;
 	totalReference = 0;
 	return returnValue;
+  }
+
+  public void updateSegmentQueryTime(long timetaken)
+  {
+    segmentQueryTimes.add(timetaken);
+  }
+
+  public long getAndClearSegmentQueryTime()
+  {
+    long totaltime = 0;
+    synchronized(segmentQueryTimes) {
+      for (long time: segmentQueryTimes) {
+        totaltime += time;
+      }
+    }
+
+    segmentQueryTimes.clear();
+    return totaltime;
   }
 
   public boolean isClosed()

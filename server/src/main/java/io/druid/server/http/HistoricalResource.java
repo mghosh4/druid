@@ -69,4 +69,12 @@ public class HistoricalResource
   {
     return Response.ok(manager.getTotalAccessMap()).build();
   }
+
+  @GET
+  @Path("/totalAccessTime")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getTotalAccessTime()
+  {
+    return Response.ok(manager.getSegmentAccessTimeMap()).build();
+  }
 }

@@ -396,6 +396,35 @@ public class ServerManager implements QuerySegmentWalker
 	return result;	
   }
 
+  public String getSegmentAccessTimeMap()
+  {
+    String result = null;
+
+    try {
+      Map<String, Long> segmentAccessTimeMap = Maps.newHashMap();
+      for (Map.Entry<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> dataSource : dataSources.entrySet())
+      {
+        List<PartitionHolder<ReferenceCountingSegment>> partitionList = dataSource.getValue().getAllObjects();
+        for (PartitionHolder<ReferenceCountingSegment> partition : partitionList)
+        {
+          for (ReferenceCountingSegment segment : partition.payloads()) {
+            long accessTime = segment.getAndClearSegmentQueryTime();
+            if (accessTime > 0)
+              segmentAccessTimeMap.put(segment.getIdentifier(), accessTime);
+          }
+        }
+      }
+
+      result = objectMapper.writeValueAsString(segmentAccessTimeMap);
+      log.info("Serializing Total Access Map [%d]", result.length());
+    } catch (JsonProcessingException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+
+    return result;
+  }
+
   private String getDataSourceName(DataSource dataSource)
   {
     return Iterables.getOnlyElement(dataSource.getNames());
@@ -509,14 +538,16 @@ public class ServerManager implements QuerySegmentWalker
                             },
                             new ReferenceCountingSegmentQueryRunner<T>(factory, adapter, segmentDescriptor),
                             "query/segment/time",
-                            ImmutableMap.of("segment", adapter.getIdentifier())
+                            ImmutableMap.of("segment", adapter.getIdentifier()),
+                            adapter
                         ),
                         cachingExec,
                         cacheConfig
                     )
                 ),
                 "query/segmentAndCache/time",
-                ImmutableMap.of("segment", adapter.getIdentifier())
+                ImmutableMap.of("segment", adapter.getIdentifier()),
+                adapter
             ).withWaitMeasuredFromNow(),
             segmentSpec
         ),
