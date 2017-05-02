@@ -59,7 +59,7 @@ public class DruidBroker
 
 
   //QueryTime distribution data structures
-  String loadingPath = "/proj/ISS/lexu/distribution/";
+  String loadingPath = "/users/lexu/distribution/";
   String[] fullpaths = {loadingPath+"groupby.cdf", loadingPath+"timeseries.cdf", loadingPath+"topn.cdf"};
 
 
