@@ -57,6 +57,7 @@ public class DruidBroker
   private volatile Map<String, Map<String, Long>> routingTable;
 
 
+
   //QueryTime distribution data structures
   String loadingPath = "/proj/ISS/lexu/distribution/";
   String[] fullpaths = {loadingPath+"groupby.cdf", loadingPath+"timeseries.cdf", loadingPath+"topn.cdf"};
@@ -64,7 +65,16 @@ public class DruidBroker
 
   HashMap<String, ArrayList<Double>> percentileCollection;
   HashMap<String, HashMap<Double, Double>> histogramCollection;
+  HashMap<String, HashMap<String, Double>> allocationTable;
 
+  public void setAllocationTable(HashMap<String, HashMap<String, Double>> allocationTable) {
+    this.allocationTable = allocationTable;
+  }
+
+  public HashMap<String, HashMap<String, Double>> getAllocationTable() {
+
+    return allocationTable;
+  }
 
   String[] queryTypes = {"groupby", "timeseries", "topn"};
 

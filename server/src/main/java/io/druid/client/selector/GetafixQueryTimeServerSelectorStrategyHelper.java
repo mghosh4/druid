@@ -40,7 +40,7 @@ public class GetafixQueryTimeServerSelectorStrategyHelper {
         return queryTime;
     }
 
-    public static String compareAndSelect(HashMap<String, Double> currentMap, HashMap<String, Double> goalMap){
+    public static String compareAndSelect(HashMap<String, Double> currentMap, Map<String, Long> goalMap){
 
         HashMap<String , Integer> keyToID = new HashMap<String, Integer>();
         HashMap<Integer, String> IDToKey = new HashMap<Integer, String>();
@@ -59,7 +59,7 @@ public class GetafixQueryTimeServerSelectorStrategyHelper {
                 //populate all data structure
                 String key = entry.getKey();
                 currentArr[counter] = currentMap.get(key);
-                goalArr[counter] = goalMap.get(key);
+                goalArr[counter] = (double)goalMap.get(key);
                 keyToID.put(key, counter);
                 IDToKey.put(counter, key);
                 counter++;
