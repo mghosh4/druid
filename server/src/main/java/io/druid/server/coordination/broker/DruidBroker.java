@@ -86,7 +86,7 @@ public class DruidBroker
       final ServiceAnnouncer serviceAnnouncer,
       final ServerDiscoveryFactory serverDiscoveryFactory,
       @Global HttpClient httpClient
-  ) throws IOException {
+  )  {
     this.self = self;
     this.serviceAnnouncer = serviceAnnouncer;
     this.serverDiscoveryFactory = serverDiscoveryFactory;
@@ -112,7 +112,12 @@ public class DruidBroker
     for(int i = 0 ; i < queryTypes.length; i++){
       String key = queryTypes[i];
       HashMap<Double, Double> histogram = new HashMap<Double, Double>();
-      ArrayList<Double> percentile = loadAndParse(fullpaths[i], histogram);
+      ArrayList<Double> percentile = null;
+      try {
+        percentile = loadAndParse(fullpaths[i], histogram);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
       percentileCollection.put(key, percentile);
       histogramCollection.put(key, histogram);
     }
@@ -177,7 +182,7 @@ public class DruidBroker
 
     while ( (myLine = bufRead.readLine()) != null)
     {
-      String[] array = myLine.split("\t");
+      String[] array = myLine.split("\\s+");
       double querytime = Double.parseDouble(array[0]);
       double percentile = Double.parseDouble(array[1]);
       percentileArr.add(percentile);
