@@ -50,6 +50,7 @@ public class GetafixQueryTimeServerSelectorStrategy implements ServerSelectorStr
 
 
   String[] queryTypes = {"groupby", "timeseries", "topn"};
+  /*
 
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
@@ -115,8 +116,8 @@ public class GetafixQueryTimeServerSelectorStrategy implements ServerSelectorStr
 
     return null;
   }
-
-  public QueryableDruidServer queryTimePick(Set<QueryableDruidServer> servers, DataSegment segment)
+*/
+  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
   {
     if (servers.size() == 0) {
       log.error("[GETAFIX ROUTING] No QueryableDruidServers in the set");
@@ -273,7 +274,9 @@ public class GetafixQueryTimeServerSelectorStrategy implements ServerSelectorStr
       allocationMap.get(segment.getIdentifier()).put(chosenServer, 0.0);
     }
     double oldallocation = allocationMap.get(segment.getIdentifier()).get(chosenServer);
-    double newallocation = oldallocation + GetafixQueryTimeServerSelectorStrategyHelper.selectRandomQueryTime(histogramCollection.get("timeseries"), percentileCollection.get("timeseries"));
+    double estimated_weight = GetafixQueryTimeServerSelectorStrategyHelper.selectRandomQueryTime(histogramCollection.get("timeseries"), percentileCollection.get("timeseries"));
+    log.info("[GETAFIX ROUTING] adding weight to allocation [%s]", estimated_weight);
+    double newallocation = oldallocation + estimated_weight;
     allocationMap.get(segment.getIdentifier()).put(chosenServer, newallocation);
     druidBroker.setAllocationTable(allocationMap);
   }
