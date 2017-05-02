@@ -178,8 +178,8 @@ public class DruidBroker
     while ( (myLine = bufRead.readLine()) != null)
     {
       String[] array = myLine.split("\t");
-      double querytime = Double.valueOf(array[0]);
-      double percentile = Double.valueOf(array[1]);
+      double querytime = Double.parseDouble(array[0]);
+      double percentile = Double.parseDouble(array[1]);
       percentileArr.add(percentile);
       histogram.put(percentile, querytime);
     }
