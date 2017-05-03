@@ -63,9 +63,10 @@ public class DruidBroker
   String[] fullpaths = {loadingPath+"groupby.cdf", loadingPath+"timeseries.cdf", loadingPath+"topn.cdf"};
 
 
-  HashMap<String, ArrayList<Double>> percentileCollection;
-  HashMap<String, HashMap<Double, Double>> histogramCollection;
-  HashMap<String, HashMap<String, Double>> allocationTable;
+  HashMap<String, ArrayList<Double>> percentileCollection = new HashMap<String, ArrayList<Double>>();
+    HashMap<String, HashMap<Double, Double>> histogramCollection = new HashMap<String, HashMap<Double, Double>>();
+  HashMap<String, HashMap<String, Double>> allocationTable = new HashMap<String, HashMap<String, Double>>();
+    String[] queryTypes = {"groupby", "timeseries", "topn"};
 
   public void setAllocationTable(HashMap<String, HashMap<String, Double>> allocationTable) {
     this.allocationTable = allocationTable;
@@ -76,7 +77,7 @@ public class DruidBroker
     return allocationTable;
   }
 
-  String[] queryTypes = {"groupby", "timeseries", "topn"};
+
 
 
   @Inject
@@ -180,21 +181,21 @@ public class DruidBroker
     BufferedReader bufRead = new BufferedReader(input);
     String myLine = null;
 
-//    while ( (myLine = bufRead.readLine()) != null)
-//    {
-//      String[] array = myLine.split("\\s+");
-//      double querytime = Double.parseDouble(array[0]);
-//      double percentile = Double.parseDouble(array[1]);
-//      percentileArr.add(percentile);
-//      histogram.put(percentile, querytime);
-//    }
-    double c = 0;
-    double step = 0.1;
-    while(c<=1){
-      percentileArr.add(c);
-      histogram.put(c, 1.0);
-      c+=0.1;
+    while ( (myLine = bufRead.readLine()) != null)
+    {
+      String[] array = myLine.split("\\s+");
+      double querytime = Double.parseDouble(array[0]);
+      double percentile = Double.parseDouble(array[1]);
+      percentileArr.add(percentile);
+      histogram.put(percentile, querytime);
     }
+//    double c = 0;
+//    double step = 0.1;
+//    while(c<=1){
+//      percentileArr.add(c);
+//      histogram.put(c, 1.0);
+//      c+=0.1;
+//    }
     /*********************************************************************/
     return percentileArr;
   }
