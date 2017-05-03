@@ -180,13 +180,20 @@ public class DruidBroker
     BufferedReader bufRead = new BufferedReader(input);
     String myLine = null;
 
-    while ( (myLine = bufRead.readLine()) != null)
-    {
-      String[] array = myLine.split("\\s+");
-      double querytime = Double.parseDouble(array[0]);
-      double percentile = Double.parseDouble(array[1]);
-      percentileArr.add(percentile);
-      histogram.put(percentile, querytime);
+//    while ( (myLine = bufRead.readLine()) != null)
+//    {
+//      String[] array = myLine.split("\\s+");
+//      double querytime = Double.parseDouble(array[0]);
+//      double percentile = Double.parseDouble(array[1]);
+//      percentileArr.add(percentile);
+//      histogram.put(percentile, querytime);
+//    }
+    double c = 0;
+    double step = 0.1;
+    while(c<=1){
+      percentileArr.add(c);
+      histogram.put(c, 1.0);
+      c+=0.1;
     }
     /*********************************************************************/
     return percentileArr;
