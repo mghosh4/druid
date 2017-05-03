@@ -31,6 +31,7 @@ import io.druid.curator.discovery.ServiceAnnouncer;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Self;
+import io.druid.query.Query;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.broker.tasks.PeriodicPollRoutingTable;
 
@@ -40,6 +41,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -56,29 +58,14 @@ public class DruidBroker
   private volatile boolean started = false;
   private volatile Map<String, Map<String, Long>> routingTable;
 
-
-
   //QueryTime distribution data structures
   String loadingPath = "/users/lexu/distribution/";
   String[] fullpaths = {loadingPath+"groupby.cdf", loadingPath+"timeseries.cdf", loadingPath+"topn.cdf"};
 
-
   HashMap<String, ArrayList<Double>> percentileCollection = new HashMap<String, ArrayList<Double>>();
-    HashMap<String, HashMap<Double, Double>> histogramCollection = new HashMap<String, HashMap<Double, Double>>();
-  HashMap<String, HashMap<String, Double>> allocationTable = new HashMap<String, HashMap<String, Double>>();
-    String[] queryTypes = {"groupby", "timeseries", "topn"};
-
-  public void setAllocationTable(HashMap<String, HashMap<String, Double>> allocationTable) {
-    this.allocationTable = allocationTable;
-  }
-
-  public HashMap<String, HashMap<String, Double>> getAllocationTable() {
-
-    return allocationTable;
-  }
-
-
-
+  HashMap<String, HashMap<Double, Double>> histogramCollection = new HashMap<String, HashMap<Double, Double>>();
+  ConcurrentHashMap<String, ConcurrentHashMap<String, Double>> allocationTable = new ConcurrentHashMap<>();
+  String[] queryTypes = {Query.TIMESERIES, Query.TOPN, Query.GROUP_BY};
 
   @Inject
   public DruidBroker(
@@ -158,6 +145,16 @@ public class DruidBroker
     return histogramCollection;
   }
 
+  public void setAllocationTable(ConcurrentHashMap<String, ConcurrentHashMap<String, Double>> allocationTable) {
+    this.allocationTable = allocationTable;
+  }
+
+  public void clearAllocationTable() {
+    this.allocationTable.clear();
+  }
+
+  public ConcurrentHashMap<String, ConcurrentHashMap<String, Double>> getAllocationTable() { return allocationTable;  }
+
   public synchronized Map<String, Map<String, Long>> getRoutingTable()
   {
     return routingTable;
@@ -176,7 +173,7 @@ public class DruidBroker
     ArrayList<Double> percentileArr = new ArrayList<Double>();
 
     /*********************************************************************/
-        /* http://stackoverflow.com/questions/5819772/java-parsing-text-file */
+    /* http://stackoverflow.com/questions/5819772/java-parsing-text-file */
     FileReader input = new FileReader(filename);
     BufferedReader bufRead = new BufferedReader(input);
     String myLine = null;
@@ -189,13 +186,7 @@ public class DruidBroker
       percentileArr.add(percentile);
       histogram.put(percentile, querytime);
     }
-//    double c = 0;
-//    double step = 0.1;
-//    while(c<=1){
-//      percentileArr.add(c);
-//      histogram.put(c, 1.0);
-//      c+=0.1;
-//    }
+
     /*********************************************************************/
     return percentileArr;
   }

@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 
@@ -40,7 +41,7 @@ public class GetafixQueryTimeServerSelectorStrategyHelper {
         return queryTime;
     }
 
-    public static String compareAndSelect(HashMap<String, Double> currentMap, Map<String, Long> goalMap){
+    public static String compareAndSelect(ConcurrentHashMap<String, Double> currentMap, Map<String, Long> goalMap){
 
         HashMap<String , Integer> keyToID = new HashMap<String, Integer>();
         HashMap<Integer, String> IDToKey = new HashMap<Integer, String>();

@@ -19,7 +19,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.net.URI;
 import java.net.URL;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -85,8 +84,7 @@ public class PeriodicPollRoutingTable implements Runnable
       );
 
       druidBroker.setRoutingTable(routingTable);
-      HashMap<String, HashMap<String, Double>> allocationTable = new HashMap<>();
-      druidBroker.setAllocationTable(allocationTable);
+      druidBroker.clearAllocationTable();
       selector.stop();
     }
     catch (Exception e) {
