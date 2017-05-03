@@ -79,10 +79,21 @@ public class GetafixQueryTimeServerSelectorStrategyHelper {
             }
         }
         log.info("max multiplication factor [%s]", maxFactor);
-
+        log.info("current array:");
+        for(int i =0; i<currentArr.length;i++){
+            log.info("[%s]", currentArr[i]);
+        }
+        log.info("original goal array:");
+        for(int i =0; i<goalArr.length;i++){
+            log.info("[%s]", goalArr[i]);
+        }
         //refactoring goal array
         for (int i = 0; i < goalArr.length; i++){
             refactoredGoalArr[i] = goalArr[i] * maxFactor;
+        }
+        log.info("refactoredGoalArr:");
+        for(int i =0; i<refactoredGoalArr.length;i++){
+            log.info("[%s]", refactoredGoalArr[i]);
         }
 
         //find the one furthest from its goal
@@ -98,7 +109,7 @@ public class GetafixQueryTimeServerSelectorStrategyHelper {
                 targetID = i;
             }
         }
-
+        log.info("max distance [%s]", maxDistance);
         return IDToKey.get(targetID);
 
     }
