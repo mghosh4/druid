@@ -29,7 +29,8 @@ import java.util.Set;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "random", value = RandomServerSelectorStrategy.class),
     @JsonSubTypes.Type(name = "connectionCount", value = ConnectionCountServerSelectorStrategy.class),
-    @JsonSubTypes.Type(name = "getafix", value = GetafixQueryTimeServerSelectorStrategy.class)
+    @JsonSubTypes.Type(name = "getafix", value = GetafixServerSelectorStrategy.class),
+    @JsonSubTypes.Type(name = "getafixtime", value = GetafixQueryTimeServerSelectorStrategy.class)
 })
 public interface ServerSelectorStrategy
 {

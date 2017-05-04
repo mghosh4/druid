@@ -38,6 +38,7 @@ import io.druid.server.coordination.broker.tasks.PeriodicPollRoutingTable;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -59,7 +60,7 @@ public class DruidBroker
   private volatile Map<String, Map<String, Long>> routingTable;
 
   //QueryTime distribution data structures
-  String loadingPath = "/users/lexu/distribution/";
+  String loadingPath = "/proj/DCSQ/mghosh4/distribution/";
   String[] fullpaths = {loadingPath+"groupby.cdf", loadingPath+"timeseries.cdf", loadingPath+"topn.cdf"};
 
   HashMap<String, ArrayList<Double>> percentileCollection = new HashMap<String, ArrayList<Double>>();
@@ -105,6 +106,7 @@ public class DruidBroker
         percentile = loadAndParse(fullpaths[i], histogram);
       } catch (IOException e) {
         e.printStackTrace();
+        break;
       }
       percentileCollection.put(key, percentile);
       histogramCollection.put(key, histogram);
@@ -135,6 +137,11 @@ public class DruidBroker
       serviceAnnouncer.unannounce(self);
       started = false;
     }
+  }
+
+  public boolean acceptableQueryType(String queryType)
+  {
+    return Arrays.asList(queryTypes).contains(queryType);
   }
 
   public HashMap<String, ArrayList<Double>> getPercentileCollection() {

@@ -97,7 +97,10 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   private final SegmentCollector segmentCollector;
   private final MetadataSegmentManager metadataSegmentManager;
 
-  @JacksonInject
+  private HashMap<String, ArrayList<Double>> percentileCollection = Maps.newHashMap();
+  private HashMap<String, HashMap<Double, Double>> histogramCollection = Maps.newHashMap();
+  private ConcurrentHashMap<String, ConcurrentHashMap<String, Double>> allocationMap = new ConcurrentHashMap<>();
+  @Inject
   DruidBroker druidBroker;
 
   @Inject
@@ -300,11 +303,15 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       }
     }
 
-    HashMap<String, ArrayList<Double>> percentileCollection = druidBroker.getPercentileCollection();
-    HashMap<String, HashMap<Double, Double>> histogramCollection = druidBroker.getHistogramCollection();
-    ConcurrentHashMap<String, ConcurrentHashMap<String, Double>> allocationMap = druidBroker.getAllocationTable();
-    double estimated_weight = GetafixQueryTimeServerSelectorStrategyHelper.selectRandomQueryTime(
-            histogramCollection.get(query.getType()), percentileCollection.get(query.getType()));
+    double estimated_weight = 0;
+    if (druidBroker.acceptableQueryType(query.getType()))
+    {
+        percentileCollection = druidBroker.getPercentileCollection();
+        histogramCollection = druidBroker.getHistogramCollection();
+        allocationMap = druidBroker.getAllocationTable();
+        estimated_weight = GetafixQueryTimeServerSelectorStrategyHelper.selectRandomQueryTime(
+                histogramCollection.get(query.getType()), percentileCollection.get(query.getType()));
+    }
 
     // Compile list of all segments not pulled from cache
     for (Pair<ServerSelector, SegmentDescriptor> segment : segments) {
@@ -327,7 +334,8 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
         descriptors.add(segment.rhs);
 
-        if (segment.lhs.getStrategy() instanceof GetafixQueryTimeServerSelectorStrategy)
+        if (segment.lhs.getStrategy() instanceof GetafixQueryTimeServerSelectorStrategy
+            && druidBroker.acceptableQueryType(query.getType()))
         {
           String segmentId = segment.lhs.getSegment().getIdentifier();
           String serverId= queryableDruidServer.getServer().getMetadata().toString();
