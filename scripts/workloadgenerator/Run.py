@@ -68,23 +68,20 @@ def applyOperation(query, config, brokerNameUrl, logger):
     elif querytype == "timeboundary":
         return dbOpsHandler.timeboundary(query, logger)
     elif querytype == "mixture":
-        return generateRandomQuery(query, logger, config)
+        randomNumber = random.randint(0, 100);
+        qtype = 0
+        for queryweight in queryratio:
+            if randomNumber <= queryweight:
+                break
+            qtype = qtype + 1
+            randomNumber = randomNumber - queryweight
 
-def generateRandomQuery(query, logger, dbOpsHandler):
-    randomNumber = random.randint(0, 100);
-    qtype = 0
-    for queryweight in queryratio:
-        if randomNumber <= queryweight:
-            break
-        qtype = qtype + 1
-        randomNumber = randomNumber - queryweight
-
-    if qtype == 0:
-        return dbOpsHandler.timeseries(query, logger)
-    elif qtype == 1:
-        return dbOpsHandler.topn(query, logger)
-    elif qtype == 2:
-        return dbOpsHandler.groupby(query, logger)
+        if qtype == 0:
+            return dbOpsHandler.timeseries(query, logger)
+        elif qtype == 1:
+            return dbOpsHandler.topn(query, logger)
+        elif qtype == 2:
+            return dbOpsHandler.groupby(query, logger)
 
 def threadoperation(queryPerSec):
     @gen.coroutine
