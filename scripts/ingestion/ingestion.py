@@ -73,7 +73,7 @@ if(datatype == "randomstream"):
     metric = {
       'timestamp': long(time.time() * 1000),
       'name': 'query/time',
-      'host': '192.168.' + str(random.randrange(1, 254)) + '.' + str(random.randrange(1, 254)),
+      'host': '192.168.1.' + str(random.randrange(1, 50)),
       'page': str(int(max(1, random.gauss(5, 4)))) + '.html',
       'value': max(0, int(random.gauss(200, 80)))
     }
