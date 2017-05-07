@@ -42,7 +42,9 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -256,6 +258,10 @@ public class BrokerServerView implements TimelineServerView
     }
   }
 
+  public ConcurrentMap<String, QueryableDruidServer> getServerMap()
+  {
+    return clients;
+  }
 
   @Override
   public VersionedIntervalTimeline<String, ServerSelector> getTimeline(DataSource dataSource)

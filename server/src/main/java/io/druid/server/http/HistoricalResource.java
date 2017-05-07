@@ -77,4 +77,12 @@ public class HistoricalResource
   {
     return Response.ok(manager.getSegmentAccessTimeMap()).build();
   }
+
+  @GET
+  @Path("/currentLoad")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getCurrentQueryLoad()
+  {
+    return Response.ok(manager.currentQueryLoad()).build();
+  }
 }

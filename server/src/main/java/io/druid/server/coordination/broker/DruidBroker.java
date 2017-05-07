@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.http.client.HttpClient;
+import io.druid.client.BrokerServerView;
 import io.druid.client.ServerInventoryView;
 import io.druid.client.ServerView;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
@@ -33,6 +34,7 @@ import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Self;
 import io.druid.query.Query;
 import io.druid.server.DruidNode;
+import io.druid.server.coordination.broker.tasks.PeriodicPollHistoricalLoad;
 import io.druid.server.coordination.broker.tasks.PeriodicPollRoutingTable;
 
 import java.io.BufferedReader;
@@ -54,6 +56,7 @@ public class DruidBroker
   private final ServiceAnnouncer serviceAnnouncer;
   private final ServerDiscoveryFactory serverDiscoveryFactory;
   private final HttpClient httpClient;
+  private final BrokerServerView serverView;
 
   private final ScheduledExecutorService pool;
   private volatile boolean started = false;
@@ -74,12 +77,14 @@ public class DruidBroker
       final @Self DruidNode self,
       final ServiceAnnouncer serviceAnnouncer,
       final ServerDiscoveryFactory serverDiscoveryFactory,
+      final BrokerServerView serverView,
       @Global HttpClient httpClient
   )  {
     this.self = self;
     this.serviceAnnouncer = serviceAnnouncer;
     this.serverDiscoveryFactory = serverDiscoveryFactory;
     this.httpClient = httpClient;
+    this.serverView = serverView;
 
     serverInventoryView.registerSegmentCallback(
         MoreExecutors.sameThreadExecutor(),
@@ -124,6 +129,7 @@ public class DruidBroker
 
       // Scheduled Tasks
       pool.scheduleWithFixedDelay(new PeriodicPollRoutingTable(this, serverDiscoveryFactory, httpClient), 0, 20, TimeUnit.SECONDS);
+      pool.scheduleWithFixedDelay(new PeriodicPollHistoricalLoad(this, httpClient), 0, 20, TimeUnit.SECONDS);
     }
   }
 
@@ -175,6 +181,8 @@ public class DruidBroker
   public HttpClient getHttpClient() {
     return httpClient;
   }
+
+  public BrokerServerView getServerView() { return this.serverView; }
 
   public ArrayList<Double> loadAndParse(String filename, HashMap<Double, Double> histogram) throws IOException {
     ArrayList<Double> percentileArr = new ArrayList<Double>();
