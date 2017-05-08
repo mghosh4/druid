@@ -70,17 +70,17 @@ def applyOperation(query, config, brokerNameUrl, logger):
     elif querytype == "mixture":
         randomNumber = random.randint(0, 100);
         qtype = 0
-        for queryweight in queryratio:
+        for queryweight in sorted(queryratio):
             if randomNumber <= queryweight:
                 break
             qtype = qtype + 1
             randomNumber = randomNumber - queryweight
 
-        if qtype == 0:
+        if qtype == 2:
             return dbOpsHandler.timeseries(query, logger)
         elif qtype == 1:
             return dbOpsHandler.topn(query, logger)
-        elif qtype == 2:
+        elif qtype == 0:
             return dbOpsHandler.groupby(query, logger)
 
 def threadoperation(queryPerSec):
