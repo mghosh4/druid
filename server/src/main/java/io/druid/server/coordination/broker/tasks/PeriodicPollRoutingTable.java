@@ -84,6 +84,7 @@ public class PeriodicPollRoutingTable implements Runnable
       );
 
       druidBroker.setRoutingTable(routingTable);
+      druidBroker.clearAllocationTable();
       selector.stop();
     }
     catch (Exception e) {

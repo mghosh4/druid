@@ -27,6 +27,10 @@ import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.query.Query;
 import io.druid.query.QueryWatcher;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class QueryManager implements QueryWatcher
@@ -59,10 +63,24 @@ public class QueryManager implements QueryWatcher
           @Override
           public void run()
           {
-            queries.remove(id, future);
+            Iterator<Map.Entry<String, ListenableFuture>> it = queries.entries().iterator();
+            while (it.hasNext()) {
+              Map.Entry<String, ListenableFuture> next = it.next();
+              if (next.getKey().equals(id) && next.getValue().equals(future)) {
+                it.remove();
+              }
+            }
           }
         },
         MoreExecutors.sameThreadExecutor()
     );
+  }
+
+  public List<String> currentQueries()
+  {
+    List<String> elements = new ArrayList<String>();
+    Set<String> queryids = queries.keys().elementSet();
+    elements.addAll(queryids); 
+    return elements;
   }
 }

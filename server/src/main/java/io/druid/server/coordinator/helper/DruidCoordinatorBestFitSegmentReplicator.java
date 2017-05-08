@@ -293,7 +293,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 						null,
 						historical.getHost().split(":")[0],
 						Integer.parseInt(historical.getHost().split(":")[1]),
-						"/druid/historical/v1/totalAccess",
+						"/druid/historical/v1/totalAccessTime",
 						null,
 						null);
 			} catch (URISyntaxException e) {

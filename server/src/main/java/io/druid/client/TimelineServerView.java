@@ -20,9 +20,12 @@
 package io.druid.client;
 
 import io.druid.client.selector.ServerSelector;
+import io.druid.client.selector.QueryableDruidServer;
 import io.druid.query.DataSource;
 import io.druid.query.QueryRunner;
 import io.druid.timeline.TimelineLookup;
+
+import java.util.concurrent.ConcurrentMap;
 
 /**
  */
@@ -30,4 +33,5 @@ public interface TimelineServerView extends ServerView
 {
   TimelineLookup<String, ServerSelector> getTimeline(DataSource dataSource);
   <T> QueryRunner<T> getQueryRunner(DruidServer server);
+  ConcurrentMap<String, QueryableDruidServer> getServerMap();
 }

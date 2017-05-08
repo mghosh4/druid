@@ -52,6 +52,7 @@ public class DruidServer implements Comparable
   private final DruidServerMetadata metadata;
 
   private volatile long currSize;
+  private volatile long loadEstimate;
 
   public DruidServer(
       DruidNode node,
@@ -83,6 +84,8 @@ public class DruidServer implements Comparable
 
     this.dataSources = new ConcurrentHashMap<String, DruidDataSource>();
     this.segments = new ConcurrentHashMap<String, DataSegment>();
+
+    this.loadEstimate = 0;
   }
 
   public String getName()
@@ -93,6 +96,16 @@ public class DruidServer implements Comparable
   public DruidServerMetadata getMetadata()
   {
     return metadata;
+  }
+
+  public long getCurrentLoad()
+  {
+    return loadEstimate;
+  }
+
+  public void setCurrentLoad(long estimate)
+  {
+    loadEstimate = estimate;
   }
 
   @JsonProperty

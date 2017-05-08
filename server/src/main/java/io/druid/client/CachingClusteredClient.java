@@ -19,6 +19,7 @@
 
 package io.druid.client;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
@@ -45,6 +46,8 @@ import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.selector.GetafixQueryTimeServerSelectorStrategy;
+import io.druid.client.selector.GetafixQueryTimeServerSelectorStrategyHelper;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
 import io.druid.concurrent.Execs;
@@ -63,6 +66,7 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.MetricManipulatorFns;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.broker.DruidBroker;
 import io.druid.server.http.SegmentCollector;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
@@ -71,13 +75,9 @@ import io.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 
@@ -96,6 +96,12 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   private final ListeningExecutorService backgroundExecutorService;
   private final SegmentCollector segmentCollector;
   private final MetadataSegmentManager metadataSegmentManager;
+
+  private HashMap<String, ArrayList<Double>> percentileCollection = Maps.newHashMap();
+  private HashMap<String, HashMap<Double, Double>> histogramCollection = Maps.newHashMap();
+  private ConcurrentHashMap<String, ConcurrentHashMap<String, Double>> allocationMap = new ConcurrentHashMap<>();
+  @Inject
+  DruidBroker druidBroker;
 
   @Inject
   public CachingClusteredClient(
@@ -297,6 +303,16 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       }
     }
 
+    double estimated_weight = 0;
+    if (druidBroker.acceptableQueryType(query.getType()))
+    {
+        percentileCollection = druidBroker.getPercentileCollection();
+        histogramCollection = druidBroker.getHistogramCollection();
+        allocationMap = druidBroker.getAllocationTable();
+        estimated_weight = GetafixQueryTimeServerSelectorStrategyHelper.selectRandomQueryTime(
+                histogramCollection.get(query.getType()), percentileCollection.get(query.getType()));
+    }
+
     // Compile list of all segments not pulled from cache
     for (Pair<ServerSelector, SegmentDescriptor> segment : segments) {
       final QueryableDruidServer queryableDruidServer = segment.lhs.pick();
@@ -317,6 +333,29 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         }
 
         descriptors.add(segment.rhs);
+
+        if (segment.lhs.getStrategy() instanceof GetafixQueryTimeServerSelectorStrategy
+            && druidBroker.acceptableQueryType(query.getType()))
+        {
+          String segmentId = segment.lhs.getSegment().getIdentifier();
+          String serverId= queryableDruidServer.getServer().getMetadata().toString();
+          if(!allocationMap.containsKey(segmentId)){
+            //allocationMap has no segment info
+            ConcurrentHashMap<String, Double> allocation = new ConcurrentHashMap<>();
+            allocation.put(serverId, 0.0);
+
+            allocationMap.put(segmentId, allocation);
+          }
+          else if (!allocationMap.get(segmentId).containsKey(serverId)){
+            allocationMap.get(segmentId).put(serverId, 0.0);
+          }
+
+          double oldallocation = allocationMap.get(segmentId).get(serverId);
+          log.info("[GETAFIX ROUTING] adding weight to allocation [%s]", estimated_weight);
+          double newallocation = oldallocation + estimated_weight;
+          allocationMap.get(segmentId).put(serverId, newallocation);
+          druidBroker.setAllocationTable(allocationMap);
+        }
       }
     }
 

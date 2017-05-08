@@ -78,6 +78,11 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
     }
   }
 
+  public TierSelectorStrategy getStrategy()
+  {
+    return strategy;
+  }
+
   public QueryableDruidServer pick()
   {
     synchronized (this) {

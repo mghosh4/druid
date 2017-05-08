@@ -31,11 +31,19 @@ import io.druid.curator.discovery.ServiceAnnouncer;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Self;
+import io.druid.query.Query;
 import io.druid.server.DruidNode;
+import io.druid.server.coordination.broker.tasks.PeriodicPollHistoricalLoad;
 import io.druid.server.coordination.broker.tasks.PeriodicPollRoutingTable;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -47,10 +55,20 @@ public class DruidBroker
   private final ServiceAnnouncer serviceAnnouncer;
   private final ServerDiscoveryFactory serverDiscoveryFactory;
   private final HttpClient httpClient;
+  private final ServerInventoryView inventoryView;
 
   private final ScheduledExecutorService pool;
   private volatile boolean started = false;
   private volatile Map<String, Map<String, Long>> routingTable;
+
+  //QueryTime distribution data structures
+  String loadingPath = "/proj/DCSQ/mghosh4/druid/estimation/";
+  String[] fullpaths = {loadingPath+"groupby.cdf", loadingPath+"timeseries.cdf", loadingPath+"topn.cdf"};
+
+  HashMap<String, ArrayList<Double>> percentileCollection = new HashMap<String, ArrayList<Double>>();
+  HashMap<String, HashMap<Double, Double>> histogramCollection = new HashMap<String, HashMap<Double, Double>>();
+  ConcurrentHashMap<String, ConcurrentHashMap<String, Double>> allocationTable = new ConcurrentHashMap<>();
+  String[] queryTypes = {Query.TIMESERIES, Query.TOPN, Query.GROUP_BY};
 
   @Inject
   public DruidBroker(
@@ -59,12 +77,12 @@ public class DruidBroker
       final ServiceAnnouncer serviceAnnouncer,
       final ServerDiscoveryFactory serverDiscoveryFactory,
       @Global HttpClient httpClient
-  )
-  {
+  )  {
     this.self = self;
     this.serviceAnnouncer = serviceAnnouncer;
     this.serverDiscoveryFactory = serverDiscoveryFactory;
     this.httpClient = httpClient;
+    this.inventoryView = serverInventoryView;
 
     serverInventoryView.registerSegmentCallback(
         MoreExecutors.sameThreadExecutor(),
@@ -79,8 +97,23 @@ public class DruidBroker
         }
     );
 
-    this.pool = Executors.newSingleThreadScheduledExecutor();
+    this.pool = Executors.newScheduledThreadPool(2);
     this.routingTable = new HashMap<>();
+
+    //populate all query time distribution data structures
+    for(int i = 0 ; i < queryTypes.length; i++){
+      String key = queryTypes[i];
+      HashMap<Double, Double> histogram = new HashMap<Double, Double>();
+      ArrayList<Double> percentile = null;
+      try {
+        percentile = loadAndParse(fullpaths[i], histogram);
+      } catch (IOException e) {
+        e.printStackTrace();
+        break;
+      }
+      percentileCollection.put(key, percentile);
+      histogramCollection.put(key, histogram);
+    }
   }
 
   @LifecycleStart
@@ -94,6 +127,7 @@ public class DruidBroker
 
       // Scheduled Tasks
       pool.scheduleWithFixedDelay(new PeriodicPollRoutingTable(this, serverDiscoveryFactory, httpClient), 0, 20, TimeUnit.SECONDS);
+      pool.scheduleWithFixedDelay(new PeriodicPollHistoricalLoad(inventoryView, httpClient), 0, 20, TimeUnit.SECONDS);
     }
   }
 
@@ -109,6 +143,29 @@ public class DruidBroker
     }
   }
 
+  public boolean acceptableQueryType(String queryType)
+  {
+    return Arrays.asList(queryTypes).contains(queryType);
+  }
+
+  public HashMap<String, ArrayList<Double>> getPercentileCollection() {
+    return percentileCollection;
+  }
+
+  public HashMap<String, HashMap<Double, Double>> getHistogramCollection() {
+    return histogramCollection;
+  }
+
+  public void setAllocationTable(ConcurrentHashMap<String, ConcurrentHashMap<String, Double>> allocationTable) {
+    this.allocationTable = allocationTable;
+  }
+
+  public void clearAllocationTable() {
+    this.allocationTable.clear();
+  }
+
+  public ConcurrentHashMap<String, ConcurrentHashMap<String, Double>> getAllocationTable() { return allocationTable;  }
+
   public synchronized Map<String, Map<String, Long>> getRoutingTable()
   {
     return routingTable;
@@ -121,5 +178,27 @@ public class DruidBroker
 
   public HttpClient getHttpClient() {
     return httpClient;
+  }
+
+  public ArrayList<Double> loadAndParse(String filename, HashMap<Double, Double> histogram) throws IOException {
+    ArrayList<Double> percentileArr = new ArrayList<Double>();
+
+    /*********************************************************************/
+    /* http://stackoverflow.com/questions/5819772/java-parsing-text-file */
+    FileReader input = new FileReader(filename);
+    BufferedReader bufRead = new BufferedReader(input);
+    String myLine = null;
+
+    while ( (myLine = bufRead.readLine()) != null)
+    {
+      String[] array = myLine.split("\\s+");
+      double querytime = Double.parseDouble(array[0]);
+      double percentile = Double.parseDouble(array[1]);
+      percentileArr.add(percentile);
+      histogram.put(percentile, querytime);
+    }
+
+    /*********************************************************************/
+    return percentileArr;
   }
 }

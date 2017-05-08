@@ -11,7 +11,7 @@
             "format" : "auto"
           },
           "dimensionsSpec" : {
-            "dimensions": null,
+            "dimensions": ["host","page"],
             "dimensionExclusions" : [],
             "spatialDimensions" : []
           }
