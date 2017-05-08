@@ -21,13 +21,13 @@ package io.druid.server;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimaps;
-import com.google.common.collect.Multiset;
 import com.google.common.collect.SetMultimap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.query.Query;
 import io.druid.query.QueryWatcher;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -68,8 +68,14 @@ public class QueryManager implements QueryWatcher
     );
   }
 
-  public Multiset<String> currentQueries()
+  public List<String> currentQueries()
   {
-    return queries.keys();
+    List<String> elements = new ArrayList<String>();
+    synchronized(queries){
+        Set<String> queryids = queries.keys().elementSet();
+        elements.addAll(queryids); 
+    }
+
+    return elements;
   }
 }

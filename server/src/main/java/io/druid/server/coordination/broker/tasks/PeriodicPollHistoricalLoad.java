@@ -4,16 +4,16 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.util.Charsets;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Iterables;
 import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
-import io.druid.client.selector.QueryableDruidServer;
-import io.druid.curator.discovery.ServerDiscoveryFactory;
+import io.druid.client.ServerInventoryView;
+import io.druid.client.DruidServer;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.server.coordination.broker.DruidBroker;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -31,29 +31,30 @@ import java.util.concurrent.*;
 public class PeriodicPollHistoricalLoad implements Runnable
 {
   private static final EmittingLogger log = new EmittingLogger(PeriodicPollHistoricalLoad.class);
-  private final DruidBroker druidBroker;
+  private final ServerInventoryView<Object> serverView;
   private final HttpClient httpClient;
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private final StatusResponseHandler responseHandler = new StatusResponseHandler(Charsets.UTF_8);
-  private final ConcurrentMap<String, QueryableDruidServer> servers;
 
-  public PeriodicPollHistoricalLoad(DruidBroker druidBroker, HttpClient httpClient)
+  public PeriodicPollHistoricalLoad(ServerInventoryView serverView, HttpClient httpClient)
   {
-    this.druidBroker = druidBroker;
+    this.serverView = serverView;
     this.httpClient = httpClient;
-
-    this.servers = druidBroker.getServerView().getServerMap();
   }
 
   @Override
   public void run()
   {
-    ExecutorService pool = Executors.newFixedThreadPool(servers.size());
+    int serverSize = Iterables.size(serverView.getInventory());
+    if (serverSize == 0)
+        return;
+
+    ExecutorService pool = Executors.newFixedThreadPool(serverSize);
     List<Future> futures = new ArrayList<Future>();
 
-    for (final QueryableDruidServer server : servers.values())
+    for (final DruidServer server : serverView.getInventory())
     {
-      if (!server.getServer().getType().equalsIgnoreCase("historical"))
+      if (!server.getType().equalsIgnoreCase("historical"))
         continue;
 
       // Should use threads to fetch in parallel from all brokers
@@ -62,21 +63,19 @@ public class PeriodicPollHistoricalLoad implements Runnable
         uri = new URI(
                 "http",
                 null,
-                server.getServer().getHost().split(":")[0],
-                Integer.parseInt(server.getServer().getHost().split(":")[1]),
+                server.getHost().split(":")[0],
+                Integer.parseInt(server.getHost().split(":")[1]),
                 "/druid/historical/v1/currentLoad",
                 null,
                 null);
       } catch (URISyntaxException e) {
-        log.warn("URI did not get created [%s]", server.getServer().getHost());
+        log.warn("URI did not get created [%s]", server.getHost());
         // TODO Auto-generated catch block
         e.printStackTrace();
         continue;
       }
 
       final String url = uri.toString();
-      log.info("URI [%s]", url);
-
       futures.add(pool.submit(new Callable<Void>(){
         @Override
         public Void call()
@@ -100,8 +99,6 @@ public class PeriodicPollHistoricalLoad implements Runnable
               );
             }
 
-            log.info("Response Length [%d]", response.getContent().length());
-
             currentLoadMap = jsonMapper.readValue(
                     response.getContent(), new TypeReference<Map<String, Long>>()
                     {
@@ -109,10 +106,24 @@ public class PeriodicPollHistoricalLoad implements Runnable
             );
           }
           catch (Exception e) {
+            log.warn("Something failed [%s]", e.toString());
             e.printStackTrace();
           }
 
-          server.setCurrentLoad(currentLoadMap.get("currentload"));
+          long serverLoad = 0;
+          try
+          {
+            serverLoad = currentLoadMap.get("currentload");
+          }
+          catch (Exception e)
+          {
+            log.warn("No key existing called currentload");
+          }
+
+          if (serverLoad > 0)
+            log.info("Current Server Load [%d]", serverLoad);
+          
+          server.setCurrentLoad(serverLoad);
           return null;
         }
       }));

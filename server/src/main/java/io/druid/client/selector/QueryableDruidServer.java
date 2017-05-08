@@ -28,13 +28,11 @@ public class QueryableDruidServer
 {
   private final DruidServer server;
   private final DirectDruidClient client;
-  private long currentLoad;
 
   public QueryableDruidServer(DruidServer server, DirectDruidClient client)
   {
     this.server = server;
     this.client = client;
-    this.currentLoad = 0;
   }
 
   public DruidServer getServer()
@@ -46,8 +44,4 @@ public class QueryableDruidServer
   {
     return client;
   }
-
-  public void setCurrentLoad(long load) { this.currentLoad = load; }
-
-  public long getCurrentLoad() { return this.currentLoad; }
 }

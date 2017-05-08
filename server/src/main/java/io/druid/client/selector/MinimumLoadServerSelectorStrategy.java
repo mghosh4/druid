@@ -45,21 +45,22 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
     long minLoad = 0;
     boolean first = false;
     for (QueryableDruidServer server : servers) {
-      if (!server.getServer().getType().equalsIgnoreCase("historical") && !first) {
-        chosenServer = server;
+      if (!server.getServer().getType().equalsIgnoreCase("historical")) {
+        if (!first)
+            chosenServer = server;
         continue;
       }
 
       if (!first)
       {
         chosenServer = server;
-        minLoad = server.getCurrentLoad();
+        minLoad = server.getServer().getCurrentLoad();
         first = true;
       }
-      else if (server.getCurrentLoad() < minLoad)
+      else if (server.getServer().getCurrentLoad() < minLoad)
       {
         chosenServer = server;
-        minLoad = server.getCurrentLoad();
+        minLoad = server.getServer().getCurrentLoad();
       }
     }
 

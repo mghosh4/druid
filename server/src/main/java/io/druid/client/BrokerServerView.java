@@ -258,6 +258,7 @@ public class BrokerServerView implements TimelineServerView
     }
   }
 
+  @Override
   public ConcurrentMap<String, QueryableDruidServer> getServerMap()
   {
     return clients;

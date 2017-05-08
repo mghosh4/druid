@@ -98,7 +98,10 @@ public class ServerManager implements QuerySegmentWalker
   private final CacheConfig cacheConfig;
   private final QueryManager manager;
 
-  private final String loadingPath = "/proj/DCSQ/mghosh4/druid/estimation";
+  private long estimatedLoad;
+  private long lastLoadEstimateTime;
+
+  private final String loadingPath = "/proj/DCSQ/mghosh4/druid/estimation/";
   private final String[] fullpaths = {loadingPath+"groupby.cdf", loadingPath+"timeseries.cdf", loadingPath+"topn.cdf"};
 
   private final HashMap<String, ArrayList<Double>> percentileCollection = new HashMap<String, ArrayList<Double>>();
@@ -133,6 +136,8 @@ public class ServerManager implements QuerySegmentWalker
     this.cacheConfig = cacheConfig;
 
     this.manager = manager;
+    this.lastLoadEstimateTime = System.currentTimeMillis();
+    this.estimatedLoad = 0;
 
     //populate all query time distribution data structures
     for(int i = 0 ; i < queryTypes.length; i++){
@@ -481,29 +486,45 @@ public class ServerManager implements QuerySegmentWalker
   public String currentQueryLoad()
   {
     String result = null;
+    long finalLoadValue = 0;
+    long currentTime = System.currentTimeMillis();
+    if (currentTime - this.lastLoadEstimateTime < 20000)
+        finalLoadValue = this.estimatedLoad;
+    else
+    {
+        double totalLoad = 0;
+        try {
+          List<String> queryInQueue = manager.currentQueries();
+          for (String queryID : queryInQueue)
+          {
+            if (this.runtimeEstimate.containsKey(queryID))
+              totalLoad += this.runtimeEstimate.get(queryID);
+            else
+              log.info("Query id missing");
+          }
 
-    try {
-      Multiset<String> queryInQueue = manager.currentQueries();
-      double totalLoad = 0;
-      for (String queryID : queryInQueue)
-      {
-        if (this.runtimeEstimate.containsKey(queryID))
-          totalLoad += this.runtimeEstimate.get(queryID);
-        else
-          log.info("Query id missing");
-      }
+          // Cleaning up the data structure by removing completed queries
+          for (String queryID : this.runtimeEstimate.keySet())
+          {
+            if (!queryInQueue.contains(queryID))
+              this.runtimeEstimate.remove(queryID);
+          }
 
-      // Cleaning up the data structure by removing completed queries
-      for (String queryID : this.runtimeEstimate.keySet())
-      {
-        if (!queryInQueue.contains(queryID))
-          this.runtimeEstimate.remove(queryID);
-      }
+          finalLoadValue = (long)totalLoad;
+          this.estimatedLoad = finalLoadValue;
+          this.lastLoadEstimateTime = currentTime;
+        } catch (Exception e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
+    }
 
-      Map<String, Long> returnValue = Maps.newHashMap();
-      returnValue.put("currentload", (long) totalLoad);
-      result = objectMapper.writeValueAsString(totalLoad);
-      log.info("Serializing Total Access Map [%d]", result.length());
+    try
+    {
+        Map<String, Long> returnValue = Maps.newHashMap();
+        returnValue.put("currentload", finalLoadValue);
+        result = objectMapper.writeValueAsString(returnValue);
+        log.info("Query Load [%d]", finalLoadValue);
     } catch (JsonProcessingException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();

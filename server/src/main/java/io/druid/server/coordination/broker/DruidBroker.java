@@ -24,7 +24,6 @@ import com.google.inject.Inject;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.http.client.HttpClient;
-import io.druid.client.BrokerServerView;
 import io.druid.client.ServerInventoryView;
 import io.druid.client.ServerView;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
@@ -56,14 +55,14 @@ public class DruidBroker
   private final ServiceAnnouncer serviceAnnouncer;
   private final ServerDiscoveryFactory serverDiscoveryFactory;
   private final HttpClient httpClient;
-  private final BrokerServerView serverView;
+  private final ServerInventoryView inventoryView;
 
   private final ScheduledExecutorService pool;
   private volatile boolean started = false;
   private volatile Map<String, Map<String, Long>> routingTable;
 
   //QueryTime distribution data structures
-  String loadingPath = "/proj/DCSQ/mghosh4/druid/estimation";
+  String loadingPath = "/proj/DCSQ/mghosh4/druid/estimation/";
   String[] fullpaths = {loadingPath+"groupby.cdf", loadingPath+"timeseries.cdf", loadingPath+"topn.cdf"};
 
   HashMap<String, ArrayList<Double>> percentileCollection = new HashMap<String, ArrayList<Double>>();
@@ -77,14 +76,13 @@ public class DruidBroker
       final @Self DruidNode self,
       final ServiceAnnouncer serviceAnnouncer,
       final ServerDiscoveryFactory serverDiscoveryFactory,
-      final BrokerServerView serverView,
       @Global HttpClient httpClient
   )  {
     this.self = self;
     this.serviceAnnouncer = serviceAnnouncer;
     this.serverDiscoveryFactory = serverDiscoveryFactory;
     this.httpClient = httpClient;
-    this.serverView = serverView;
+    this.inventoryView = serverInventoryView;
 
     serverInventoryView.registerSegmentCallback(
         MoreExecutors.sameThreadExecutor(),
@@ -99,7 +97,7 @@ public class DruidBroker
         }
     );
 
-    this.pool = Executors.newSingleThreadScheduledExecutor();
+    this.pool = Executors.newScheduledThreadPool(2);
     this.routingTable = new HashMap<>();
 
     //populate all query time distribution data structures
@@ -129,7 +127,7 @@ public class DruidBroker
 
       // Scheduled Tasks
       pool.scheduleWithFixedDelay(new PeriodicPollRoutingTable(this, serverDiscoveryFactory, httpClient), 0, 20, TimeUnit.SECONDS);
-      pool.scheduleWithFixedDelay(new PeriodicPollHistoricalLoad(this, httpClient), 0, 20, TimeUnit.SECONDS);
+      pool.scheduleWithFixedDelay(new PeriodicPollHistoricalLoad(inventoryView, httpClient), 0, 20, TimeUnit.SECONDS);
     }
   }
 
@@ -181,8 +179,6 @@ public class DruidBroker
   public HttpClient getHttpClient() {
     return httpClient;
   }
-
-  public BrokerServerView getServerView() { return this.serverView; }
 
   public ArrayList<Double> loadAndParse(String filename, HashMap<Double, Double> histogram) throws IOException {
     ArrayList<Double> percentileArr = new ArrayList<Double>();
