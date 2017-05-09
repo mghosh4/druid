@@ -63,24 +63,10 @@ public class QueryManager implements QueryWatcher
           @Override
           public void run()
           {
-            Iterator<Map.Entry<String, ListenableFuture>> it = queries.entries().iterator();
-            while (it.hasNext()) {
-              Map.Entry<String, ListenableFuture> next = it.next();
-              if (next.getKey().equals(id) && next.getValue().equals(future)) {
-                it.remove();
-              }
-            }
+            queries.remove(id, future);
           }
         },
         MoreExecutors.sameThreadExecutor()
     );
-  }
-
-  public List<String> currentQueries()
-  {
-    List<String> elements = new ArrayList<String>();
-    Set<String> queryids = queries.keys().elementSet();
-    elements.addAll(queryids); 
-    return elements;
   }
 }

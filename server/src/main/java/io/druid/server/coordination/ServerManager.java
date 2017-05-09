@@ -487,37 +487,7 @@ public class ServerManager implements QuerySegmentWalker
   {
     String result = null;
     long finalLoadValue = 0;
-    long currentTime = System.currentTimeMillis();
-    if (currentTime - this.lastLoadEstimateTime < 20000)
-        finalLoadValue = this.estimatedLoad;
-    else
-    {
-        double totalLoad = 0;
-        try {
-          List<String> queryInQueue = manager.currentQueries();
-          for (String queryID : queryInQueue)
-          {
-            if (this.runtimeEstimate.containsKey(queryID))
-              totalLoad += this.runtimeEstimate.get(queryID);
-            else
-              log.info("Query id missing");
-          }
-
-          // Cleaning up the data structure by removing completed queries
-          for (String queryID : this.runtimeEstimate.keySet())
-          {
-            if (!queryInQueue.contains(queryID))
-              this.runtimeEstimate.remove(queryID);
-          }
-
-          finalLoadValue = (long)totalLoad;
-          this.estimatedLoad = finalLoadValue;
-          this.lastLoadEstimateTime = currentTime;
-        } catch (Exception e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
-        }
-    }
+    finalLoadValue = this.estimatedLoad;
 
     try
     {
