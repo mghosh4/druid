@@ -72,7 +72,7 @@ headerStr = "Time\tTotal\tMean\tMax\tMin\n"
 aggValues = dict()
 for metric in historicalmetrics:
     aggValues[metric] = historicalmetric.getAggregateStats(metric, stats)
-    
+   
     if "/" in metric:
         newmetrics = metric.replace("/", "-")
     else:

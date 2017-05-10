@@ -46,7 +46,9 @@ class DruidNodeLogReader:
                     if (metric not in self.metricvalues[count]):
                         self.metricvalues[count][metric] = dict()
                     timestamp = datetime.strptime(y[0]['timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ')
-                    self.metricvalues[count][metric][timestamp] = float(y[0]['value'])
+                    if timestamp not in self.metricvalues[count][metric]:
+                        self.metricvalues[count][metric][timestamp] = list()
+                    self.metricvalues[count][metric][timestamp].append(float(y[0]['value']))
                     break
 
         for metric in self.metrics:
@@ -70,8 +72,9 @@ class DruidNodeLogReader:
                         if (timestamp >= firsttimerange and timestamp <= secondtimerange):
                             if (metric not in self.metricvalues[count]):
                                 self.metricvalues[count][metric] = dict()
-                            self.metricvalues[count][metric][timestamp] = float(y[0]['value'])
-
+                                if (timestamp not in self.metricvalues[count][metric]):
+                                    self.metricvalues[count][metric][timestamp] = list()
+                                self.metricvalues[count][metric][timestamp].append(float(y[0]['value']))
                         break
 
             for metric in self.metrics:
@@ -111,7 +114,8 @@ class DruidNodeLogReader:
     def getOverallMetric(self, metric):
         overalllist = list()
         for count in xrange(self.numnodes):
-            overalllist.extend(self.metricvalues[count][metric].values())
+            for (key, value) in self.metricvalues[count][metric].iteritems():
+                overalllist.extend(value)
         return overalllist
 
     def getOverallStats(self, metric, stats):
@@ -144,7 +148,7 @@ class DruidNodeLogReader:
         currentVal = dict()
         for count in xrange(self.numnodes):
             candidatelist[count] = next(iterlist[count])
-            currentVal[count] = 0
+            currentVal[count] = list()
 
         aggregatelist = dict()
         for stat in stats:
@@ -156,7 +160,7 @@ class DruidNodeLogReader:
             currentVal[count] = value
 
             for stat in stats:
-                aggregatelist[stat][key] = stat(currentVal.values())
+                aggregatelist[stat][key] = stat([item for sublist in currentVal.values() for item in sublist])
 
             try:
                 candidatelist[count] = next(iterlist[count])

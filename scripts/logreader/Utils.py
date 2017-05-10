@@ -9,8 +9,9 @@ class Utils(object):
             os.makedirs(os.path.dirname(filename))
             
         f = open(filename, 'w')
-        for key,value in timeseriesdata.iteritems():
-            f.write(str(key) + "\t" + str(value) + "\n")
+        for key,values in timeseriesdata.iteritems():
+            for value in values:
+                f.write(str(key) + "\t" + str(value) + "\n")
         f.close()
     
     @staticmethod    
