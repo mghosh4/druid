@@ -195,6 +195,11 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
     delegate.execute(runnable);
   }
 
+  public int getActiveTaskCount()
+  {
+    return threadPoolExecutor.getActiveCount();
+  }
+
   public int getQueueSize()
   {
     return delegateQueue.size();

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.util.Charsets;
 import com.google.common.collect.Iterators;
+import com.google.common.primitives.Longs;
+import com.google.common.primitives.Ints;
 import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.Request;
@@ -21,6 +23,11 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -38,103 +45,29 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private final StatusResponseHandler responseHandler = new StatusResponseHandler(Charsets.UTF_8);
 
+  private static final Comparator<QueryableDruidServer> comparator = new Comparator<QueryableDruidServer>()
+  {
+    @Override
+    public int compare(QueryableDruidServer left, QueryableDruidServer right)
+    {
+      return Ints.compare(left.getClient().getNumOpenConnections(), right.getClient().getNumOpenConnections());
+    }
+  };
+
+  private static final Comparator<QueryableDruidServer> loadcomparator = new Comparator<QueryableDruidServer>()
+  {
+    @Override
+    public int compare(QueryableDruidServer left, QueryableDruidServer right)
+    {
+      return Longs.compare(left.getServer().getCurrentLoad() + left.getClient().getNumOpenConnections(), right.getServer().getCurrentLoad() + right.getClient().getNumOpenConnections());
+    }
+  };
+
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
   {
-    QueryableDruidServer chosenServer = null;
-    long minLoad = 0;
-    boolean first = false;
-    for (QueryableDruidServer server : servers) {
-      if (!server.getServer().getType().equalsIgnoreCase("historical")) {
-        if (!first)
-            chosenServer = server;
-        continue;
-      }
+    QueryableDruidServer chosenServer = Collections.min(servers, loadcomparator);
 
-      if (!first)
-      {
-        chosenServer = server;
-        minLoad = server.getServer().getCurrentLoad();
-        first = true;
-      }
-      else if (server.getServer().getCurrentLoad() < minLoad)
-      {
-        chosenServer = server;
-        minLoad = server.getServer().getCurrentLoad();
-      }
-    }
-
-    if (chosenServer != null)
-      return chosenServer;
-    
-    log.error("[GETAFIX ROUTING] Trying to load segment on demand");
-    String druidServerMetadata = loadSegmentOnDemand(segment);
-    if (druidServerMetadata == null) {
-      log.error("[GETAFIX ROUTING] Cannot find even with loading on demand");
-      return null;
-    }
-    
-    for (QueryableDruidServer server : servers) {
-      if (druidServerMetadata.equals(server.getServer().getMetadata().toString())) {
-        log.info("[GETAFIX ROUTING] SUCCESS");
-        return server;
-      }
-    }
-
-    return null;
-  }
-
-  private String loadSegmentOnDemand(DataSegment segment) {
-    String coordinatorService = TieredBrokerConfig.DEFAULT_COORDINATOR_SERVICE_NAME;
-    ServerDiscoverySelector selector = serverDiscoveryFactory.createSelector(coordinatorService);
-
-    try {
-      selector.start();
-      Server coordinator = selector.pick();
-      URI uri = new URI(
-          coordinator.getScheme(),
-          null,
-          coordinator.getAddress(),
-          coordinator.getPort(),
-          "/druid/coordinator/v1/loadSegment/" + segment.getIdentifier(),
-          null,
-          null
-      );
-
-      String url = uri.toString();
-
-      StatusResponseHolder response = druidBroker.getHttpClient().go(
-          new Request(
-              HttpMethod.POST,
-              new URL(url)
-          ),
-          responseHandler
-      ).get();
-
-      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
-            "Error while querying[%s] status[%s] content[%s]",
-            url,
-            response.getStatus(),
-            response.getContent()
-        );
-      }
-
-      String resp = response.getContent();
-      log.info("[GETAFIX PLACEMENT] Load segment " + segment.getIdentifier() + " on demand. " + resp);
-      selector.stop();
-      return resp;
-    } catch (Exception e) {
-      log.error("[GETAFIX PLACEMENT] On demand loading error: " + e.getMessage());
-      try
-      {
-        selector.stop();
-      }
-      catch(IOException ex)
-      {
-        log.error("[GETAFIX PLACEMENT] Error stopping selector");
-      }
-      return null;
-    }
+    return chosenServer;
   }
 }

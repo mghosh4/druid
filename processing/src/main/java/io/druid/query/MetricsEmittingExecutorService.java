@@ -66,6 +66,22 @@ public class MetricsEmittingExecutorService extends ForwardingListeningExecutorS
     delegate.execute(runnable);
   }
 
+  public int getQueueSize()
+  {
+    if (delegate instanceof PrioritizedExecutorService) 
+      return ((PrioritizedExecutorService) delegate).getQueueSize();
+    
+    return 0;
+  }
+
+  public int getActiveTaskCount()
+  {
+    if (delegate instanceof PrioritizedExecutorService) 
+      return ((PrioritizedExecutorService) delegate).getActiveTaskCount();
+    
+    return 0;
+  }
+
   private void emitMetrics()
   {
     if (delegate instanceof PrioritizedExecutorService) {

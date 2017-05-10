@@ -42,8 +42,10 @@ import io.druid.query.BySegmentQueryRunner;
 import io.druid.query.CPUTimeMetricQueryRunner;
 import io.druid.query.DataSource;
 import io.druid.query.FinalizeResultsQueryRunner;
+import io.druid.query.MetricsEmittingExecutorService;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.NoopQueryRunner;
+import io.druid.query.PrioritizedExecutorService;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
@@ -487,14 +489,14 @@ public class ServerManager implements QuerySegmentWalker
   {
     String result = null;
     long finalLoadValue = 0;
-    finalLoadValue = this.estimatedLoad;
-
+    MetricsEmittingExecutorService service = (MetricsEmittingExecutorService)(exec);
+    finalLoadValue = service.getQueueSize() + service.getActiveTaskCount();
+    log.info("Current Load [%d]", finalLoadValue);
     try
     {
         Map<String, Long> returnValue = Maps.newHashMap();
         returnValue.put("currentload", finalLoadValue);
         result = objectMapper.writeValueAsString(returnValue);
-        log.info("Query Load [%d]", finalLoadValue);
     } catch (JsonProcessingException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
