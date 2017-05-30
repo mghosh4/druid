@@ -505,6 +505,17 @@ public class ServerManager implements QuerySegmentWalker
     return result;
   }
 
+  public String currentHNLoad()
+  {
+    long finalLoadValue = 0;
+    MetricsEmittingExecutorService service = (MetricsEmittingExecutorService)(exec);
+    finalLoadValue = service.getQueueSize() + service.getActiveTaskCount();
+    finalLoadValue = service.getQueueSize();
+    log.info("QSize %d", service.getQueueSize());
+    log.info("ActiveTaskCount %d", service.getActiveTaskCount());
+    return Long.toString(finalLoadValue);
+  }
+
   private String getDataSourceName(DataSource dataSource)
   {
     return Iterables.getOnlyElement(dataSource.getNames());

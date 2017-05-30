@@ -61,6 +61,7 @@ import io.druid.segment.StorageAdapter;
 import io.druid.segment.loading.SegmentLoader;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.server.metrics.NoopServiceEmitter;
+import io.druid.server.QueryManager;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
@@ -145,7 +146,8 @@ public class ServerManagerTest
         MoreExecutors.sameThreadExecutor(),
         new DefaultObjectMapper(),
         new LocalCacheProvider().get(),
-        new CacheConfig()
+        new CacheConfig(),
+        new QueryManager()
     );
 
     loadQueryable("test", "1", new Interval("P1d/2011-04-01"));

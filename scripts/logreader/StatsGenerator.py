@@ -81,8 +81,8 @@ for metric in historicalmetrics:
     filename = resultfolder + "/historical" + "-" + newmetrics + ".log"
     Utils.writeTimeSeriesMetricStats(filename, aggValues[metric], stats, headerStr)
 
-stats = [numpy.median, Utils.percentile75, Utils.percentile90, Utils.percentile95, Utils.percentile99]
-headerStr = "Median\t75th Percentile\t90th Percentile\t95th Percentile\t99th Percentile\n"
+stats = [numpy.median, Utils.percentile75, Utils.percentile90, Utils.percentile95, Utils.percentile99, numpy.mean]
+headerStr = "Median\t75th Percentile\t90th Percentile\t95th Percentile\t99th Percentile\tMean\n"
 for metric in historicalmetrics:
     overallStats = aggValues[metric][sum]
     if "/" in metric:
@@ -135,8 +135,8 @@ for metric in coordinatormetrics:
     filename = resultfolder + "/coordinator" + "-" + newmetrics + ".log"
     Utils.writeTimeSeriesMetricStats(filename, aggValues[metric], stats, headerStr)
 
-stats = [numpy.median, Utils.percentile75, Utils.percentile90, Utils.percentile95, Utils.percentile99]
-headerStr = "Median\t75th Percentile\t90th Percentile\t95th Percentile\t99th Percentile\n"
+stats = [numpy.median, Utils.percentile75, Utils.percentile90, Utils.percentile95, Utils.percentile99, numpy.mean]
+headerStr = "Median\t75th Percentile\t90th Percentile\t95th Percentile\t99th Percentile\tMean\n"
 for metric in coordinatormetrics:
     overallStats = aggValues[metric][sum]
     if "/" in metric:

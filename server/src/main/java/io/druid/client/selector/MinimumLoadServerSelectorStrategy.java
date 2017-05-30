@@ -59,15 +59,49 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
     @Override
     public int compare(QueryableDruidServer left, QueryableDruidServer right)
     {
-      return Longs.compare(left.getServer().getCurrentLoad() + left.getClient().getNumOpenConnections(), right.getServer().getCurrentLoad() + right.getClient().getNumOpenConnections());
+      return Longs.compare(left.getServer().getCurrentLoad(), right.getServer().getCurrentLoad());
     }
   };
 
+/*
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
   {
-    QueryableDruidServer chosenServer = Collections.min(servers, loadcomparator);
+    return Collections.min(servers, comparator);
+  }
+*/
+
+  // Pick() the minimum loaded server which has few open connections
+  @Override
+  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
+  {
+    QueryableDruidServer chosenServer = null;
+
+    List<QueryableDruidServer> temp = new ArrayList<QueryableDruidServer>();
+    for(QueryableDruidServer s : servers){
+      if(s.getClient().getNumOpenConnections() >= 18){
+        temp.add(s);
+      }
+    }
+
+    if(temp.size() < servers.size()){
+      //log.info("Ignoring [%d] servers with 20 open connections out of total [%d] servers", temp.size(), servers.size());
+      for(QueryableDruidServer t : temp){
+        servers.remove(t);
+      }
+    }
+
+    chosenServer = Collections.min(servers, loadcomparator);
+
+    //log.info("Min loaded HN connections = %d, Max loaded HN connections = %d", chosenServer.getClient().getNumOpenConnections(), Collections.max(servers, loadcomparator).getClient().getNumOpenConnections());
+
+    //String printStr = "";
+    //for (QueryableDruidServer s : servers){
+      //printStr = printStr+", "+s.getServer().getHost().split("\\.")[0]+":"+String.valueOf(s.getServer().getCurrentLoad());
+    //}
+    //log.info("Choosing HN [%s] with min load [%d] out of [%d] HNs, HN loading stats [%s]", chosenServer.getServer().getHost().split("\\.")[0], chosenServer.getServer().getCurrentLoad(), servers.size(),  printStr);
 
     return chosenServer;
   }
 }
+

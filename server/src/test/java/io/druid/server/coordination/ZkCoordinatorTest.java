@@ -46,6 +46,7 @@ import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
+import io.druid.server.QueryManager;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.curator.framework.CuratorFramework;
@@ -124,7 +125,8 @@ public class ZkCoordinatorTest extends CuratorTestBase
         MoreExecutors.sameThreadExecutor(),
         new DefaultObjectMapper(),
         new LocalCacheProvider().get(),
-        new CacheConfig()
+        new CacheConfig(),
+        new QueryManager()
     );
 
     final ZkPathsConfig zkPaths = new ZkPathsConfig()

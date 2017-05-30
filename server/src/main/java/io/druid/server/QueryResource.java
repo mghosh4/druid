@@ -42,6 +42,7 @@ import io.druid.query.QueryInterruptedException;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
+import io.druid.server.coordination.ServerManager;
 import org.joda.time.DateTime;
 
 import javax.servlet.http.HttpServletRequest;
@@ -124,6 +125,21 @@ public class QueryResource
     final long start = System.currentTimeMillis();
     Query query = null;
     String queryId = null;
+    String currentHNLoad = null;
+
+    try{
+      ServerManager manager = (ServerManager)texasRanger;
+
+      if (manager != null){
+        currentHNLoad = manager.currentHNLoad();
+        log.info("Current HN load [%s]", currentHNLoad);
+      }
+      else{
+        currentHNLoad = "0";
+      }
+    }catch(ClassCastException cce){
+      currentHNLoad = "0";
+    }
 
     final String reqContentType = req.getContentType();
     final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(reqContentType)
@@ -222,7 +238,8 @@ public class QueryResource
                 },
                 contentType
             )
-            .header("X-Druid-Query-Id", queryId);
+            .header("X-Druid-Query-Id", queryId)
+            .header("CurrentHNLoad", currentHNLoad);
 
         //Limit the response-context header, see https://github.com/druid-io/druid/issues/2331
         //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()

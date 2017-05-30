@@ -102,6 +102,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   private final HttpClient httpClient;
   private final String host;
   private final ServiceEmitter emitter;
+  private final DruidServer server;
 
   private final AtomicInteger openConnections;
   private final boolean isSmile;
@@ -112,7 +113,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       ObjectMapper objectMapper,
       HttpClient httpClient,
       String host,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      DruidServer server
   )
   {
     this.warehouse = warehouse;
@@ -121,6 +123,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     this.httpClient = httpClient;
     this.host = host;
     this.emitter = emitter;
+    this.server = server;
 
     this.isSmile = this.objectMapper.getFactory() instanceof SmileFactory;
     this.openConnections = new AtomicInteger();
@@ -184,6 +187,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           emitter.emit(builder.build("query/node/ttfb", responseStartTime - requestStartTime));
 
           try {
+            final String currentHNLoad = response.headers().get("CurrentHNLoad");
+            server.setCurrentLoad(Long.parseLong(currentHNLoad));
+            log.info("Current HN [%s] load [%s]", host, currentHNLoad);
+            
             final String responseContext = response.headers().get("X-Druid-Response-Context");
             // context may be null in case of error or query timeout
             if (responseContext != null) {

@@ -33,5 +33,5 @@ public interface TimelineServerView extends ServerView
 {
   TimelineLookup<String, ServerSelector> getTimeline(DataSource dataSource);
   <T> QueryRunner<T> getQueryRunner(DruidServer server);
-  ConcurrentMap<String, QueryableDruidServer> getServerMap();
+  //ConcurrentMap<String, QueryableDruidServer> getServerMap();
 }

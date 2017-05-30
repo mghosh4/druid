@@ -177,7 +177,7 @@ public class BrokerServerView implements TimelineServerView
 
   private DirectDruidClient makeDirectClient(DruidServer server)
   {
-    return new DirectDruidClient(warehouse, queryWatcher, smileMapper, httpClient, server.getHost(), emitter);
+    return new DirectDruidClient(warehouse, queryWatcher, smileMapper, httpClient, server.getHost(), emitter, server);
   }
 
   private QueryableDruidServer removeServer(DruidServer server)
@@ -258,11 +258,11 @@ public class BrokerServerView implements TimelineServerView
     }
   }
 
-  @Override
-  public ConcurrentMap<String, QueryableDruidServer> getServerMap()
-  {
-    return clients;
-  }
+  //@Override
+  //public ConcurrentMap<String, QueryableDruidServer> getServerMap()
+  //{
+  //  return clients;
+  //}
 
   @Override
   public VersionedIntervalTimeline<String, ServerSelector> getTimeline(DataSource dataSource)
