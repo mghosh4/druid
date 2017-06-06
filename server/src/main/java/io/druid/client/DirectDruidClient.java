@@ -188,7 +188,22 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
           try {
             final String currentHNLoad = response.headers().get("CurrentHNLoad");
+            /*
+            // calculate the exponential moving average of load over n data samples
+            long prevLoad = server.getCurrentLoad();
+            if(prevLoad == -1){
+              // first load sample
+              server.setCurrentLoad(Long.parseLong(currentHNLoad));
+            }
+            else{
+              int numSamples = 3;
+              float alpha = 2/(1+numSamples);
+              long currLoad = (long)(alpha*Long.parseLong(currentHNLoad) + (1-alpha)*prevLoad);
+              server.setCurrentLoad(currLoad);
+            }
+            */
             server.setCurrentLoad(Long.parseLong(currentHNLoad));
+
             log.info("Current HN [%s] load [%s]", host, currentHNLoad);
             
             final String responseContext = response.headers().get("X-Druid-Response-Context");

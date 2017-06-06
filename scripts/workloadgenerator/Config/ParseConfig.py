@@ -19,6 +19,7 @@ class ParseConfig:
         self.opspersecond = 0
         self.logfolder = ""
         self.runtime = 0
+	self.segmentpopularityinterval = 0
         self.isbatch = 0
         self.filename = ""
 
@@ -71,6 +72,8 @@ class ParseConfig:
                     self.logfolder = value
                 elif key == "runtime":
                     self.runtime = int(value)
+		elif key == "segmentpopularityinterval":
+		    self.segmentpopularityinterval = int(value)
                 elif key == "isbatch":
                     self.isbatch = int(value)
                 elif key == "filename":
@@ -129,6 +132,9 @@ class ParseConfig:
 
     def getRunTime(self):
         return self.runtime
+
+    def getSegmentPopularityInterval(self):
+	return self.segmentpopularityinterval
 
     def getBatchExperiment(self):
         return self.isbatch > 0

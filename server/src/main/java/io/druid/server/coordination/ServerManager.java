@@ -510,7 +510,6 @@ public class ServerManager implements QuerySegmentWalker
     long finalLoadValue = 0;
     MetricsEmittingExecutorService service = (MetricsEmittingExecutorService)(exec);
     finalLoadValue = service.getQueueSize() + service.getActiveTaskCount();
-    finalLoadValue = service.getQueueSize();
     log.info("QSize %d", service.getQueueSize());
     log.info("ActiveTaskCount %d", service.getActiveTaskCount());
     return Long.toString(finalLoadValue);

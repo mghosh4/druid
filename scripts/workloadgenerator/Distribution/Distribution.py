@@ -1,6 +1,5 @@
 import numpy
 
-
 class Uniform(object):
 
     def generateDistribution(self, minSample, maxSample, numSamples, popularityList):
@@ -9,25 +8,31 @@ class Uniform(object):
 
 class Zipfian(object):
 
-    def generateDistribution(self, minSample, maxSample, numSamples, popularityList):
+    def generateDistribution(self, minSample, maxSample, numSamples, popularityList, logger):
         shape = 1.2   # the distribution shape parameter, also known as `a` or `alpha`
-        zipfsample = self.randZipf(maxSample - minSample + 1, shape, numSamples)
+        zipfsample = self.randZipf(maxSample - minSample + 1, shape, numSamples, logger)
         #print "Zipf List"
         #Utils.printlist(zipfsample)
+	#logger.info("Distribution Samples "+str(zipfsample))
 
         return [ x + minSample for x in zipfsample ]
 
     # Used code from stackoverflow link http://stackoverflow.com/questions/31027739/python-custom-zipf-number-generator-performing-poorly
-    def randZipf(self, n, alpha, numSamples):
-        # Calculate Zeta values from 1 to n:
+    def randZipf(self, n, alpha, numSamples, logger):
+        #logger.info("Dist params "+str(n)+", "+str(alpha))
+	# Calculate Zeta values from 1 to n:
         tmp = numpy.power( numpy.arange(1, n+1), -alpha )
+	#logger.info("tmp "+str(tmp))
         zeta = numpy.r_[0.0, numpy.cumsum(tmp)]
+	#logger.info("zeta "+str(zeta))
         # Store the translation map:
         distMap = [x / zeta[-1] for x in zeta]
+	#logger.info("distMap "+str(distMap))
         # Generate an array of uniform 0-1 pseudo-random values:
         u = numpy.random.random(numSamples)
         # bisect them with distMap
         v = numpy.searchsorted(distMap, u)
+	#logger.info("U, V "+str(u)+" $ "+str(v))
         samples = [t-1 for t in v]
         return samples
 
@@ -77,14 +82,14 @@ class DynamicZipfian(object):
 
 class Latest(Zipfian):
 
-    def generateDistribution(self, minSample, maxSample, numSamples, popularityList):
-        latestsample = super(Latest, self).generateDistribution(minSample, maxSample, numSamples, popularityList)
+    def generateDistribution(self, minSample, maxSample, numSamples, popularityList, logger):
+        latestsample = super(Latest, self).generateDistribution(minSample, maxSample, numSamples, popularityList, logger)
         return [maxSample - x + minSample for x in latestsample]
 
 
 class ScrambledZipfian(Zipfian):
 
-    def generateDistribution(self, minSample, maxSample, numSamples, popularityList):
-        scrambledzipfiansample = super(ScrambledZipfian, self).generateDistribution(minSample, maxSample, numSamples, popularityList)
+    def generateDistribution(self, minSample, maxSample, numSamples, popularityList, logger):
+        scrambledzipfiansample = super(ScrambledZipfian, self).generateDistribution(minSample, maxSample, numSamples, popularityList, logger)
         itemcount = maxSample - minSample + 1
         return [minSample + x % itemcount for x in scrambledzipfiansample]

@@ -8,7 +8,7 @@ import time
 import datetime as dt
 from datetime import *
 import json
-import random
+#import random
 from dateutil.relativedelta import relativedelta
 
 
@@ -16,24 +16,39 @@ class QueryGenerator(object):
 	queryRunningCount = 0
 
 	@staticmethod
-	def generateQueries(startTime, endTime, numQueries, accessGenerator, periodGenerator, popularityList):
+	def generateQueries(startTime, endTime, numQueries, accessGenerator, periodGenerator, popularityList, logger):
 		querylist = list()
 		elapsed = (endTime - startTime).total_seconds()
-		accesslist = accessGenerator.generateDistribution(0, elapsed, numQueries, popularityList)
+		logger.info("start end elapsed"+str(startTime)+", "+str(endTime)+", "+str(elapsed))
+		accesslist = accessGenerator.generateDistribution(0, elapsed, numQueries, popularityList, logger)
 
-		periodlist = periodGenerator.generateDistribution(1, elapsed, numQueries, popularityList)
+		periodlist = periodGenerator.generateDistribution(1, elapsed, numQueries, popularityList, logger)
 		histogram = {}
+		logger.info("Params "+str(startTime)+"$ "+str(endTime)+"$ "+str(numQueries)+"$ "+str(popularityList))
 		for i in xrange(numQueries):
 			q = Query(QueryGenerator.queryRunningCount, elapsed)
 			QueryGenerator.queryRunningCount += 1
 			sttime = accesslist[i]
+			#logger.info("Accesslist "+str(accesslist[i]));
+			#logger.info("Periodlist "+str(periodlist[i]));
 			#print "sttime: %s" % sttime
 			#if (starttime + periodlist[i] - 1 > elapsed):
 			#	starttime = starttime - (periodlist[i] - (elapsed - starttime + 1)
 			newstart = startTime + dt.timedelta(0, sttime)
+			period = periodlist[i]
+			if(newstart == startTime):
+				period = 1
+			else:
+				# check if query start time falls before the start time, then 
+				if(newstart-dt.timedelta(0, period) < startTime):
+					period = sttime
+					newstart = startTime
+				else:
+					newstart = newstart - dt.timedelta(0, period)
+
 			startstring = newstart.strftime('%Y-%m-%dT%H:%M:%S')
 			#print(periodlist[i], Utils.iso8601(dt.timedelta(seconds=periodlist[i])))
-			q.setInterval(startstring + "/" + Utils.iso8601(dt.timedelta(seconds=periodlist[i])))
+			q.setInterval(startstring + "/" + Utils.iso8601(dt.timedelta(seconds=period)))
 			querylist.append(q)
 			#print "interval: " + q.interval
 			#print "index: " , q.index
@@ -88,9 +103,9 @@ class QueryGenerator(object):
 		##print "fullcount: ", fullcount
 		originallist = list()
 		for count2 in xrange(numQueries):
-			#querylist.append(fulllist[random.randint(0,querycount-1)])
-			original = fullist[random.randint(0, fullcount-1)]
-			#print "randint: ", random.randint(0, fullcount-1)
+			#querylist.append(fulllist[numpy.random.randint(0,querycount-1)])
+			original = fullist[numpy.random.randint(0, fullcount-1)]
+			#print "randint: ", numpy.random.randint(0, fullcount-1)
 			#print "0: " ,original[0]
 			#print "1: ", original[1]
 			originallist.append(original)

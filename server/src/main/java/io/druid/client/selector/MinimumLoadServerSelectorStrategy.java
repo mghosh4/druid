@@ -30,6 +30,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Random;
+import java.util.Iterator;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
@@ -71,6 +73,60 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
   }
 */
 
+  // Pick() the minimum loaded server as per a probability distribution
+  @Override
+  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
+  {
+    QueryableDruidServer chosenServer = null;
+    long maxLoading = -1;
+    List<Long> loading = new ArrayList<Long>();
+    List<QueryableDruidServer> serverList = new ArrayList<QueryableDruidServer>();
+    
+    for (Iterator<QueryableDruidServer> iterator = servers.iterator(); iterator.hasNext();){
+      QueryableDruidServer s = iterator.next();
+      if(s.getClient().getNumOpenConnections() >= 18) {
+        iterator.remove();
+      }
+      else{
+        serverList.add(s);
+        long temp = s.getServer().getCurrentLoad();
+        loading.add(temp);
+        // find max loading value
+        if(temp > maxLoading){
+          maxLoading = temp;
+        }
+        //log.info("Servers %s", s.getServer().getCurrentLoad());  
+      }
+    }
+    
+    maxLoading++;
+    //log.info("Max loading %d", maxLoading);
+    long prev = 0;
+    for(int i=0; i<loading.size(); i++){
+      long value = maxLoading - loading.get(i) + prev;
+      loading.set(i, value);
+      prev = value;
+      //log.info("Frequency %d: %d", i, value); 
+    }
+
+    // generate a random number from 0 to prev
+    Random rn = new Random();
+    int randNum = rn.nextInt((int)prev - 0 + 1) + 0;
+    //log.info("Random number %d", randNum);    
+
+    // loop through loading list to identify the bucket
+    int i;
+    for(i=0; i<loading.size(); i++){
+      long value = loading.get(i);
+      if(value >= randNum){
+        break;
+      } 
+    }
+    //log.info("Selected index %d", i);
+    return serverList.get(i);
+  }
+
+/*
   // Pick() the minimum loaded server which has few open connections
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
@@ -103,5 +159,6 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
 
     return chosenServer;
   }
+*/
 }
 

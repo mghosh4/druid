@@ -85,7 +85,7 @@ public class DruidServer implements Comparable
     this.dataSources = new ConcurrentHashMap<String, DruidDataSource>();
     this.segments = new ConcurrentHashMap<String, DataSegment>();
 
-    this.loadEstimate = 0;
+    this.loadEstimate = -1;
   }
 
   public String getName()
