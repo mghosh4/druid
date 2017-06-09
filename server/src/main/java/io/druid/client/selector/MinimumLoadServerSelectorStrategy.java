@@ -33,6 +33,8 @@ import java.util.Set;
 import java.util.Random;
 import java.util.Iterator;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.Date;
+import java.lang.Math;
 
 public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
 {
@@ -81,15 +83,28 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
     long maxLoading = -1;
     List<Long> loading = new ArrayList<Long>();
     List<QueryableDruidServer> serverList = new ArrayList<QueryableDruidServer>();
-    
+     
     for (Iterator<QueryableDruidServer> iterator = servers.iterator(); iterator.hasNext();){
       QueryableDruidServer s = iterator.next();
-      if(s.getClient().getNumOpenConnections() >= 18) {
+      //log.info("OpenConnections %d", s.getClient().getNumOpenConnections());
+      // TODO: setting the check to a high number for now. This ensures that no server is removed from the list. Revisit this later
+      if(s.getClient().getNumOpenConnections() >= 10000) {
         iterator.remove();
       }
       else{
         serverList.add(s);
         long temp = s.getServer().getCurrentLoad();
+
+
+        // exponentially decay the load value
+        Date currTime = new Date();
+        long refreshTime = (currTime.getTime()-s.getServer().getCurrentLoadTime().getTime());     
+        double decayRate = -0.05;
+        double e = 2.7183;
+        temp = (long)(temp*Math.pow(e, decayRate*refreshTime));
+	//log.info("Prev load %d, Decayed load %d, refreshTime %d", s.getServer().getCurrentLoad(), temp, refreshTime);
+
+
         loading.add(temp);
         // find max loading value
         if(temp > maxLoading){

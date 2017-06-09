@@ -59,17 +59,17 @@ def signal_term_handler(signum, frame):
     sys.exit(0)
 
 def applyOperation(query, config, brokerNameUrl, logger):
-    dbOpsHandler = AsyncDBOpsHandler(config, brokerNameUrl)
+    dbOpsHandler = AsyncDBOpsHandler(config, brokerNameUrl, logger)
     if querytype == "timeseries":
-        return dbOpsHandler.timeseries(query, logger)
+        return dbOpsHandler.timeseries(query)
     elif querytype == "topn":
-        return dbOpsHandler.topn(query, logger)
+        return dbOpsHandler.topn(query)
     elif querytype == "groupby":
-        return dbOpsHandler.groupby(query, logger)
+        return dbOpsHandler.groupby(query)
     elif querytype == "segmentmetadata":
-        return dbOpsHandler.segmentmetadata(query, logger)
+        return dbOpsHandler.segmentmetadata(query)
     elif querytype == "timeboundary":
-        return dbOpsHandler.timeboundary(query, logger)
+        return dbOpsHandler.timeboundary(query)
     elif querytype == "mixture":
         randomNumber = numpy.random.randint(0, 100);
         qtype = 0
@@ -80,11 +80,11 @@ def applyOperation(query, config, brokerNameUrl, logger):
             randomNumber = randomNumber - queryweight
 
         if qtype == 2:
-            return dbOpsHandler.timeseries(query, logger)
+            return dbOpsHandler.timeseries(query)
         elif qtype == 1:
-            return dbOpsHandler.topn(query, logger)
+            return dbOpsHandler.topn(query)
         elif qtype == 0:
-            return dbOpsHandler.groupby(query, logger)
+            return dbOpsHandler.groupby(query)
 
 # def threadoperation(queryPerSec):
 #     @gen.coroutine
@@ -178,7 +178,7 @@ def applyOperation(query, config, brokerNameUrl, logger):
 # generates tuples of (num queries, time to sleep) as per poisson distribution
 def genPoissonQuerySchedule(queryPerMilliSecond, numSamples):
     
-    numSamples = numSamples + 1000 # generate some additional samples in case the query count falls short
+    numSamples = int(1.25*numSamples) # generate some additional samples in case the query count falls short
     samples = numpy.random.poisson(queryPerMilliSecond, numSamples)
 
     numQueries = 0
@@ -216,6 +216,18 @@ def threadoperation(queryPerSec):
             newquerylist = QueryGenerator.generateQueriesFromFile(start, end, querypermin * runtime, timeAccessGenerator, periodAccessGenerator, filename)
         elif isbatch == True:
             newquerylist = QueryGenerator.generateQueries(start, end, querypermin * runtime, timeAccessGenerator, periodAccessGenerator, popularitylist)
+        else:
+            #logger.info("Run.py start queryendtime "+str(start)+", "+str(endtime))
+            queryStartInterval = start
+            queryEndInterval = start + timedelta(minutes=segmentpopularityinterval)
+            logger.info("Start generating queries for interval "+str(queryStartInterval)+" - "+str(queryEndInterval))
+            for i in range(0, (runtime-segmentpopularityinterval)/segmentpopularityinterval):
+                newquerylist.extend(QueryGenerator.generateQueries(queryStartInterval, queryEndInterval, segmentpopularityinterval*querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist, logger))
+                queryEndInterval = queryEndInterval + timedelta(minutes=segmentpopularityinterval)
+
+            if(runtime%segmentpopularityinterval != 0):
+                newquerylist.extend(QueryGenerator.generateQueries(queryStartInterval, queryEndInterval, runtime%segmentpopularityinterval*querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist, logger))
+            logger.info("Finished generating queries. num queries generated "+str(len(newquerylist)))    
         
         if filename != "" or isbatch == True:
             count = 0
@@ -253,40 +265,30 @@ def threadoperation(queryPerSec):
             # sleep initially till the segmentpopularityinterval
             yield gen.sleep(segmentpopularityinterval*60)
 
-            endtime = start + timedelta(minutes=runtime)
-            queryStartInterval = start
-            queryEndInterval = start + timedelta(minutes=segmentpopularityinterval)
             queryScheduleIdx = 0
-
-            while queryEndInterval < endtime:
-                #logger.info("Run.py start queryendtime "+str(start)+", "+str(endtime))
-                logger.info("Start generating queries for interval "+str(queryStartInterval)+" - "+str(queryEndInterval))
-                newquerylist = QueryGenerator.generateQueries(queryStartInterval, queryEndInterval, segmentpopularityinterval*querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist, logger)
-                logger.info("Finished generating queries. num queries generated "+str(len(newquerylist)))
-
-                count = 0
-                while count < len(newquerylist):
-                    sample = querySchedule[queryScheduleIdx]
-                    #logger.info("Poisson sample is "+str(sample[0])+", "+str(sample[1]))
-                    if(sample[0] == 0):
-                        #logger.info("Sleeping for "+str(sample[1]))
-                        yield gen.sleep(float(sample[1])/1000) # divide by 1000 to convert it into seconds
-                    else:
-                        for i in range(0,sample[0]):
-                            try:
-                                line.append(applyOperation(newquerylist[count], config, brokernameurl, logger))
-                                #logger.info("Running query "+str(sample[0]))
-                            except Exception as inst:
-                                logger.error(type(inst))     # the exception instance
-                                logger.error(inst.args)      # arguments stored in .args
-                                logger.error(inst)           # __str__ allows args to be printed directly
-                                x, y = inst.args
-                                logger.error('x =', x)
-                                logger.error('y =', y)
-                            count = count + 1
-                    queryScheduleIdx = queryScheduleIdx + 1
-
-                queryEndInterval = queryEndInterval + timedelta(minutes=segmentpopularityinterval)
+            count = 0
+            while count < len(newquerylist):
+                sample = querySchedule[queryScheduleIdx]
+                #logger.info("Poisson sample is "+str(sample[0])+", "+str(sample[1]))
+                if(sample[0] == 0):
+                    #logger.info("Sleeping for "+str(sample[1]))
+                    yield gen.sleep(float(sample[1])/1000) # divide by 1000 to convert it into seconds
+                else:
+                    for i in range(0,sample[0]):
+                        try:
+                            line.append(applyOperation(newquerylist[count], config, brokernameurl, logger))
+                            #applyOperation(newquerylist[count], config, brokernameurl, logger)
+                            newquerylist[count].setTxTime(datetime.now())
+                            #logger.info("Running query "+str(sample[0]))
+                        except Exception as inst:
+                            logger.error(type(inst))     # the exception instance
+                            logger.error(inst.args)      # arguments stored in .args
+                            logger.error(inst)           # __str__ allows args to be printed directly
+                            x, y = inst.args
+                            logger.error('x =', x)
+                            logger.error('y =', y)
+                        count = count + 1
+                queryScheduleIdx = queryScheduleIdx + 1
     
         wait_iterator = gen.WaitIterator(*line)
         while not wait_iterator.done():
@@ -377,7 +379,7 @@ end = utc.localize(end)
 minqueryperiod = 0
 maxqueryperiod = int((end - start).total_seconds())
 
-AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient", max_clients=(opspersecond + 20))
+AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient", max_clients=(5000), defaults=dict(request_timeout=60))
 
 t1 = datetime.now()
 for i in xrange(numthreads): 

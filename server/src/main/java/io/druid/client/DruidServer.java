@@ -33,6 +33,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.Date;
 
 /**
  */
@@ -53,6 +54,7 @@ public class DruidServer implements Comparable
 
   private volatile long currSize;
   private volatile long loadEstimate;
+  private volatile Date loadEstimateTime;
 
   public DruidServer(
       DruidNode node,
@@ -86,6 +88,7 @@ public class DruidServer implements Comparable
     this.segments = new ConcurrentHashMap<String, DataSegment>();
 
     this.loadEstimate = -1;
+    this.loadEstimateTime = new Date();
   }
 
   public String getName()
@@ -103,9 +106,14 @@ public class DruidServer implements Comparable
     return loadEstimate;
   }
 
+  public Date getCurrentLoadTime()
+  {
+    return loadEstimateTime;
+  }
   public void setCurrentLoad(long estimate)
   {
     loadEstimate = estimate;
+    loadEstimateTime = new Date();
   }
 
   @JsonProperty
