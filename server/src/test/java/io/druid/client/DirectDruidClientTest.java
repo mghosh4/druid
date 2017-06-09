@@ -121,7 +121,8 @@ public class DirectDruidClientTest
         new DefaultObjectMapper(),
         httpClient,
         "foo",
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        null
     );
     DirectDruidClient client2 = new DirectDruidClient(
         new ReflectionQueryToolChestWarehouse(),
@@ -129,7 +130,8 @@ public class DirectDruidClientTest
         new DefaultObjectMapper(),
         httpClient,
         "foo2",
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        null
     );
 
     QueryableDruidServer queryableDruidServer1 = new QueryableDruidServer(
@@ -231,7 +233,8 @@ public class DirectDruidClientTest
         new DefaultObjectMapper(),
         httpClient,
         "foo",
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        null
     );
 
     QueryableDruidServer queryableDruidServer1 = new QueryableDruidServer(
