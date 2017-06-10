@@ -342,6 +342,9 @@ logformat = '%(asctime)s (%(threadName)-10s) %(message)s'
 logger = logging.getLogger(logKey)
 logger.setLevel(logging.DEBUG)
 logger.propagate = False
+curllogger = logging.getLogger('tornado.curl_httpclient')
+curllogger.setLevel(logging.DEBUG)
+curllogger.propagate = False
 
 fh = logging.FileHandler(logfilename, 'w')
 fh.setLevel(logging.DEBUG)
@@ -355,6 +358,8 @@ ch.setFormatter(formatter)
 
 logger.addHandler(fh)
 logger.addHandler(ch)
+curllogger.addHandler(fh)
+curllogger.addHandler(ch)
 
 SINGLE_THREAD_THROUGHPUT = 400
 if filename != "" or isbatch == True:
@@ -379,7 +384,7 @@ end = utc.localize(end)
 minqueryperiod = 0
 maxqueryperiod = int((end - start).total_seconds())
 
-AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient", max_clients=(5000), defaults=dict(request_timeout=60))
+AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient", max_clients=(25), defaults=dict(request_timeout=60))
 
 t1 = datetime.now()
 for i in xrange(numthreads): 

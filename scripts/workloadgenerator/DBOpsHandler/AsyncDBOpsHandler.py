@@ -55,7 +55,7 @@ class AsyncDBOpsHandler:
         newquery = self.getAsyncPyDruid()
         self.logger.info("Query id "+str(query.getID())+",interval "+str(query.getInterval()))
         ts = yield newquery.timeseries(datasource=config.getDataSource(), granularity=config.getGranularity(), intervals=query.interval, aggregations={"count": aggregators.doublesum("count")})
-	#self.processQueryCompletion(query)
+	self.processQueryCompletion(query)
         raise gen.Return(ts.export_pandas())
     
     #FILTER AND POST_AGGREGATIONS ARE OPTIONAL

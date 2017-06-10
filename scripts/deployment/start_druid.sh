@@ -394,7 +394,7 @@ do
         fi
         COMMAND=$COMMAND" sudo cat $PATH_TO_SOURCE/scripts/deployment/broker.properties > $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$BROKER_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
-        if [ "$REPLICATION_RULE" == "getafix" ] || ["$REPLICATION_RULE" == "scarlett"];
+        if [ "$REPLICATION_RULE" == "getafix" ] || [ "$REPLICATION_RULE" == "scarlett" ];
         then
             #COMMAND=$COMMAND" sudo sed -i '12s@.*@druid.broker.balancer.type=minimumload@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
             COMMAND=$COMMAND" sudo sed -i '12s@.*@druid.broker.balancer.type=connectionCount@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
