@@ -1,7 +1,8 @@
 #!/usr/bin/python
 
 # Script plots the historical node loading (HN queue size + HN active threads)
-# for all HNs. It also plots the broker query start time at y_axis = 5 units
+# for all HNs. It also plots the broker query start time at y_axis = 5 units.
+# Script takes numHNPerPlot as an optional argument (default is 15)
 
 import glob
 import numpy as np
@@ -10,6 +11,7 @@ import json
 import _strptime
 from datetime import datetime, timedelta
 import re
+import sys
 
 # resolution in milliseconds, value 250 aggregates for 250ms
 resolution = 500
@@ -37,7 +39,7 @@ def getBrokerActivityData():
 				else:
 					time = datetime.strptime(l[0], '%Y-%m-%d %H:%M:%S.%f')
 				time = time - timedelta(milliseconds=int(float(l[1])))
-                                data.append(time)
+				data.append(time)
 				y.append(5)
 
 	data.sort()
@@ -48,7 +50,6 @@ def getBrokerActivityData():
 		currtime = point
 		time = time + (currtime - prevtime).total_seconds()*1000/resolution
 		x.append(time)
-		print time
 		prevtime = currtime
 
 	return x, y
@@ -66,7 +67,11 @@ def plotHNLoading():
 	hnFiles = sorted(glob.glob("historical-*-segment-scan-pending.log"), key=numericalSort)
 	loop = 0
 	numHNPerPlot = 15
-        maxPlotValue = 0
+	if len(sys.argv) == 2:
+		numHNPerPlot = int(sys.argv[1])
+	else:
+		print "INFO: Script is setup to plot "+str(numHNPerPlot)+" lines per plot by default"
+	maxPlotValue = 0
 	for fname in hnFiles:
 		with open(fname) as f:
 			x = []
@@ -91,7 +96,6 @@ def plotHNLoading():
 					y.append(float(l[1]))
 					firstsample = False
 					prevtime = currtime
-                                        print currtime
 				else:	
 					if(currtime-prevtime).total_seconds()*1000 <= resolution:
 						loadingSum = loadingSum + float(l[1])
@@ -125,6 +129,7 @@ def plotHNLoading():
 				plt.savefig('hn_'+str(loop-numHNPerPlot)+'_to_'+str(loop-1)+'_loading.png')
 				plt.clf()
 				maxPlotValue = 0
+				print "Output plot : hn_"+str(loop-numHNPerPlot)+"_to_"+str(loop-1)+"_loading.png"
 
 def main():
 	plotHNLoading()

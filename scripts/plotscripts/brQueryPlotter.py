@@ -59,8 +59,9 @@ def plotBrokerQueryTimes():
 	plt.title('Broker query inter-arrival time')
 	plt.ylabel('Inter-arrival time (ms)')
 	plt.xlabel('Time (secs)')
-	plt.ylim(0, 1000)
+	plt.ylim(0, max(y))
 	plt.savefig('broker_query_interarrival_plot.png')
+	print "Output plot : broker_query_interarrival_plot.png"
 	plt.clf()
 	print "Median is "+str(np.median(y))
 	print "Max query inter-arrival time is "+str(maxqueryinterarrivaltime)+" at time "+str(maxtime)+" first sample was at time "+str(donetime[0])
@@ -75,8 +76,9 @@ def plotBrokerQueryTimes():
 	plt.title('Broker query time')
 	plt.ylabel('Query processing time (ms)')
 	plt.xlabel('Time (secs)')
-	plt.ylim(0, 1000)
+	plt.ylim(0, max([row[1] for row in b]))
 	plt.savefig('broker_query_time_plot.png')
+	print "Output plot : broker_query_time_plot.png"
 	print "Median is "+str(np.median([row[1] for row in b]))
 	print "Max query/time is "+str(maxquerytime)+" at time "+str(maxindex)+" very first query time is "+str(querytime[0][0])
 

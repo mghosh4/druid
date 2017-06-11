@@ -88,6 +88,7 @@ def plotCurlQueryTimes():
 	plt.xlabel('Time (secs)')
 	plt.ylim(0, max(y))
 	plt.savefig('curl_query_interdeparture_plot.png')
+	print "Output plot : curl_query_interdeparture_plot.png"
 	plt.clf()
 	print "Median is "+str(np.median(y))
 	print "Max query inter-departure time is "+str(maxqueryinterdeparturetime)+" at time "+str(maxtime)+" first sample was at time "+str(querysendtime[0])
@@ -122,6 +123,7 @@ def plotCurlQueryTimes():
 	plt.xlabel('Time (secs)')
 	plt.ylim(0, max(y))
 	plt.savefig('curl_query_result_interarrival_plot.png')
+	print "Output plot : curl_query_result_interarrival_plot.png"
 	plt.clf()
 	print "Median is "+str(np.median(y))
 	print "Max query result inter-arrival time is "+str(maxqueryresultinterarrivatime)+" at time "+str(maxtime)+" first sample was at time "+str(querysendtime[0])
@@ -158,6 +160,7 @@ def plotCurlQueryTimes():
 	plt.xlabel('Time (secs)')
 	plt.ylim(0, max(y))
 	plt.savefig('curl_query_delay_plot.png')
+	print "Output plot : curl_query_delay_plot.png"
 	plt.clf()
 	print "Median is "+str(np.median(y))
 	print "Max query inter-departure time is "+str(maxquerydelay)+" at time "+str(maxindex)+" first sample was at time "+str(querygentocurlsenddelay[0])

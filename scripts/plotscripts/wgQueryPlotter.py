@@ -36,7 +36,7 @@ def plotWGQueryTimes():
 		else:
 			time = (t-prevtime).total_seconds()*1000
 		cumulativetime = cumulativetime + time
-		x.append(count)
+		x.append(cumulativetime/1000)
 		y.append(time)
 		prevtime = t
 		count = count + 1
