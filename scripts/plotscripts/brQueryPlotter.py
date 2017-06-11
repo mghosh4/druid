@@ -68,8 +68,7 @@ def plotBrokerQueryTimes():
 	# plot the broker query time
 	maxquerytime = 0
 	b = []
-	#a = list(range(1,(len(querytime)+1)))
-	b = sorted(querytime,key=lambda t: t[1])
+	b = sorted(querytime,key=lambda t: t[0])
 	maxindex, maxquerytime = max(querytime, key=lambda item: item[1])
 	plt.plot(x, [row[1] for row in b], label='query time')
 	plt.legend(loc='upper right', fontsize = 'small')
