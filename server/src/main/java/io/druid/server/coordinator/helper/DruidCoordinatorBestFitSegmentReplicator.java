@@ -134,15 +134,15 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable = new HashMap<DataSegment, HashMap<DruidServerMetadata, Long>>();
 		calculateBestFitReplication(params, weightedAccessCounts, routingTable, insertList, removeList);
 
+		//manageReplicas(params, insertList, removeList, stats);
+		manageReplicas(params, routingTable, stats);
+
 		// Load new segments
 		loadNewSegments(params, stats, routingTable);
 
 		coordinator.setRoutingTable(routingTable);
 
 		// Manage replicas
-		//manageReplicas(params, insertList, removeList, stats);
-		manageReplicas(params, routingTable, stats);
-
 		return params.buildFromExisting() 
                 .withReplicationManager(replicatorThrottler)
 				.withCoordinatorStats(stats) 
@@ -273,7 +273,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		//}
 	}*/
 	
-	private List<String> getHistoricalURLs(DruidCoordinatorRuntimeParams params)
+	private List<URI> getHistoricalURLs(DruidCoordinatorRuntimeParams params)
 	{
 		List<ImmutableDruidServer> historicals = new ArrayList<ImmutableDruidServer>();
 		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier()){
@@ -282,7 +282,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
             }
 		}
 		
-		List<String> uris = new ArrayList<String>(historicals.size());
+		List<URI> uris = new ArrayList<URI>(historicals.size());
 		for (ImmutableDruidServer historical : historicals)
 		{
 			// Should use threads to fetch in parallel from all brokers
@@ -304,7 +304,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 
 			log.info("URI [%s]", uri.toString());
 			
-			uris.add(uri.toString());
+			uris.add(uri);
 		}
 
 		log.info("Number of Historical Servers [%d]", historicals.size());
@@ -314,12 +314,12 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 
 	private void calculateSegmentCounts(DruidCoordinatorRuntimeParams params, Multiset<DataSegment> segmentCounts)
 	{
-		List<String> urls = getHistoricalURLs(params);
+		List<URI> urls = getHistoricalURLs(params);
 
 		ExecutorService pool = Executors.newFixedThreadPool(urls.size());
 		List<Future<Map<String, Integer>>> futures = new ArrayList<Future<Map<String, Integer>>>();
 			
-		for (final String url: urls)
+		for (final URI url: urls)
 		{
 			futures.add(pool.submit(new Callable<Map<String, Integer>> (){
 				@Override
@@ -330,7 +330,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 				    	StatusResponseHolder response = httpClient.go(
 				            new Request(
 				                HttpMethod.GET,
-				                new URL(url)
+				                new URL(url.toString())
 				            ),
 				            responseHandler
 				        ).get();
@@ -338,7 +338,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 				        if (!response.getStatus().equals(HttpResponseStatus.OK)) {
 				          throw new ISE(
 				              "Error while querying[%s] status[%s] content[%s]",
-				              url,
+				              url.toString(),
 				              response.getStatus(),
 				              response.getContent()
 				          );
@@ -359,7 +359,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 				    
 				    for (Map.Entry<String, Integer> entry : totalAccessMap.entrySet())
 				    {
-				        log.info("Segment Received [%s] with value [%d]", entry.getKey(), entry.getValue());
+				        log.info("Segment Received [%s] with value [%d] from [%s]", entry.getKey(), entry.getValue(), url.getHost());
 				    }
 				    
 				    return totalAccessMap;
@@ -785,7 +785,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 					strategy,
 					serverHolderList,
 					segment,
-					1L,
+					5L,
 					routingTable
 			);
 			stats.accumulate(assignStats);
@@ -828,8 +828,6 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 				}
 				);
 
-		log.info("Inserted Segment [%s]", segment.getIdentifier());
-
 		stats.addToTieredStat(assignedCount, tier, 1);
 
 		return stats;
@@ -845,8 +843,6 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 			HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable
 	)
 	{
-		log.info("Insert Segment [%s] [%d]", segment.getIdentifier(), numReplicantsToAdd);
-		
         final CoordinatorStats stats = new CoordinatorStats();
 		stats.addToTieredStat(assignedCount, tier, 0);
 
@@ -855,6 +851,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		HashMap<DruidServerMetadata, Long> bootstrapRouting = new HashMap<>();
 		while (numReplicants > 0) {
 			final ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
+		    log.info("Insert Segment [%s] to [%s]", segment.getIdentifier(), holder.getServer().getHost());
 
 			if (holder == null) {
 				log.warn(
@@ -885,7 +882,6 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 					}
 					);
 
-			log.info("Inserted Segment [%s]", segment.getIdentifier());
 			bootstrapRouting.put(holder.getServer().getMetadata(), 1L);
 
 			stats.addToTieredStat(assignedCount, tier, 1);
@@ -935,7 +931,6 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 				);
 			
 		stats.addToTieredStat(droppedCount, tier, 1);
-		log.info("Removed Segment [%s]", segment.getIdentifier());
 			
 		return stats;
 	}
