@@ -93,7 +93,7 @@ def plotHnSegmentAccess():
 				if metric not in metricslist:
 					metricslist.append(metric)
 				
-				lasttime = time
+			lasttime = time
 
 	# sort the metric list
 	metricslist.sort()
@@ -135,7 +135,7 @@ def plotHnSegmentAccess():
 			plt.text(x[-1], y[-1], metricslist.index(entry[1]), fontsize=12, horizontalalignment='left', verticalalignment='bottom')
 
 		# plot the segment accesses
-		plt.plot(x, y, 'co--', markersize=10, label='hn num segment scans ')
+		plt.plot(x, y, 'co--', markersize=10, label='hn segment scan time')
 		# plot the individual segment durations
 		segplot = segtimeplots[hn]
 		segplotsorted = sorted(segplot,key=lambda x: x[1])
@@ -143,11 +143,11 @@ def plotHnSegmentAccess():
 			templist = item[1]
 			newarray = np.array(templist)
 			xtemp, ytemp = newarray.T
-			plt.plot(xtemp, ytemp, ''+colors[int(item[0])]+'-', label='metric-'+str(item[0]), linewidth = '10')
+			plt.plot(xtemp, ytemp, ''+colors[int(item[0])]+'-', label='segment-'+str(item[0]), linewidth = '10')
 
 		plt.legend(loc='upper left', fontsize = 'xx-small')
 		plt.title('HN '+str(hn.split(".")[0])+' segment access across time')
-		plt.ylabel('Num segment scans (log scale)')
+		plt.ylabel('Total segment access time milliseconds (log-e values)')
 		plt.xlabel('Time (secs)')
 		plt.ylim(0, float(1.25*max(y)))
 		plt.grid(True) 
