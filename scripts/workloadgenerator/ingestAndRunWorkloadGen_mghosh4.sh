@@ -5,7 +5,7 @@ COMMAND=$COMMAND" screen -d -m python ingestion.py getafix.conf;"
 echo $COMMAND
 ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no node-1 "$COMMAND"
 
-sleep 3
+sleep 1m
 
 ./runMultiWorkloadGen_mghosh4.sh $@
 

@@ -204,7 +204,7 @@ def genPoissonQuerySchedule(queryPerMilliSecond, numSamples):
 def threadoperation(queryPerSec):
     @gen.coroutine
     def printresults():
-        logger.info('{} {} {} {}'.format(start.strftime("%Y-%m-%d %H:%M:%S"), end.strftime("%Y-%m-%d %H:%M:%S"), runtime, queryPerSec, segmentpopularityinterval))
+        logger.info('{} {} {} {} {}'.format(start.strftime("%Y-%m-%d %H:%M:%S"), end.strftime("%Y-%m-%d %H:%M:%S"), runtime, queryPerSec, segmentpopularityinterval))
         
         querypermin = queryPerSec * 60
         endtime = datetime.now(timezone('UTC')) + timedelta(minutes=runtime)
@@ -220,8 +220,8 @@ def threadoperation(queryPerSec):
             #logger.info("Run.py start queryendtime "+str(start)+", "+str(endtime))
             queryStartInterval = start
             queryEndInterval = start + timedelta(minutes=segmentpopularityinterval)
-            logger.info("Start generating queries for interval "+str(queryStartInterval)+" - "+str(queryEndInterval))
             for i in range(0, (runtime-segmentpopularityinterval)/segmentpopularityinterval):
+                logger.info("Start generating queries for interval "+str(queryStartInterval)+" - "+str(queryEndInterval))
                 newquerylist.extend(QueryGenerator.generateQueries(queryStartInterval, queryEndInterval, segmentpopularityinterval*querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist, logger))
                 queryEndInterval = queryEndInterval + timedelta(minutes=segmentpopularityinterval)
 

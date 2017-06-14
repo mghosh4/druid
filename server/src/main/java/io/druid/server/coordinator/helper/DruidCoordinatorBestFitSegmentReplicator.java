@@ -134,13 +134,13 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable = new HashMap<DataSegment, HashMap<DruidServerMetadata, Long>>();
 		calculateBestFitReplication(params, weightedAccessCounts, routingTable, insertList, removeList);
 
-		//manageReplicas(params, insertList, removeList, stats);
-		manageReplicas(params, routingTable, stats);
-
 		// Load new segments
 		loadNewSegments(params, stats, routingTable);
 
 		coordinator.setRoutingTable(routingTable);
+
+		//manageReplicas(params, insertList, removeList, stats);
+		manageReplicas(params, routingTable, stats);
 
 		// Manage replicas
 		return params.buildFromExisting() 
@@ -774,27 +774,46 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		Set<DataSegment> orderedAvailableDataSegments = coordinator.getOrderedAvailableDataSegments();
 		log.info("[GETAFIX PLACEMENT] latest segment: " + coordinator.getLatestSegment());
 
+        int holderCount = 0;
 		for (DataSegment segment : orderedAvailableDataSegments) {
+            log.info("[GETAFIX PLACEMENT] segment:" + segment.getIdentifier());
 			if (segment.getIdentifier().equals(coordinator.getLatestSegment())) {
 				break;
 			}
 
-			CoordinatorStats assignStats = assign(
+            // Round robin allocate the servers because best fit should have uniformly spread the query load
+            long bootstrapReplicas = numOfBootstrapReplicasToCreate();
+		    HashMap<DruidServerMetadata, Long> bootstrapRouting = new HashMap<>();
+            for (long replicaNum = 0; replicaNum < bootstrapReplicas; replicaNum++)
+            {
+			    bootstrapRouting.put(serverHolderList.get(holderCount).getServer().getMetadata(), 1L);
+                holderCount = (holderCount + 1) % serverHolderList.size();
+            }
+
+		    routingTable.put(segment, bootstrapRouting);
+
+			/*CoordinatorStats assignStats = assign(
 					replicatorThrottler,
 					tier,
 					strategy,
 					serverHolderList,
 					segment,
-					5L,
+					3L,
 					routingTable
 			);
-			stats.accumulate(assignStats);
+			stats.accumulate(assignStats);*/
 		}
 
 		if (!orderedAvailableDataSegments.isEmpty()) {
+            log.info("[GETAFIX PLACEMENT] set latest segment:" + orderedAvailableDataSegments.iterator().next().getIdentifier());
 			coordinator.setLatestSegment(orderedAvailableDataSegments.iterator().next().getIdentifier());
 		}
 	}
+
+    private long numOfBootstrapReplicasToCreate()
+    {
+        return 5L;
+    }
 
 	private CoordinatorStats assign(
 			final ReplicationThrottler replicationManager,
