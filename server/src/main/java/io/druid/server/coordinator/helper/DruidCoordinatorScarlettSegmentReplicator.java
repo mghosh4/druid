@@ -634,31 +634,44 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 		Set<DataSegment> orderedAvailableDataSegments = coordinator.getOrderedAvailableDataSegments();
 		log.info("[SCARLETT PLACEMENT] latest segment: " + coordinator.getLatestSegment());
 
+        int holderCount = 0;
 		for (DataSegment segment : orderedAvailableDataSegments) {
 			if (segment.getIdentifier().equals(coordinator.getLatestSegment())) {
 				break;
 			}
 
-			CoordinatorStats assignStats = assign(
+            // Round robin allocate the servers because best fit should have uniformly spread the query load
+            long bootstrapReplicas = numOfBootstrapReplicasToCreate();
+		    HashMap<DruidServerMetadata, Long> bootstrapRouting = new HashMap<>();
+            for (long replicaNum = 0; replicaNum < bootstrapReplicas; replicaNum++)
+            {
+			    bootstrapRouting.put(serverHolderList.get(holderCount).getServer().getMetadata(), 1L);
+                holderCount = (holderCount + 1) % serverHolderList.size();
+            }
+
+		    routingTable.put(segment, bootstrapRouting);
+
+			/*CoordinatorStats assignStats = assign(
 					replicatorThrottler,
 					tier,
 					strategy,
 					serverHolderList,
 					segment,
-					1L,
-					routingTable,
-					nodeVolumes,
-					currentTable
+					3L,
+					routingTable
 			);
-			
-			
-			stats.accumulate(assignStats);
+			stats.accumulate(assignStats);*/
 		}
 
 		if (!orderedAvailableDataSegments.isEmpty()) {
 			coordinator.setLatestSegment(orderedAvailableDataSegments.iterator().next().getIdentifier());
 		}
 	}
+
+    private long numOfBootstrapReplicasToCreate()
+    {
+        return 1L;
+    }
 
 	private CoordinatorStats assign(
 			final ReplicationThrottler replicationManager,
@@ -692,7 +705,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 				}
 				);
 
-		log.info("Inserted Segment [%s] to server [%s]", segment.getIdentifier(), holder.getServer().getHost());
+		//log.info("Inserted Segment [%s] to server [%s]", segment.getIdentifier(), holder.getServer().getHost());
 
 		stats.addToTieredStat(assignedCount, tier, 1);
 
@@ -816,7 +829,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 					}
 					);
 
-			log.info("Inserted Segment [%s] for the first time, to server [%s]", segment.getIdentifier(), holder.getServer().getHost());
+			//log.info("Inserted Segment [%s] for the first time, to server [%s]", segment.getIdentifier(), holder.getServer().getHost());
 			bootstrapRouting.put(holder.getServer().getMetadata(), 0L);
 			newListEntry.add(holder.getServer().getMetadata());
 			if(!nodeVolumes.containsKey(pair.getKey())){

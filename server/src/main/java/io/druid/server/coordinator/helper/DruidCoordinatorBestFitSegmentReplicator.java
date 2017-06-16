@@ -776,7 +776,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 
         int holderCount = 0;
 		for (DataSegment segment : orderedAvailableDataSegments) {
-            log.info("[GETAFIX PLACEMENT] segment:" + segment.getIdentifier());
+            //log.info("[GETAFIX PLACEMENT] segment:" + segment.getIdentifier());
 			if (segment.getIdentifier().equals(coordinator.getLatestSegment())) {
 				break;
 			}
@@ -805,14 +805,14 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		}
 
 		if (!orderedAvailableDataSegments.isEmpty()) {
-            log.info("[GETAFIX PLACEMENT] set latest segment:" + orderedAvailableDataSegments.iterator().next().getIdentifier());
+            //log.info("[GETAFIX PLACEMENT] set latest segment:" + orderedAvailableDataSegments.iterator().next().getIdentifier());
 			coordinator.setLatestSegment(orderedAvailableDataSegments.iterator().next().getIdentifier());
 		}
 	}
 
     private long numOfBootstrapReplicasToCreate()
     {
-        return 5L;
+        return 2L;
     }
 
 	private CoordinatorStats assign(
