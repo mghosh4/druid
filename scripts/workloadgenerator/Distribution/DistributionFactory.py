@@ -11,6 +11,8 @@ class DistributionFactory(object):
 			return DynamicZipfian()
 		elif distribution == "latest":
 			return Latest()
+		elif distribution == "druid":
+			return Druid()
 	
 	@staticmethod
 	def createSizeDistribution(distribution):

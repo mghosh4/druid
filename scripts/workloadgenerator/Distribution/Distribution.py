@@ -1,4 +1,6 @@
 import numpy
+import matplotlib.pyplot as plt
+from scipy.interpolate import UnivariateSpline
 
 class Uniform(object):
 
@@ -35,6 +37,40 @@ class Zipfian(object):
 	#logger.info("U, V "+str(u)+" $ "+str(v))
         samples = [t-1 for t in v]
         return samples
+
+def plotDistribution(data, filename):
+
+    numBins = len(data)/10
+    p, x = np.histogram(data, bins=len(data)/10) # bin it into 10 bins
+    x = x[:-1] + (x[1] - x[0])/2   # convert bin edges to centers
+    f = UnivariateSpline(x, p, data=numBins)
+    plt.plot(x, f(x))
+    plt.title('Druid distribution')
+    # plt.ylabel('Total segment access')
+    # plt.xlabel('Time')
+    # plt.ylim(0, float(1.25*max(y)))
+    # plt.grid(True) 
+    plt.savefig(filename)
+
+class Druid(Zipfian):
+
+    def generateDistribution(self, minSample, maxSample, numSamples, popularityList, logger):
+    latestsample = super(Druid, self).generateDistribution(minSample, maxSample, numSamples, popularityList, logger)
+
+    datalatest = [maxSample - x + minSample for x in latestsample]
+    plotDistribution(datalatest, 'latest_distribution.png')
+
+    # convert zipfian to druid distribution
+    numBins = len(data)/10
+    chunk1 = data[0:numBins].reverse()
+    datadruid = data[numBins:-1] + chunk1
+
+    print len(datalatest), len(datadruid)
+
+    plotDistribution(datadruid, 'druid_distribution.png')
+
+    #return data
+
 
 class DynamicZipfian(object):
 
