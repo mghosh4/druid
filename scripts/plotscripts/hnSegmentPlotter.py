@@ -93,7 +93,10 @@ def plotHnSegmentAccess():
 				if metric not in metricslist:
 					metricslist.append(metric)
 				
-			lasttime = time
+				lasttime = time
+
+	# add additional 30secs to the last time
+	lasttime = lasttime + timedelta(minutes=1)
 
 	# sort the metric list
 	metricslist.sort()
