@@ -41,7 +41,7 @@ class Zipfian(object):
 def plotDistribution(data, filename):
 
     numBins = len(data)/10
-    p, x = np.histogram(data, bins=len(data)/10) # bin it into 10 bins
+    p, x = numpy.histogram(data, bins=len(data)/10) # bin it into 10 bins
     x = x[:-1] + (x[1] - x[0])/2   # convert bin edges to centers
     f = UnivariateSpline(x, p, data=numBins)
     plt.plot(x, f(x))
