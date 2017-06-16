@@ -55,19 +55,19 @@ def plotDistribution(data, filename):
 class Druid(Zipfian):
 
     def generateDistribution(self, minSample, maxSample, numSamples, popularityList, logger):
-    latestsample = super(Druid, self).generateDistribution(minSample, maxSample, numSamples, popularityList, logger)
+        latestsample = super(Druid, self).generateDistribution(minSample, maxSample, numSamples, popularityList, logger)
 
-    datalatest = [maxSample - x + minSample for x in latestsample]
-    plotDistribution(datalatest, 'latest_distribution.png')
+        datalatest = [maxSample - x + minSample for x in latestsample]
+        plotDistribution(datalatest, 'latest_distribution.png')
 
-    # convert zipfian to druid distribution
-    numBins = len(data)/10
-    chunk1 = data[0:numBins].reverse()
-    datadruid = data[numBins:-1] + chunk1
+        # convert zipfian to druid distribution
+        numBins = len(data)/10
+        chunk1 = data[0:numBins].reverse()
+        datadruid = data[numBins:-1] + chunk1
 
-    print len(datalatest), len(datadruid)
+        print len(datalatest), len(datadruid)
 
-    plotDistribution(datadruid, 'druid_distribution.png')
+        plotDistribution(datadruid, 'druid_distribution.png')
 
     #return data
 
