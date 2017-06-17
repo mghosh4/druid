@@ -14,7 +14,7 @@ import re
 import sys
 
 # resolution in milliseconds, value 250 aggregates for 250ms
-resolution = 500
+resolution = 1000
 
 def getBrokerActivityData():
 	global resolution
@@ -65,6 +65,9 @@ def plotHNLoading():
 	global resolution
 	bx, by = getBrokerActivityData()
 	hnFiles = sorted(glob.glob("historical-*-segment-scan-pending.log"), key=numericalSort)
+        if len(hnFiles) == 0:
+          print "Error: no historical-*-segment-scan-pending.log files found in folder"
+          return
 	loop = 0
 	numHNPerPlot = 15
 	if len(sys.argv) == 2:
@@ -121,11 +124,13 @@ def plotHNLoading():
 				if (numHNPerPlot > 5) :
 					plt.legend(loc='upper left', fontsize = 'xx-small', ncol=4)
 				else:
-					plt.legend(loc='upper left', fontsize = 'small')
+					plt.legend(loc='upper left', fontsize = 'xx-small')
 				plt.ylim(0, int(maxPlotValue))
 				plt.title('Historical Node '+str(loop-numHNPerPlot)+' to '+str(loop-1)+' Loading')
 				plt.ylabel('Loading (HN queue size + active threads)')
-				plt.xlabel('Time (each tick is '+str(resolution)+' ms)')
+				plt.xlabel('Time (each tick is '+str(resolution/1000)+' secs)')
+                                plt.xticks(np.arange(0, max(bx)+90.0, 30), fontsize=10) # arrange ticks on 30secs boundary
+                                plt.grid(True)
 				plt.savefig('hn_'+str(loop-numHNPerPlot)+'_to_'+str(loop-1)+'_loading.png')
 				plt.clf()
 				maxPlotValue = 0

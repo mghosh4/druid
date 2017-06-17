@@ -14,7 +14,11 @@ def plotHnSegmentAccess():
 	#matplotlib.colors.cnames
 	colors = ['b', 'g', 'r', 'k', 'm', 'y', 'c']
 	segmentYaxis = [0.5, 1, 1.5, 2, 2.5, 3, 3.5]
-	fname = glob.glob("coordinator-0.log")[0]
+	fnames = glob.glob("coordinator-0.log")
+        if len(fnames) == 0:
+          print "Error: coordinator-0.log file not found"
+          return
+        fname = fnames[0]
 	firsttime = ''
 	data = {}
 	metricslist = []
@@ -138,7 +142,7 @@ def plotHnSegmentAccess():
 			plt.text(x[-1], y[-1], metricslist.index(entry[1]), fontsize=12, horizontalalignment='left', verticalalignment='bottom')
 
 		# plot the segment accesses
-		plt.plot(x, y, 'co--', markersize=10, label='hn segment scan time')
+		plt.plot(x, y, 'k.', markersize=10, label='scan time')
 		# plot the individual segment durations
 		segplot = segtimeplots[hn]
 		segplotsorted = sorted(segplot,key=lambda x: x[1])
@@ -148,10 +152,11 @@ def plotHnSegmentAccess():
 			xtemp, ytemp = newarray.T
 			plt.plot(xtemp, ytemp, ''+colors[int(item[0])]+'-', label='segment-'+str(item[0]), linewidth = '10')
 
-		plt.legend(loc='upper left', fontsize = 'xx-small')
+		plt.legend(loc='upper right', fontsize = 'xx-small')
 		plt.title('HN '+str(hn.split(".")[0])+' segment access across time')
-		plt.ylabel('Total segment access time milliseconds (log-e values)')
-		plt.xlabel('Time (secs)')
+		plt.ylabel('Total segment access time milliseconds (log-e values)', fontsize=10)
+		plt.xlabel('Time (secs)', fontsize=10)
+                plt.xticks(np.arange(0, max(x)+90.0, 30), fontsize=9) # arrange ticks on 30secs boundary
 		plt.ylim(0, float(1.25*max(y)))
 		plt.grid(True) 
 		plt.savefig('hn_'+str(count)+'_segment_scan.png')
