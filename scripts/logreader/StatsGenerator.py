@@ -100,6 +100,18 @@ for metric in historicalmetrics:
 
     Utils.writeOverallMetricStats(statfile, metricstats, stats, headerStr)
 
+# write the HN node to hostname map to hn-to-hostname-map.log
+mapfile = resultfolder + "/historical-to-hostname-map.log"
+mFile = open(mapfile, 'w')
+for i in range(0,num_h_nodes):
+    filename = logpath + "/historical-" + str(i) + ".log"
+    for line in open(filename):
+        if "host=" in line:
+            str = "HN-"+str(i)+"\t"+line.split("'")[-2]+"\n"
+            mFile.write(str)
+            break
+mFile.close()
+
 ## Broker Metrics ###
 
 #Query Runtime
