@@ -20,8 +20,8 @@ def plotHnSegmentAccess():
     hnames = glob.glob("historical-*-segment-scan-pending.log")
     if len(hnames) == 0:
         print "Error: historical-*-segment-scan-pending.log files missing"
-    minQueryStartTime = datetime.now()
-    maxQueryEndTime = datetime.now() - timedelta(hours=50000)
+    minQueryStartTime = datetime.now() + timedelta(1000) # add 1000 days
+    maxQueryEndTime = datetime.now() - timedelta(1000) # subtrace 1000 days
     for hname in hnames:
         with open(hname) as f:
             for line in f:
@@ -35,7 +35,7 @@ def plotHnSegmentAccess():
                 if time < minQueryStartTime:
                     minQueryStartTime = time
                 if time > maxQueryEndTime:
-                	maxQueryEndTime = time
+                    maxQueryEndTime = time
     
     totalQueryDurationInSecs = int(math.ceil(float((maxQueryEndTime - minQueryStartTime).total_seconds())/60))
     segGenInterval = 60 # assuming segment generation interval is every 1 minute
