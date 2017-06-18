@@ -79,66 +79,74 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
   {
-    QueryableDruidServer chosenServer = null;
-    long maxLoading = -1;
-    List<Long> loading = new ArrayList<Long>();
-    List<QueryableDruidServer> serverList = new ArrayList<QueryableDruidServer>();
-     
-    for (Iterator<QueryableDruidServer> iterator = servers.iterator(); iterator.hasNext();){
-      QueryableDruidServer s = iterator.next();
-      //log.info("OpenConnections %d", s.getClient().getNumOpenConnections());
-      // TODO: setting the check to a high number for now. This ensures that no server is removed from the list. Revisit this later
-      if(s.getClient().getNumOpenConnections() >= 10000) {
-        iterator.remove();
+      QueryableDruidServer chosenServer = null;
+      long maxLoading = -1;
+      long minLoading = 1000000;
+      int minLoadingIndex = -1;
+      int counter = 0;
+      List<Long> loading = new ArrayList<Long>();
+      List<QueryableDruidServer> serverList = new ArrayList<QueryableDruidServer>();
+
+      for (Iterator<QueryableDruidServer> iterator = servers.iterator(); iterator.hasNext();) {
+          QueryableDruidServer s = iterator.next();
+          //log.info("OpenConnections %d", s.getClient().getNumOpenConnections());
+          // remove the realtime node from the server list if other servers are available
+          if (s.getServer().getMetadata().getType().equals("realtime") && servers.size() > 1) {
+              iterator.remove();
+              log.info("Removed realtime server from the list load=%d openConnections=%d", s.getServer().getCurrentLoad(), s.getClient().getNumOpenConnections());
+          } else {
+              serverList.add(s);
+              long temp = s.getServer().getCurrentLoad();
+              // exponentially decay the load value
+              Date currTime = new Date();
+              long refreshTime = (currTime.getTime() - s.getServer().getCurrentLoadTime().getTime());
+              double decayRate = -0.05;
+              double e = 2.7183;
+              temp = (long) (temp * Math.pow(e, decayRate * refreshTime));
+              //log.info("Prev load %d, Decayed load %d, refreshTime %d", s.getServer().getCurrentLoad(), temp, refreshTime);
+              loading.add(temp);
+              // find max loading value
+              if (temp > maxLoading) {
+                  maxLoading = temp;
+              }
+              // find min loading value
+              if (temp < minLoading) {
+                  minLoading = temp;
+                  minLoadingIndex = counter;
+              }
+              counter++;
+              //log.info("Servers %s", s.getServer().getCurrentLoad());
+          }
       }
-      else{
-        serverList.add(s);
-        long temp = s.getServer().getCurrentLoad();
 
-
-        // exponentially decay the load value
-        Date currTime = new Date();
-        long refreshTime = (currTime.getTime()-s.getServer().getCurrentLoadTime().getTime());     
-        double decayRate = -0.05;
-        double e = 2.7183;
-        temp = (long)(temp*Math.pow(e, decayRate*refreshTime));
-	//log.info("Prev load %d, Decayed load %d, refreshTime %d", s.getServer().getCurrentLoad(), temp, refreshTime);
-
-
-        loading.add(temp);
-        // find max loading value
-        if(temp > maxLoading){
-          maxLoading = temp;
-        }
-        //log.info("Servers %s", s.getServer().getCurrentLoad());  
+      // pick the server based on the probability distribution of loads
+      /*
+      maxLoading++;
+      //log.info("Max loading %d", maxLoading);
+      long prev = 0;
+      for(int i=0; i<loading.size(); i++){
+          long value = maxLoading - loading.get(i) + prev;
+          loading.set(i, value);
+          prev = value;
+          //log.info("Frequency %d: %d", i, value);
       }
-    }
-    
-    maxLoading++;
-    //log.info("Max loading %d", maxLoading);
-    long prev = 0;
-    for(int i=0; i<loading.size(); i++){
-      long value = maxLoading - loading.get(i) + prev;
-      loading.set(i, value);
-      prev = value;
-      //log.info("Frequency %d: %d", i, value); 
-    }
+      // generate a random number from 0 to prev
+      Random rn = new Random();
+      int randNum = rn.nextInt((int)prev - 0 + 1) + 0;
+      //log.info("Random number %d", randNum);
+      // loop through loading list to identify the bucket
+      int i;
+      for(i=0; i<loading.size(); i++){
+          long value = loading.get(i);
+          if(value >= randNum){
+              break;
+          }
+      }
+      //log.info("Selected index %d", i);
+      return serverList.get(i);
+      */
 
-    // generate a random number from 0 to prev
-    Random rn = new Random();
-    int randNum = rn.nextInt((int)prev - 0 + 1) + 0;
-    //log.info("Random number %d", randNum);    
-
-    // loop through loading list to identify the bucket
-    int i;
-    for(i=0; i<loading.size(); i++){
-      long value = loading.get(i);
-      if(value >= randNum){
-        break;
-      } 
-    }
-    //log.info("Selected index %d", i);
-    return serverList.get(i);
+      return serverList.get(minLoadingIndex);
   }
 
 /*
