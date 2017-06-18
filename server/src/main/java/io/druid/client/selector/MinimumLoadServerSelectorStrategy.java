@@ -103,7 +103,7 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
               double decayRate = -0.05;
               double e = 2.7183;
               temp = (long) (temp * Math.pow(e, decayRate * refreshTime));
-              //log.info("Prev load %d, Decayed load %d, refreshTime %d", s.getServer().getCurrentLoad(), temp, refreshTime);
+              log.info("Server name %s, Server host %s, Prev load %d, Decayed load %d, refreshTime %d", s.getServer().getMetadata().getName(), s.getServer().getMetadata().getHost(), s.getServer().getCurrentLoad(), temp, refreshTime);
               loading.add(temp);
               // find max loading value
               if (temp > maxLoading) {
@@ -145,7 +145,7 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
       //log.info("Selected index %d", i);
       return serverList.get(i);
       */
-
+      log.info("Selected server name %s, host %s, loading %d", serverList.get(minLoadingIndex).getServer().getMetadata().getName(), serverList.get(minLoadingIndex).getServer().getMetadata().getHost(), loading.get(minLoadingIndex));
       return serverList.get(minLoadingIndex);
   }
 

@@ -128,7 +128,7 @@ def plotHNLoading():
                 plt.ylim(0, int(maxPlotValue))
                 plt.title('Historical Node '+str(loop-numHNPerPlot)+' to '+str(loop-1)+' Loading')
                 plt.ylabel('Loading (HN queue size + active threads)')
-                plt.xlabel('Time (each tick is '+str(resolution/1000)+' secs)')
+                plt.xlabel('Time (each tick is '+str(float(resolution)/1000)+' secs)')
                 plt.xticks(np.arange(0, max(bx)+90.0, 30), fontsize=10) # arrange ticks on 30secs boundary
                 plt.grid(True)
                 plt.savefig('hn_'+str(loop-numHNPerPlot)+'_to_'+str(loop-1)+'_loading.png')
