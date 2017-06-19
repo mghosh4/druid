@@ -13,7 +13,7 @@ import math
 
 def plotHnSegmentAccess():
     #matplotlib.colors.cnames
-    colors = ['b', 'g', 'r', 'k', 'm', 'y', 'c']
+    colors = ['b', 'g', 'r', 'k', 'c', 'm', 'y']
     segmentYaxis = [0.5, 1, 1.5, 2, 2.5, 3, 3.5]
     
     # read the historical segment scan files to plot query boundaries
@@ -22,9 +22,14 @@ def plotHnSegmentAccess():
         print "Error: historical-*-segment-scan-pending.log files missing"
     minQueryStartTime = datetime.now() + timedelta(1000) # add 1000 days
     maxQueryEndTime = datetime.now() - timedelta(1000) # subtrace 1000 days
+    numTimeBoundaryQueries = 2
     for hname in hnames:
         with open(hname) as f:
+            queryCount = 0
             for line in f:
+                if queryCount < numTimeBoundaryQueries:
+                    queryCount = queryCount + 1
+                    continue
                 l = line.rstrip('\n').replace("\t", " ")
                 lsplit = l.split(" ")
                 date = lsplit[0]+" "+lsplit[1]
@@ -48,7 +53,8 @@ def plotHnSegmentAccess():
     firsttime = ''
     data = {}
     metricslist = []
-    lasttime = datetime.now()
+    # add additional 1 minute to the last time
+    lasttime = maxQueryEndTime + timedelta(minutes=1)
     hnmetricplots = {}
     segtimeplots = {}
     with open(fname) as f:
@@ -57,6 +63,9 @@ def plotHnSegmentAccess():
             lsplit = l.split(" ")
             date = lsplit[0]+" "+lsplit[1]    
             time = datetime.strptime(date, '%Y-%m-%d %H:%M:%S,%f')
+
+            if time > lasttime:
+                break;
 
             if "Insert Segment" in line and " to " in line:
                 if firsttime == '':
@@ -122,11 +131,6 @@ def plotHnSegmentAccess():
                     data[hn] = templist
                 if metric not in metricslist:
                     metricslist.append(metric)
-                
-                lasttime = time
-
-    # add additional 30secs to the last time
-    lasttime = lasttime + timedelta(minutes=1)
 
     # sort the metric list
     metricslist.sort()
@@ -151,7 +155,6 @@ def plotHnSegmentAccess():
                 #print "b removed from "+str(hn)+" metric "+str(metricslist.index(metric))+" at time "+str(lasttime)
 
     # process one HN at a time
-    count = 0
     for hn, datalist in data.iteritems():
         x = []
         y = []
@@ -182,18 +185,18 @@ def plotHnSegmentAccess():
         yseg = [0, max(y)+2]
         for i in range(0,(totalQueryDurationInSecs+1)):
             xseg = list([(minQueryStartTime+timedelta(minutes=int(i))-firsttime).total_seconds(), (minQueryStartTime+timedelta(minutes=int(i))-firsttime).total_seconds()])
-            plt.plot(xseg, yseg, 'r-')
+            plt.plot(xseg, yseg, 'y-')
 
-        plt.legend(loc='upper right', fontsize = 'xx-small')
-        plt.title('HN '+str(hn.split(".")[0])+' segment access across time')
+        plt.legend(loc='upper left', fontsize = 'xx-small')
+        plt.title('HN '+str(hn.split(".")[0])+' segment accesses')
         plt.ylabel('Total segment access time milliseconds (log-e values)', fontsize=10)
         plt.xlabel('Time (secs)', fontsize=10)
         plt.xticks(np.arange(0, max(x)+90.0, 30), fontsize=9) # arrange ticks on 30secs boundary
         plt.ylim(0, float(1.25*max(y)))
         plt.grid(True) 
-        plt.savefig('hn_'+str(count)+'_segment_scan.png')
+        plt.savefig('hn_'+str(hn.split(".")[0])+'_segment_scan.png')
         plt.clf()
-        count = count + 1
+        print "Output plot : "+'hn_'+str(hn.split(".")[0])+'_segment_scan.png'
 
     print "Metric IDs"
     for i in range(0, len(metricslist)):

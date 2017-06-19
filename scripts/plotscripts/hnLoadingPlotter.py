@@ -64,9 +64,18 @@ def numericalSort(value):
 def plotHNLoading():
     global resolution
     bx, by = getBrokerActivityData()
+    hnMap = []
+    hnMapFiles = glob.glob("historical-to-hostname-map.log")
+    if len(hnMapFiles) == 0:
+        print "Error: historical-to-hostname-map.log file missing"
+        return
+    with open(hnMapFiles[0]) as f:
+        for line in f:
+            hnMap.append(line.rstrip('\n').split("\t")[1].split(".")[0])
+
     hnFiles = sorted(glob.glob("historical-*-segment-scan-pending.log"), key=numericalSort)
     if len(hnFiles) == 0:
-        print "Error: no historical-*-segment-scan-pending.log files found in folder"
+        print "Error: historical-*-segment-scan-pending.log files missing"
         return
     loop = 0
     numHNPerPlot = 15
@@ -117,7 +126,7 @@ def plotHNLoading():
                             loadingSum = float(l[1])
                         prevtime = currtime
 
-            plt.plot(x, y, label='hn_'+fname.split("-")[1]+'_loading')
+            plt.plot(x, y, label='hn_'+hnMap[int(fname.split("-")[1])]+'_loading')
             loop = loop + 1
             if loop % numHNPerPlot == 0:
                 plt.plot(bx, by, '.', label='broker query activity')
@@ -125,16 +134,24 @@ def plotHNLoading():
                     plt.legend(loc='upper left', fontsize = 'xx-small', ncol=4)
                 else:
                     plt.legend(loc='upper left', fontsize = 'xx-small')
-                plt.ylim(0, int(maxPlotValue))
-                plt.title('Historical Node '+str(loop-numHNPerPlot)+' to '+str(loop-1)+' Loading')
+                plt.ylim(0, 1.25*int(maxPlotValue))
+                if numHNPerPlot > 1:
+                    plt.title('HN '+str(loop-numHNPerPlot)+' to '+str(loop-1)+' Loading')
+                else:
+                    plt.title('HN-'+str(loop)+" "+hnMap[int(fname.split("-")[1])]+' Loading')
                 plt.ylabel('Loading (HN queue size + active threads)')
                 plt.xlabel('Time (each tick is '+str(float(resolution)/1000)+' secs)')
                 plt.xticks(np.arange(0, max(bx)+90.0, 30), fontsize=10) # arrange ticks on 30secs boundary
                 plt.grid(True)
-                plt.savefig('hn_'+str(loop-numHNPerPlot)+'_to_'+str(loop-1)+'_loading.png')
+                outputPlotFile = ''
+                if numHNPerPlot > 1:
+                    outputPlotFile = 'hn_'+str(loop-numHNPerPlot)+'_to_'+str(loop-1)+'_loading.png'
+                else:
+                    outputPlotFile = 'hn_'+str(loop)+"_"+hnMap[int(fname.split("-")[1])]+'_loading.png'
+                plt.savefig(outputPlotFile)
                 plt.clf()
                 maxPlotValue = 0
-                print "Output plot : hn_"+str(loop-numHNPerPlot)+"_to_"+str(loop-1)+"_loading.png"
+                print "Output plot : "+outputPlotFile
 
 def main():
     plotHNLoading()
