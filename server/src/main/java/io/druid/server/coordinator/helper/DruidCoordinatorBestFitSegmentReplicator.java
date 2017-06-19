@@ -812,7 +812,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 
     private long numOfBootstrapReplicasToCreate()
     {
-        return 2L;
+        return 1L;
     }
 
 	private CoordinatorStats assign(
