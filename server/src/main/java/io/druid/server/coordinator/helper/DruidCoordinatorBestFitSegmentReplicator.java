@@ -232,17 +232,16 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
         List<URI> urls = getBrokerURLs();
 
         ExecutorService pool = Executors.newFixedThreadPool(urls.size());
-        List<Future<Map<String, Integer>>> futures = new ArrayList<Future<Map<String, Integer>>>();
+        List<Future<Integer>> futures = new ArrayList<Future<Integer>>();
 
         log.info("Routing Table:");
         printRoutingTable(routingTable);
 
         for (final URI url : urls) {
             log.info("Sending routing table to broker %s", url.toString());
-            futures.add(pool.submit(new Callable<Map<String, Integer>>() {
+            futures.add(pool.submit(new Callable<Integer>() {
                 @Override
-                public Map<String, Integer> call() {
-                    Map<String, Integer> totalAccessMap = Maps.newHashMap();
+                public Integer call() {
                     try {
                         StatusResponseHolder response = httpClient.go(
                                 new Request(
@@ -269,6 +268,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
                         e.printStackTrace();
                         throw Throwables.propagate(e);
                     }
+                    return 0; // return a dummy integer value
                 }
             }));
         }
