@@ -19,27 +19,41 @@
 
 package io.druid.server.http;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import io.druid.client.BrokerServerView;
+import io.druid.jackson.DefaultObjectMapper;
+import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.broker.DruidBroker;
+import io.druid.timeline.DataSegment;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Map;
 
 @Path("/druid/broker/v1")
 public class BrokerResource
 {
   private final BrokerServerView brokerServerView;
   private final SegmentCollector segmentCollector;
+  private final DruidBroker druidBroker;
+  private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Inject
-  public BrokerResource(BrokerServerView brokerServerView, SegmentCollector segmentCollector)
+  public BrokerResource(BrokerServerView brokerServerView, SegmentCollector segmentCollector, DruidBroker druidBroker)
   {
     this.brokerServerView = brokerServerView;
     this.segmentCollector = segmentCollector;
+    this.druidBroker = druidBroker;
   }
 
   @GET
@@ -57,4 +71,25 @@ public class BrokerResource
   {
     return Response.ok(segmentCollector.getSerializedSegmentList()).build();
   }
+
+  @POST
+  @Path("/routingTable")
+  @Consumes(MediaType.TEXT_PLAIN)
+  public Response applyNewRoutingTable(final byte[] routingTable)
+  {
+      Map<String, Map<String, Long>> rt = null;
+      try {
+          rt = jsonMapper.readValue(
+                  //response.getContent(),
+                  routingTable,
+                  new TypeReference<Map<String, Map<String, Long>>>() {
+                  }
+          );
+      }catch(java.io.IOException e){}
+
+      // save the routing table
+      druidBroker.setRoutingTable(rt);
+      return Response.ok().build();
+  }
 }
+

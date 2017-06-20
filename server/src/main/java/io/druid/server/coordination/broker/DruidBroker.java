@@ -19,10 +19,12 @@
 
 package io.druid.server.coordination.broker;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
+import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.HttpClient;
 import io.druid.client.ServerInventoryView;
 import io.druid.client.ServerView;
@@ -33,8 +35,10 @@ import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Self;
 import io.druid.query.Query;
 import io.druid.server.DruidNode;
+import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.broker.tasks.PeriodicPollHistoricalLoad;
 import io.druid.server.coordination.broker.tasks.PeriodicPollRoutingTable;
+import io.druid.timeline.DataSegment;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -59,7 +63,9 @@ public class DruidBroker
 
   private final ScheduledExecutorService pool;
   private volatile boolean started = false;
+
   private volatile Map<String, Map<String, Long>> routingTable;
+  private static final EmittingLogger log = new EmittingLogger(DruidBroker.class);
 
   //QueryTime distribution data structures
   String loadingPath = "/proj/DCSQ/mghosh4/druid/estimation/";
@@ -171,9 +177,22 @@ public class DruidBroker
     return routingTable;
   }
 
+  private void printRoutingTable(final Map<String, Map<String, Long>> routingTable){
+      for(Map.Entry<String, Map<String, Long>> entry : routingTable.entrySet()){
+          //log.info("Segment [%s]:", entry.getKey().getIdentifier());
+          log.info("Segment [%s]:", entry.getKey());
+          for(Map.Entry<String, Long> e: entry.getValue().entrySet()){
+              //log.info("[%s]: [%s]", e.getKey().getHost(), e.getValue());
+              log.info("[%s]: [%s]", e.getKey(), e.getValue());
+          }
+      }
+  }
+
   public synchronized void setRoutingTable(Map<String, Map<String, Long>> routingTable)
   {
     this.routingTable = routingTable;
+    log.info("Received routing table");
+    printRoutingTable(routingTable);
   }
 
   public HttpClient getHttpClient() {

@@ -19,6 +19,7 @@
 
 package io.druid.server.coordinator.helper;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.util.Charsets;
@@ -56,6 +57,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 
+import javax.ws.rs.core.MediaType;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -142,14 +144,27 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		//manageReplicas(params, insertList, removeList, stats);
 		manageReplicas(params, routingTable, stats);
 
+        // send the updated routing table to the brokers
+        sendRoutingTableToClients(routingTable);
+
 		// Manage replicas
 		return params.buildFromExisting() 
                 .withReplicationManager(replicatorThrottler)
 				.withCoordinatorStats(stats) 
 				.build();
 	}
+
+	private void printRoutingTable(final HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable){
+
+		for(Map.Entry<DataSegment, HashMap<DruidServerMetadata, Long>> entry : routingTable.entrySet()){
+			log.info("Segment [%s]:", entry.getKey().getIdentifier());
+			for(Map.Entry<DruidServerMetadata, Long> e: entry.getValue().entrySet()){
+				log.info("[%s]: [%s]", e.getKey().getHost(), e.getValue());
+			}
+		}
+    }
 	
-	/*private List<String> getBrokerURLs()
+	private List<URI> getBrokerURLs()
 	{
 		String brokerservice = TieredBrokerConfig.DEFAULT_BROKER_SERVICE_NAME;
 		ServerDiscoverySelector selector = serverDiscoveryFactory.createSelector(brokerservice);
@@ -162,7 +177,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		
 		Collection<Server> brokers = selector.getAll();
 		
-		List<String> uris = new ArrayList<String>(brokers.size());
+		List<URI> uris = new ArrayList<URI>(brokers.size());
 		for (Server broker : brokers)
 		{
 			// Should use threads to fetch in parallel from all brokers
@@ -173,7 +188,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 						null,
 						broker.getAddress(),
 						broker.getPort(),
-						"/druid/broker/v1/segments",
+						"/druid/broker/v1/routingTable",
 						null,
 						null);
 			} catch (URISyntaxException e) {
@@ -182,7 +197,8 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 			}
 			log.info("URI [%s]", uri.toString());
 			
-			uris.add(uri.toString());
+			//uris.add(uri.toString());
+            uris.add(uri);
 		}
 
 		log.info("Number of Broker Servers [%d]", brokers.size());
@@ -190,7 +206,75 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		return uris;
   	}
 
-	private void calculateSegmentCounts(Multiset<DataSegment> segmentCounts)
+    public String getSerializedRoutingTable(final HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable)
+    {
+        Map<String, Map<String, Long>> toser = new HashMap<>();
+        for (Map.Entry<DataSegment, HashMap<DruidServerMetadata, Long>> entry : routingTable.entrySet()) {
+            Map<String, Long> m = new HashMap<>();
+            for (Map.Entry<DruidServerMetadata, Long> hnPair : entry.getValue().entrySet()) {
+                m.put(hnPair.getKey().toString(), hnPair.getValue());
+            }
+            toser.put(entry.getKey().getIdentifier(), m);
+        }
+
+        String ser = null;
+        try {
+            ser = jsonMapper.writeValueAsString(toser);
+        } catch (JsonProcessingException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return ser;
+    }
+
+  	private void sendRoutingTableToClients(final HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable) {
+
+        List<URI> urls = getBrokerURLs();
+
+        ExecutorService pool = Executors.newFixedThreadPool(urls.size());
+        List<Future<Map<String, Integer>>> futures = new ArrayList<Future<Map<String, Integer>>>();
+
+        log.info("Routing Table:");
+        printRoutingTable(routingTable);
+
+        for (final URI url : urls) {
+            log.info("Sending routing table to broker %s", url.toString());
+            futures.add(pool.submit(new Callable<Map<String, Integer>>() {
+                @Override
+                public Map<String, Integer> call() {
+                    Map<String, Integer> totalAccessMap = Maps.newHashMap();
+                    try {
+                        StatusResponseHolder response = httpClient.go(
+                                new Request(
+                                        HttpMethod.POST,
+                                        new URL(url.toString())
+                                //).setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(routingTable)),
+                                ).setContent(MediaType.APPLICATION_JSON, getSerializedRoutingTable(routingTable).getBytes()),
+                                responseHandler
+                        ).get();
+
+                        if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+                            throw new ISE(
+                                    "Error while querying[%s] status[%s] content[%s]",
+                                    url.toString(),
+                                    response.getStatus(),
+                                    response.getContent()
+                            );
+                        }
+                        else {
+                            log.info("Received status %s from %s ", response.getStatus(), url.toString());
+                        }
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        throw Throwables.propagate(e);
+                    }
+                }
+            }));
+        }
+    }
+
+	/*private void calculateSegmentCounts(Multiset<DataSegment> segmentCounts)
 	{
 		//log.info("Starting replication. Getting Segment Popularity");
 		List<String> urls = getBrokerURLs();
