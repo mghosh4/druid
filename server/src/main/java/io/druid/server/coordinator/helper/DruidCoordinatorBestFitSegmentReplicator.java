@@ -274,6 +274,21 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
                 }
             }));
         }
+
+        for (Future<Integer> future: futures)
+        {
+            try {
+                Integer temp = future.get();
+                log.info("POST routing table future done");
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+
         log.info("Sent routing table to all brokers");
     }
 
