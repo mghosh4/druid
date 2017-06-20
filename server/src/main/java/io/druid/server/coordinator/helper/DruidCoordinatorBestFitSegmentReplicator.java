@@ -252,6 +252,8 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
                                 responseHandler
                         ).get();
 
+                        log.info("Sent routing table to broker %s", url.toString());
+
                         if (!response.getStatus().equals(HttpResponseStatus.OK)) {
                             throw new ISE(
                                     "Error while querying[%s] status[%s] content[%s]",
@@ -272,6 +274,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
                 }
             }));
         }
+        log.info("Sent routing table to all brokers");
     }
 
 	/*private void calculateSegmentCounts(Multiset<DataSegment> segmentCounts)

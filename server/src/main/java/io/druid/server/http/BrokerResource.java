@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.client.BrokerServerView;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.coordination.DruidServerMetadata;
@@ -47,6 +48,7 @@ public class BrokerResource
   private final SegmentCollector segmentCollector;
   private final DruidBroker druidBroker;
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
+    private static final EmittingLogger log = new EmittingLogger(BrokerResource.class);
 
   @Inject
   public BrokerResource(BrokerServerView brokerServerView, SegmentCollector segmentCollector, DruidBroker druidBroker)
@@ -74,9 +76,10 @@ public class BrokerResource
 
   @POST
   @Path("/routingTable")
-  @Consumes(MediaType.TEXT_PLAIN)
+  @Consumes(MediaType.APPLICATION_JSON)
   public Response applyNewRoutingTable(final byte[] routingTable)
   {
+      log.info("Received POST for routing table %s", routingTable.toString());
       Map<String, Map<String, Long>> rt = null;
       try {
           rt = jsonMapper.readValue(
@@ -89,6 +92,7 @@ public class BrokerResource
 
       // save the routing table
       druidBroker.setRoutingTable(rt);
+      log.info("Sent response of POST for routing table");
       return Response.ok().build();
   }
 }
