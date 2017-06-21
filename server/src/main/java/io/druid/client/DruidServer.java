@@ -54,7 +54,8 @@ public class DruidServer implements Comparable
 
   private volatile long currSize;
   private volatile long loadEstimate;
-  private volatile Date loadEstimateTime;
+  private volatile Date loadEstimateTimeAtClient; // time when the loadEstimate was received at Client
+  private volatile Date loadEstimateTimeAtServer; // time when the loadEstimate was sent from the Server
 
   public DruidServer(
       DruidNode node,
@@ -88,7 +89,8 @@ public class DruidServer implements Comparable
     this.segments = new ConcurrentHashMap<String, DataSegment>();
 
     this.loadEstimate = -1;
-    this.loadEstimateTime = new Date();
+    this.loadEstimateTimeAtClient = new Date();
+    this.loadEstimateTimeAtServer = new Date();
   }
 
   public String getName()
@@ -106,14 +108,14 @@ public class DruidServer implements Comparable
     return loadEstimate;
   }
 
-  public Date getCurrentLoadTime()
-  {
-    return loadEstimateTime;
-  }
+  public Date getCurrentLoadTimeAtClient() { return loadEstimateTimeAtClient; }
+  public Date getCurrentLoadTimeAtServer() { return loadEstimateTimeAtServer; }
+  public void setCurrentLoadTimeAtServer(Date loadTimeAtServer) { loadEstimateTimeAtServer = loadTimeAtServer; }
+
   public void setCurrentLoad(long estimate)
   {
     loadEstimate = estimate;
-    loadEstimateTime = new Date();
+    loadEstimateTimeAtClient = new Date();
   }
 
   @JsonProperty

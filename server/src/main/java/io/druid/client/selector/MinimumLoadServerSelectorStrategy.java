@@ -98,12 +98,14 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
               serverList.add(s);
               long temp = s.getServer().getCurrentLoad();
               // exponentially decay the load value
+              /*
               Date currTime = new Date();
-              long refreshTime = (currTime.getTime() - s.getServer().getCurrentLoadTime().getTime());
+              long refreshTime = (currTime.getTime() - s.getServer().getCurrentLoadTimeAtClient().getTime());
               double decayRate = -0.05;
               double e = 2.7183;
               temp = (long) (temp * Math.pow(e, decayRate * refreshTime));
               log.info("Server name %s, Server host %s, Prev load %d, Decayed load %d, refreshTime %d", s.getServer().getMetadata().getName(), s.getServer().getMetadata().getHost(), s.getServer().getCurrentLoad(), temp, refreshTime);
+              */
               loading.add(temp);
               // find max loading value
               if (temp > maxLoading) {

@@ -87,6 +87,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
  */
@@ -187,24 +189,37 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           emitter.emit(builder.build("query/node/ttfb", responseStartTime - requestStartTime));
 
           try {
-            final String currentHNLoad = response.headers().get("CurrentHNLoad");
-            /*
-            // calculate the exponential moving average of load over n data samples
-            long prevLoad = server.getCurrentLoad();
-            if(prevLoad == -1){
-              // first load sample
-              server.setCurrentLoad(Long.parseLong(currentHNLoad));
-            }
-            else{
-              int numSamples = 3;
-              float alpha = 2/(1+numSamples);
-              long currLoad = (long)(alpha*Long.parseLong(currentHNLoad) + (1-alpha)*prevLoad);
-              server.setCurrentLoad(currLoad);
-            }
-            */
-            server.setCurrentLoad(Long.parseLong(currentHNLoad));
+            try {
+              SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+              final String currentHNLoad = response.headers().get("CurrentHNLoad");
+              final Date currentHNLoadTime = sdf.parse(response.headers().get("CurrentHNLoadTime"));
 
-            log.info("Current HN [%s] load [%s]", host, currentHNLoad);
+              /*
+              // calculate the exponential moving average of load over n data samples
+              long prevLoad = server.getCurrentLoad();
+              if(prevLoad == -1){
+                // first load sample
+                server.setCurrentLoad(Long.parseLong(currentHNLoad));
+              }
+              else{
+                int numSamples = 3;
+                float alpha = 2/(1+numSamples);
+                long currLoad = (long)(alpha*Long.parseLong(currentHNLoad) + (1-alpha)*prevLoad);
+                server.setCurrentLoad(currLoad);
+              }
+              */
+
+              // check if current update is latest
+              if(currentHNLoadTime.after(server.getCurrentLoadTimeAtServer())) {
+                server.setCurrentLoad(Long.parseLong(currentHNLoad));
+                server.setCurrentLoadTimeAtServer(currentHNLoadTime);
+              }
+              else{
+                log.info("Out of order server load updates");
+              }
+
+              log.info("Current HN [%s] load [%s]", host, currentHNLoad);
+            }catch(java.text.ParseException e){}
             
             final String responseContext = response.headers().get("X-Druid-Response-Context");
             // context may be null in case of error or query timeout

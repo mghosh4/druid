@@ -61,6 +61,8 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Date;
+import java.text.SimpleDateFormat;
 import java.util.Map;
 import java.util.UUID;
 
@@ -195,6 +197,7 @@ public class QueryResource
 
       try {
         final Query theQuery = query;
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Response.ResponseBuilder builder = Response
             .ok(
                 new StreamingOutput()
@@ -239,7 +242,8 @@ public class QueryResource
                 contentType
             )
             .header("X-Druid-Query-Id", queryId)
-            .header("CurrentHNLoad", currentHNLoad);
+            .header("CurrentHNLoad", currentHNLoad)
+            .header("CurrentHNLoadTime", sdf.format(new Date()));
 
         //Limit the response-context header, see https://github.com/druid-io/druid/issues/2331
         //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
