@@ -166,6 +166,7 @@ public class ServerManager implements QuerySegmentWalker
 
     this.serverDiscoveryFactory = serverDiscoveryFactory;
     this.httpClient = httpClient;
+    log.info("Instantiating periodic load POST task");
     this.pool = Executors.newScheduledThreadPool(1);
     pool.scheduleWithFixedDelay(new PeriodicLoadUpdate(this, this.serverDiscoveryFactory), 1000, 5, TimeUnit.MILLISECONDS);
   }

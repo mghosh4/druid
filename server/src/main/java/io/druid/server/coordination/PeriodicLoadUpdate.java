@@ -49,6 +49,7 @@ public class PeriodicLoadUpdate implements Runnable
     this.serverDiscoveryFactory = serverDiscoveryFactory;
     this.serverManager = serverManager;
     this.httpClient = serverManager.httpClient;
+    genBrokerURIs();
   }
 
   /* generates broker URIs once at class instance creation time */
@@ -96,6 +97,7 @@ public class PeriodicLoadUpdate implements Runnable
   {
     int numBrokers = brokerURIs.size();
     if(numBrokers == 0){
+      log.info("No broker URIs found");
       return;
     }
 
@@ -111,6 +113,7 @@ public class PeriodicLoadUpdate implements Runnable
         {
           Map<String, Long> currentLoadMap = Maps.newHashMap();
           try {
+            log.info("Sending hnLoad POST message");
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
             StatusResponseHolder response = httpClient.go(
                     new Request(
