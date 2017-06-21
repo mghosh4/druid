@@ -127,21 +127,7 @@ public class QueryResource
     final long start = System.currentTimeMillis();
     Query query = null;
     String queryId = null;
-    String currentHNLoad = null;
-
-    try{
-      ServerManager manager = (ServerManager)texasRanger;
-
-      if (manager != null){
-        currentHNLoad = manager.currentHNLoad();
-        log.info("Current HN load [%s]", currentHNLoad);
-      }
-      else{
-        currentHNLoad = "0";
-      }
-    }catch(ClassCastException cce){
-      currentHNLoad = "0";
-    }
+    String currentHNLoad = "0";
 
     final String reqContentType = req.getContentType();
     final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(reqContentType)
@@ -197,7 +183,19 @@ public class QueryResource
 
       try {
         final Query theQuery = query;
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        try{
+          ServerManager manager = (ServerManager)texasRanger;
+          if (manager != null){
+            currentHNLoad = manager.currentHNLoad();
+            //log.info("Current HN load [%s]", currentHNLoad);
+          }
+          else{
+            currentHNLoad = "0";
+          }
+        }catch(ClassCastException cce){
+          currentHNLoad = "0";
+        }
         Response.ResponseBuilder builder = Response
             .ok(
                 new StreamingOutput()

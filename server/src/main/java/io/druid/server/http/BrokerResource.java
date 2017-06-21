@@ -48,7 +48,7 @@ public class BrokerResource
   private final SegmentCollector segmentCollector;
   private final DruidBroker druidBroker;
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
-    private static final EmittingLogger log = new EmittingLogger(BrokerResource.class);
+  private static final EmittingLogger log = new EmittingLogger(BrokerResource.class);
 
   @Inject
   public BrokerResource(BrokerServerView brokerServerView, SegmentCollector segmentCollector, DruidBroker druidBroker)

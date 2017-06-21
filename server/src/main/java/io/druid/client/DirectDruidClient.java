@@ -190,7 +190,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
           try {
             try {
-              SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+              SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
               final String currentHNLoad = response.headers().get("CurrentHNLoad");
               final Date currentHNLoadTime = sdf.parse(response.headers().get("CurrentHNLoadTime"));
 
@@ -210,15 +210,15 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               */
 
               // check if current update is latest
-              if(currentHNLoadTime.after(server.getCurrentLoadTimeAtServer())) {
+              //log.info("Server load update new load=%s, newHNLoadTime=%s, prev load=%d, prevHNLoadTime=%s", currentHNLoad, sdf.format(currentHNLoadTime), server.getCurrentLoad(), sdf.format(server.getCurrentLoadTimeAtServer()));
+              if(currentHNLoadTime.before(server.getCurrentLoadTimeAtServer())) {
+                log.info("Out of order server load updates prev=%s, new=%s", sdf.format(server.getCurrentLoadTimeAtServer()), sdf.format(currentHNLoadTime));
+              }
+              else{
                 server.setCurrentLoad(Long.parseLong(currentHNLoad));
                 server.setCurrentLoadTimeAtServer(currentHNLoadTime);
               }
-              else{
-                log.info("Out of order server load updates");
-              }
-
-              log.info("Current HN [%s] load [%s]", host, currentHNLoad);
+              //log.info("Current HN [%s] load [%s]", host, currentHNLoad);
             }catch(java.text.ParseException e){}
             
             final String responseContext = response.headers().get("X-Druid-Response-Context");
