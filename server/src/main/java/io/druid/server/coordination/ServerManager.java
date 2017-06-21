@@ -30,12 +30,15 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 
+import com.metamx.http.client.HttpClient;
 import io.druid.client.CachingQueryRunner;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.selector.GetafixQueryTimeServerSelectorStrategyHelper;
 import io.druid.collections.CountingMap;
+import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.guice.annotations.BackgroundCaching;
+import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Processing;
 import io.druid.guice.annotations.Smile;
 import io.druid.query.BySegmentQueryRunner;
@@ -63,6 +66,7 @@ import io.druid.segment.Segment;
 import io.druid.segment.loading.SegmentLoader;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.server.QueryManager;
+import io.druid.server.coordination.PeriodicLoadUpdate;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -77,8 +81,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -111,6 +114,9 @@ public class ServerManager implements QuerySegmentWalker
 
   private final ConcurrentHashMap<String, Double> runtimeEstimate = new ConcurrentHashMap<>();
   private final String[] queryTypes = {Query.TIMESERIES, Query.TOPN, Query.GROUP_BY};
+  private final ServerDiscoveryFactory serverDiscoveryFactory;
+  private final ScheduledExecutorService pool;
+  public static HttpClient httpClient;
 
   @Inject
   public ServerManager(
@@ -122,7 +128,9 @@ public class ServerManager implements QuerySegmentWalker
       @Smile ObjectMapper objectMapper,
       Cache cache,
       CacheConfig cacheConfig,
-      QueryManager manager
+      QueryManager manager,
+      ServerDiscoveryFactory serverDiscoveryFactory,
+      @Global HttpClient httpClient
   )
   {
     this.segmentLoader = segmentLoader;
@@ -155,6 +163,11 @@ public class ServerManager implements QuerySegmentWalker
       percentileCollection.put(key, percentile);
       histogramCollection.put(key, histogram);
     }
+
+    this.serverDiscoveryFactory = serverDiscoveryFactory;
+    this.httpClient = httpClient;
+    this.pool = Executors.newScheduledThreadPool(1);
+    pool.scheduleWithFixedDelay(new PeriodicLoadUpdate(this, this.serverDiscoveryFactory), 1000, 5, TimeUnit.MILLISECONDS);
   }
 
   private ArrayList<Double> loadAndParse(String filename, HashMap<Double, Double> histogram) throws IOException {

@@ -29,6 +29,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.broker.DruidBroker;
 import io.druid.timeline.DataSegment;
+import io.druid.client.DruidServer;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
@@ -39,7 +40,9 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.text.SimpleDateFormat;
 import java.util.Map;
+import java.util.Date;
 
 @Path("/druid/broker/v1")
 public class BrokerResource
@@ -93,6 +96,28 @@ public class BrokerResource
       // save the routing table
       druidBroker.setRoutingTable(rt);
       log.info("Sent response of POST for routing table");
+      return Response.ok().build();
+  }
+
+  // HN POSTS the queue+active task loading via this POST message periodically
+  @POST
+  @Path("/hnload")
+  @Consumes(MediaType.TEXT_PLAIN)
+  public Response applyNewRoutingTable(
+          final byte [] loadInfoBytes,
+          @Context final HttpServletRequest req){
+      // hnLoad is a string of format hnLoad_time. Strip the "_" to get hn load and time information
+
+      try {
+          String loadInfo = loadInfoBytes.toString();
+          SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+          String load = loadInfo.split("_")[0];
+          Date time = sdf.parse(loadInfo.split("_")[1]);
+          log.info("Received load POST from HN=%s, load=%s, time=",req.getRemoteHost(), load, sdf.format(time));
+          DruidServer ds = brokerServerView.getServerMap().get(req.getRemoteHost()).getServer();
+          ds.setCurrentLoad(Long.parseLong(load));
+          ds.setCurrentLoadTimeAtServer(time);
+      }catch(java.text.ParseException e){}
       return Response.ok().build();
   }
 }

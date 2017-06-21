@@ -258,11 +258,10 @@ public class BrokerServerView implements TimelineServerView
     }
   }
 
-  //@Override
-  //public ConcurrentMap<String, QueryableDruidServer> getServerMap()
-  //{
-  //  return clients;
-  //}
+  public ConcurrentMap<String, QueryableDruidServer> getServerMap()
+  {
+    return clients;
+  }
 
   @Override
   public VersionedIntervalTimeline<String, ServerSelector> getTimeline(DataSource dataSource)
