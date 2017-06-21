@@ -123,7 +123,7 @@ public class PeriodicLoadUpdate implements Runnable
                     new Request(
                             HttpMethod.POST,
                             new URL(url)
-                    ).setContent(MediaType.TEXT_PLAIN, (serverManager.currentHNLoad()+sdf.format(new Date())).getBytes()),
+                    ).setContent(MediaType.TEXT_PLAIN, (serverManager.currentHNLoad()+"_"+sdf.format(new Date())).getBytes()),
                     responseHandler
             ).get();
 

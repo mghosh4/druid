@@ -103,7 +103,7 @@ public class BrokerResource
   @POST
   @Path("/hnload")
   @Consumes(MediaType.TEXT_PLAIN)
-  public Response applyNewRoutingTable(
+  public Response saveHNLoadInfo(
           final byte [] loadInfoBytes,
           @Context final HttpServletRequest req){
       // hnLoad is a string of format hnLoad_time. Strip the "_" to get hn load and time information
