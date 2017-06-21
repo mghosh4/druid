@@ -32,7 +32,7 @@ import java.util.concurrent.*;
 import java.util.Date;
 
 /**
- * Created by raina4 on 10/12/16.
+ * Created by raina4 on 06/21/17.
  */
 public class PeriodicLoadUpdate implements Runnable
 {
@@ -97,8 +97,12 @@ public class PeriodicLoadUpdate implements Runnable
   {
     int numBrokers = brokerURIs.size();
     if(numBrokers == 0){
-      log.info("No broker URIs found");
-      return;
+      genBrokerURIs();
+      numBrokers = brokerURIs.size();
+      if(numBrokers == 0) {
+        log.info("No broker URIs found");
+        return;
+      }
     }
 
     ExecutorService pool = Executors.newFixedThreadPool(numBrokers);
