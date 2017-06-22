@@ -168,7 +168,7 @@ public class ServerManager implements QuerySegmentWalker
     this.httpClient = httpClient;
     log.info("Instantiating periodic load POST task");
     this.pool = Executors.newScheduledThreadPool(1);
-    pool.scheduleWithFixedDelay(new PeriodicLoadUpdate(this, this.serverDiscoveryFactory), 1000, 5, TimeUnit.MILLISECONDS);
+    //pool.scheduleWithFixedDelay(new PeriodicLoadUpdate(this, this.serverDiscoveryFactory), 1000, 5, TimeUnit.MILLISECONDS);
   }
 
   private ArrayList<Double> loadAndParse(String filename, HashMap<Double, Double> histogram) throws IOException {

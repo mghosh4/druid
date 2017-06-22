@@ -109,11 +109,15 @@ public class BrokerResource
       // hnLoad is a string of format hnLoad_time. Strip the "_" to get hn load and time information
 
       try {
-          String loadInfo = loadInfoBytes.toString();
+          String loadInfo = new String(loadInfoBytes);
           SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
           String load = loadInfo.split("_")[0];
           Date time = sdf.parse(loadInfo.split("_")[1]);
-          log.info("Received load POST from HN=%s, load=%s, time=",req.getRemoteHost(), load, sdf.format(time));
+          log.info("Received load POST from HN=%s, load=%s, time=%s",req.getRemoteHost(), load, sdf.format(time));
+          log.info("Server Map");
+          //for (String key : brokerServerView.getServerMap().keySet()) {
+          //  log.info(key + " maps to " + brokerServerView.getServerMap().get(key));
+          //}
           DruidServer ds = brokerServerView.getServerMap().get(req.getRemoteHost()).getServer();
           ds.setCurrentLoad(Long.parseLong(load));
           ds.setCurrentLoadTimeAtServer(time);
