@@ -43,6 +43,7 @@ import javax.ws.rs.core.Response;
 import java.text.SimpleDateFormat;
 import java.util.Map;
 import java.util.Date;
+import java.net.InetAddress;
 
 @Path("/druid/broker/v1")
 public class BrokerResource
@@ -114,13 +115,24 @@ public class BrokerResource
           String load = loadInfo.split("_")[0];
           Date time = sdf.parse(loadInfo.split("_")[1]);
           log.info("Received load POST from HN=%s, load=%s, time=%s",req.getRemoteHost(), load, sdf.format(time));
-          log.info("Server Map");
+          //log.info("Server Map num keys %d", (brokerServerView.getServerMap().keySet()).size());
           //for (String key : brokerServerView.getServerMap().keySet()) {
-          //  log.info(key + " maps to " + brokerServerView.getServerMap().get(key));
+          //  log.info("Key " + key + " maps to " + brokerServerView.getServerMap().get(key));
           //}
-          DruidServer ds = brokerServerView.getServerMap().get(req.getRemoteHost()).getServer();
-          ds.setCurrentLoad(Long.parseLong(load));
-          ds.setCurrentLoadTimeAtServer(time);
+          String hostname = req.getRemoteHost();
+          try{
+              String resolvedHostname = InetAddress.getByName(hostname).getHostName();
+              //String port = String.valueOf(req.getRemotePort());
+              String port = String.valueOf(8081);
+              log.info("POST request hostname %s, port %s, resolved hostname %s", hostname, port, resolvedHostname);
+
+              if (brokerServerView.getServerMap().get(resolvedHostname+":"+port) != null){
+                DruidServer ds = brokerServerView.getServerMap().get(resolvedHostname+":"+port).getServer();
+                log.info("Setting load %s at time %s", load, sdf.format(time));
+                ds.setCurrentLoad(Long.parseLong(load));
+                ds.setCurrentLoadTimeAtServer(time);
+              }
+          }catch(java.net.UnknownHostException e){}
       }catch(java.text.ParseException e){}
       return Response.ok().build();
   }
