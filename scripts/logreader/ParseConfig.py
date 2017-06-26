@@ -21,8 +21,7 @@ class ParseConfig:
 					continue
 				words = line.split("=")
 				key = words[0]
-				value = words[1].replace("\n", "")
-				values = value.split(",")
+				values = words[1].rstrip().split(",")
 				if key == "HISTORICAL_METRIC":
 					self.historicalmetric = values
 				elif key == "COORDINATOR_METRIC":
@@ -41,12 +40,18 @@ class ParseConfig:
 					self.resultfolder = values[0]
 
 	def getHistoricalMetric(self):
+		if len(self.historicalmetric) == 1 and not self.historicalmetric[0]:
+			return list()
 		return self.historicalmetric
 
 	def getCoordinatorMetric(self):
+		if len(self.coordinatormetric) == 1 and not self.coordinatormetric[0]:
+			return list()
 		return self.coordinatormetric
 
 	def getBrokerMetric(self):
+		if len(self.brokermetric) == 1 and not self.brokermetric[0]:
+			return list()
 		return self.brokermetric
 
 	def getLogPath(self):
