@@ -21,6 +21,8 @@ package io.druid.client.selector;
 
 import com.google.common.collect.Sets;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.query.Query;
+import io.druid.query.SegmentDescriptor;
 import io.druid.timeline.DataSegment;
 
 import java.util.Set;
@@ -40,6 +42,11 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
 
   private final AtomicReference<DataSegment> segment;
 
+  // added segmentDescriptor since it contains the exact query interval within the segment. This will be used
+  // for getafix query time estimated routing
+  private AtomicReference<SegmentDescriptor> segmentDescriptor = null;
+  private AtomicReference<String> queryType = null;
+
   public ServerSelector(
       DataSegment segment,
       TierSelectorStrategy strategy
@@ -52,6 +59,19 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
   public DataSegment getSegment()
   {
     return segment.get();
+  }
+
+  public SegmentDescriptor getSegmentDescriptor()
+  {
+    return segmentDescriptor.get();
+  }
+
+  public String getQueryType() { return queryType.get(); }
+
+  public void setQueryType(String queryType) { this.queryType = new AtomicReference<String>(queryType); }
+
+  public void setSegmentDescriptor(SegmentDescriptor segDesc){
+    this.segmentDescriptor = new AtomicReference<SegmentDescriptor>(segDesc);
   }
 
   public void addServerAndUpdateSegment(
@@ -96,7 +116,7 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
         theServers.add(server);
       }
 
-      return strategy.pick(prioritizedServers, segment.get());
+      return strategy.pick(prioritizedServers, segment.get(), segmentDescriptor.get(), queryType.get());
     }
   }
 }

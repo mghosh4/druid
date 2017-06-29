@@ -19,6 +19,7 @@
 
 package io.druid.client;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.ObjectCodec;
@@ -36,6 +37,7 @@ import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.Pair;
 import com.metamx.common.RE;
@@ -63,6 +65,7 @@ import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulatorFns;
+import io.druid.server.coordination.broker.DruidBroker;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.handler.codec.http.HttpChunk;
@@ -105,7 +108,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   private final String host;
   private final ServiceEmitter emitter;
   private final DruidServer server;
-
+  private final DruidBroker druidBroker;
   private final AtomicInteger openConnections;
   private final boolean isSmile;
 
@@ -116,7 +119,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       HttpClient httpClient,
       String host,
       ServiceEmitter emitter,
-      DruidServer server
+      DruidServer server,
+      DruidBroker druidBroker
   )
   {
     this.warehouse = warehouse;
@@ -126,6 +130,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     this.host = host;
     this.emitter = emitter;
     this.server = server;
+    this.druidBroker = druidBroker;
 
     this.isSmile = this.objectMapper.getFactory() instanceof SmileFactory;
     this.openConnections = new AtomicInteger();
@@ -186,6 +191,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           log.debug("Initial response from url[%s]", url);
           responseStartTime = System.currentTimeMillis();
+          final String queryType = query.getType();
+          final long queryDurationMillis = query.getDuration().getMillis();
           emitter.emit(builder.build("query/node/ttfb", responseStartTime - requestStartTime));
 
           try {
@@ -193,6 +200,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
               final String currentHNLoad = response.headers().get("CurrentHNLoad");
               final Date currentHNLoadTime = sdf.parse(response.headers().get("CurrentHNLoadTime"));
+              final long hnQueryTimeMillis = Long.valueOf(response.headers().get("HNQueryTime"));
+              // update queryRuntimeEstimateTable
+              druidBroker.setDecayedQueryRuntimeEstimate(queryType, queryDurationMillis, hnQueryTimeMillis);
+
+              log.info("Stats queryType %s, query duration %d, query/node/time %d queryTimeAtHN %d", queryType, queryDurationMillis,
+                      (System.currentTimeMillis()-requestStartTime), hnQueryTimeMillis);
 
               /*
               // calculate the exponential moving average of load over n data samples
@@ -360,6 +373,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           }
         }
       };
+      log.info("Query details type %s, intervals %s, duration millis %d, datasource %s, context %s", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), query.getContext().toString());
       future = httpClient.go(
           new Request(
               HttpMethod.POST,

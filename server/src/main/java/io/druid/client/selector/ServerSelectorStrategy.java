@@ -21,6 +21,7 @@ package io.druid.client.selector;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.query.SegmentDescriptor;
 import io.druid.timeline.DataSegment;
 
 import java.util.Set;
@@ -31,9 +32,10 @@ import java.util.Set;
     @JsonSubTypes.Type(name = "connectionCount", value = ConnectionCountServerSelectorStrategy.class),
     @JsonSubTypes.Type(name = "getafix", value = GetafixServerSelectorStrategy.class),
     @JsonSubTypes.Type(name = "getafixtime", value = GetafixQueryTimeServerSelectorStrategy.class),
-    @JsonSubTypes.Type(name = "minimumload", value = MinimumLoadServerSelectorStrategy.class)
+    @JsonSubTypes.Type(name = "minimumload", value = MinimumLoadServerSelectorStrategy.class),
+    @JsonSubTypes.Type(name = "potion", value = PotionServerSelectorStrategy.class)
 })
 public interface ServerSelectorStrategy
 {
-  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment);
+  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment, SegmentDescriptor segmentDescriptor, String queryType);
 }

@@ -20,11 +20,13 @@
 package io.druid.client.selector;
 
 import com.google.common.primitives.Ints;
+import io.druid.query.SegmentDescriptor;
 import io.druid.timeline.DataSegment;
 
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Set;
+import java.util.Iterator;
 
 public class ConnectionCountServerSelectorStrategy implements ServerSelectorStrategy
 {
@@ -38,8 +40,16 @@ public class ConnectionCountServerSelectorStrategy implements ServerSelectorStra
   };
 
   @Override
-  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
+  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment, SegmentDescriptor segmentDescriptor, String queryType)
   {
+      for (Iterator<QueryableDruidServer> iterator = servers.iterator(); iterator.hasNext();) {
+          QueryableDruidServer s = iterator.next();
+          // remove the realtime node from the server list if other servers are available
+          if (s.getServer().getMetadata().getType().equals("realtime") && servers.size() > 1) {
+              iterator.remove();
+              //log.info("Removed realtime server from the list load=%d openConnections=%d", s.getServer().getCurrentLoad(), s.getClient().getNumOpenConnections());
+          }
+    }
     return Collections.min(servers, comparator);
   }
 }

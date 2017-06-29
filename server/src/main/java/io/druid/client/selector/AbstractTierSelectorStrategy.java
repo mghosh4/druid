@@ -21,6 +21,7 @@ package io.druid.client.selector;
 
 import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.query.SegmentDescriptor;
 import io.druid.timeline.DataSegment;
 
 import java.util.Map;
@@ -41,7 +42,7 @@ public abstract class AbstractTierSelectorStrategy implements TierSelectorStrate
 
   @Override
   public QueryableDruidServer pick(
-      TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers, DataSegment segment
+      TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers, DataSegment segment, SegmentDescriptor segmentDescriptor, String queryType
   )
   {
     final Map.Entry<Integer, Set<QueryableDruidServer>> priorityServers = prioritizedServers.pollFirstEntry();
@@ -58,7 +59,7 @@ public abstract class AbstractTierSelectorStrategy implements TierSelectorStrate
       case 1:
         return priorityServers.getValue().iterator().next();
       default:
-        return serverSelectorStrategy.pick(servers, segment);
+        return serverSelectorStrategy.pick(servers, segment, segmentDescriptor, queryType);
     }
   }
 }

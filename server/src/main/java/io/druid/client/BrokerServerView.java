@@ -38,6 +38,7 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.QueryWatcher;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.broker.DruidBroker;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
@@ -69,8 +70,8 @@ public class BrokerServerView implements TimelineServerView
   private final ServerInventoryView baseView;
   private final TierSelectorStrategy tierSelectorStrategy;
   private final ServiceEmitter emitter;
-
   private volatile boolean initialized = false;
+  private final DruidBroker druidBroker;
 
   @Inject
   public BrokerServerView(
@@ -80,7 +81,8 @@ public class BrokerServerView implements TimelineServerView
       @Client HttpClient httpClient,
       ServerInventoryView baseView,
       TierSelectorStrategy tierSelectorStrategy,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      DruidBroker druidBroker
   )
   {
     this.warehouse = warehouse;
@@ -94,6 +96,7 @@ public class BrokerServerView implements TimelineServerView
     this.clients = Maps.newConcurrentMap();
     this.selectors = Maps.newHashMap();
     this.timelines = Maps.newHashMap();
+    this.druidBroker = druidBroker;
 
     ExecutorService exec = Execs.singleThreaded("BrokerServerView-%s");
     baseView.registerSegmentCallback(
@@ -177,7 +180,7 @@ public class BrokerServerView implements TimelineServerView
 
   private DirectDruidClient makeDirectClient(DruidServer server)
   {
-    return new DirectDruidClient(warehouse, queryWatcher, smileMapper, httpClient, server.getHost(), emitter, server);
+    return new DirectDruidClient(warehouse, queryWatcher, smileMapper, httpClient, server.getHost(), emitter, server, druidBroker);
   }
 
   private QueryableDruidServer removeServer(DruidServer server)

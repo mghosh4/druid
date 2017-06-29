@@ -22,6 +22,7 @@ package io.druid.server.coordination.broker;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
+import com.metamx.common.Pair;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
@@ -43,14 +44,12 @@ import io.druid.timeline.DataSegment;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @ManageLifecycle
 public class DruidBroker
@@ -64,7 +63,15 @@ public class DruidBroker
   private final ScheduledExecutorService pool;
   private volatile boolean started = false;
 
+  // getafix routing table. Maps segment ID to <HN, allocation> map
   private volatile Map<String, Map<String, Long>> routingTable;
+  // query runtime estimate. Maps query type to query duration bucket (60buckets, 1sec in size). Duration bucket maps
+  // duration to a tuple of (query runtime sum, number of samples over which that sum was taken). Number of
+  // samples is used to computed the query runtime mean.
+  private volatile ConcurrentHashMap<String, ConcurrentHashMap<Long, MutablePair<Long, Long>>> queryRuntimeEstimateTable = new ConcurrentHashMap<>();
+  // map maintains the history of query allocations to different HNs
+  private volatile ConcurrentHashMap<String, Long> hnQueryTimeAllocation = new ConcurrentHashMap<>();
+  private volatile static boolean estimateQueryRuntime = false;
   private static final EmittingLogger log = new EmittingLogger(DruidBroker.class);
 
   //QueryTime distribution data structures
@@ -119,6 +126,166 @@ public class DruidBroker
       }
       percentileCollection.put(key, percentile);
       histogramCollection.put(key, histogram);
+    }
+
+    // initialize queryRuntimeEstimateTable
+    long segmentDurationMillis = 600000;  // Code assumes segment size is 1minute. This will create 60 1sec buckets in the map
+    List<String> queryType = new ArrayList<String>();
+    //queryType.add(Query.TIME_BOUNDARY);
+    queryType.add(Query.TIMESERIES);
+    queryType.add(Query.TOPN);
+    queryType.add(Query.GROUP_BY);
+    //queryType.add(Query.SEARCH);
+    //queryType.add(Query.SELECT);
+
+    for(String qt : queryType){
+      ConcurrentHashMap<Long, MutablePair<Long, Long>> temp = new ConcurrentHashMap<>();
+      for(long i=0L; i<=segmentDurationMillis; i=i+1000){
+        MutablePair <Long, Long> p = new MutablePair<>(0L, 0L);
+        temp.put(i, p);
+      }
+      this.queryRuntimeEstimateTable.put(qt, temp);
+    }
+  }
+
+  public void startQueryRuntimeEstimation(){
+    this.estimateQueryRuntime = true;
+  }
+
+  public void setDecayedQueryRuntimeEstimate(String queryType, long queryDurationMillis, long queryTime){
+    if (estimateQueryRuntime == true) {
+      int numSamples = 3;
+      float alpha = 2/(1+numSamples);
+      ConcurrentHashMap<Long, MutablePair<Long, Long>> durationMap = this.queryRuntimeEstimateTable.get(queryType);
+      if (durationMap != null) {
+        MutablePair<Long, Long> runtime = durationMap.get(queryDurationMillis);
+        long oldEstimate = runtime.lhs;
+        long oldSamples = runtime.rhs;
+
+        runtime.lhs = Long.valueOf((long)(runtime.lhs*(1-alpha)) + (long)(queryTime*alpha));
+        runtime.rhs = runtime.rhs + 1L;
+        durationMap.put(queryDurationMillis, runtime);
+
+        log.info("Set done queryRuntimeEstimateTable queryType %s, queryDuration %d, queryTime %d oldEstimate %d, oldSamples %d, newEstimate %d, newSamples %d",
+                queryType, queryDurationMillis, queryTime, oldEstimate, oldSamples, runtime.lhs, runtime.rhs);
+      } else {
+        log.info("Error: query type %s not found in queryRuntimeEstimateTable ", queryType);
+      }
+    }
+  }
+
+  public long getDecayedQueryRuntimeEstimate(String queryType, long queryDurationMillis){
+    if (estimateQueryRuntime == true) {
+      if (this.queryRuntimeEstimateTable.get(queryType) != null) {
+        long estimate = this.queryRuntimeEstimateTable.get(queryType).get(queryDurationMillis).lhs;
+        long numSamples = this.queryRuntimeEstimateTable.get(queryType).get(queryDurationMillis).rhs;
+        if (numSamples != 0) {
+          return estimate;
+        } else {
+          return 0L;
+        }
+      } else {
+        return 0L;
+      }
+    }
+    else{
+      return 0L;
+    }
+  }
+
+  public void setQueryRuntimeEstimate(String queryType, long queryDurationMillis, long queryTime){
+    log.info("Setting queryRuntimeEstimate table for queryType %s, queryDuration %d, queryTime %d", queryType, queryDurationMillis, queryTime);    
+    if (estimateQueryRuntime == true) {
+      ConcurrentHashMap<Long, MutablePair<Long, Long>> durationMap = this.queryRuntimeEstimateTable.get(queryType);
+      if (durationMap != null) {
+        MutablePair<Long, Long> runtime = durationMap.get(queryDurationMillis);
+        long oldEstimate = runtime.lhs;
+        long oldSamples = runtime.rhs;
+
+        runtime.lhs = runtime.lhs + queryTime;
+        runtime.rhs = runtime.rhs + 1L;
+        durationMap.put(queryDurationMillis, runtime);
+
+        log.info("Set done queryRuntimeEstimateTable queryType %s, queryDuration %d, queryTime %d oldEstimate %d, oldSamples %d, newEstimate %d, newSamples %d",
+                queryType, queryDurationMillis, queryTime, oldEstimate, oldSamples, runtime.lhs, runtime.rhs);
+      } else {
+        log.info("Error: query type %s not found in queryRuntimeEstimateTable ", queryType);
+      }
+    }
+  }
+
+  public long getQueryRuntimeEstimate(String queryType, long queryDurationMillis){
+    if (estimateQueryRuntime == true) {
+      if (this.queryRuntimeEstimateTable.get(queryType) != null) {
+        long totalRuntime = this.queryRuntimeEstimateTable.get(queryType).get(queryDurationMillis).lhs;
+        long numSamples = this.queryRuntimeEstimateTable.get(queryType).get(queryDurationMillis).rhs;
+        if (numSamples != 0) {
+          return totalRuntime / numSamples;
+        } else {
+          return 0L;
+        }
+      } else {
+        return 0L;
+      }
+    }
+    else{
+      return 0L;
+    }
+  }
+
+  public void clearQueryRuntimeEstimate(){
+    for(ConcurrentHashMap.Entry<String, ConcurrentHashMap<Long, MutablePair<Long, Long>>> e1 : queryRuntimeEstimateTable.entrySet()){
+      for(ConcurrentHashMap.Entry<Long, MutablePair<Long, Long>> e2 : e1.getValue().entrySet()){
+        ConcurrentHashMap<Long, MutablePair<Long, Long>> temp = new ConcurrentHashMap<>();
+        temp.put(e2.getKey(), new MutablePair<Long, Long>(0L, 0L));
+        queryRuntimeEstimateTable.put(e1.getKey(), temp);
+      }
+    }
+  }
+
+/*
+  public void setQueryRuntimeEstimate(String queryType, long queryDurationMillis, long queryTime){
+    log.info("Setting queryRuntimeEstimate table for queryType %s, queryDuration %d, queryTime %d", queryType, queryDurationMillis, queryTime);
+    ConcurrentHashMap<Long, MutablePair<Long, Long>> durationMap = this.queryRuntimeEstimateTable.get(queryType);
+    if (durationMap != null){
+      MutablePair<Long, Long> runtime = durationMap.get(queryDurationMillis);
+      long oldEstimate = runtime.lhs;
+      long oldSamples = runtime.rhs;
+
+      runtime.lhs = runtime.lhs + queryTime;
+      runtime.rhs = runtime.rhs + 1L;
+      durationMap.put(queryDurationMillis, runtime);
+
+      log.info("Set done queryRuntimeEstimateTable queryType %s, queryDuration %d, queryTime %d oldEstimate %d, oldSamples %d, newEstimate %d, newSamples %d",
+              queryType, queryDurationMillis, queryTime, oldEstimate, oldSamples, runtime.lhs, runtime.rhs);
+    }
+    else{
+      log.info("Error: query type %s not found in queryRuntimeEstimateTable ", queryType);
+    }
+  }
+
+  public long getQueryRuntimeEstimate(String queryType, long queryDurationMillis){
+    if(this.queryRuntimeEstimateTable.get(queryType) != null) {
+      long totalRuntime = this.queryRuntimeEstimateTable.get(queryType).get(queryDurationMillis).lhs;
+      long numSamples = this.queryRuntimeEstimateTable.get(queryType).get(queryDurationMillis).rhs;
+      if (numSamples != 0) {
+        return totalRuntime / numSamples;
+      } else {
+        return 0L;
+      }
+    }
+    else{
+      return 0L;
+    }
+  }
+*/
+  public ConcurrentHashMap<String, Long> getHNQueryTimeAllocation(){
+    return this.hnQueryTimeAllocation;
+  }
+
+  public void clearHNQueryTimeAllocationTable(){
+    for(Map.Entry<String, Long> entry : this.hnQueryTimeAllocation.entrySet()){
+      hnQueryTimeAllocation.put(entry.getKey(), 1L);
     }
   }
 
@@ -183,7 +350,7 @@ public class DruidBroker
           log.info("Segment [%s]:", entry.getKey());
           for(Map.Entry<String, Long> e: entry.getValue().entrySet()){
               //log.info("[%s]: [%s]", e.getKey().getHost(), e.getValue());
-              log.info("[%s]: [%s]", e.getKey(), e.getValue());
+              log.info("HN [%s] : Value [%s]", e.getKey(), e.getValue());
           }
       }
   }

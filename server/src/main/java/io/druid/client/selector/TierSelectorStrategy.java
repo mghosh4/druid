@@ -21,6 +21,7 @@ package io.druid.client.selector;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.query.SegmentDescriptor;
 import io.druid.timeline.DataSegment;
 
 import java.util.Comparator;
@@ -39,5 +40,6 @@ public interface TierSelectorStrategy
 {
   public Comparator<Integer> getComparator();
 
-  public QueryableDruidServer pick(TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers, DataSegment segment);
+  public QueryableDruidServer pick(TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers, DataSegment segment,
+                                   SegmentDescriptor segmentDescriptor, String queryType);
 }

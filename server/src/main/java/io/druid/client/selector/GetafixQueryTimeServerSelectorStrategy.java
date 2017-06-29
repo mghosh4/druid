@@ -13,6 +13,7 @@ import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Query;
+import io.druid.query.SegmentDescriptor;
 import io.druid.server.coordination.broker.DruidBroker;
 import io.druid.server.router.TieredBrokerConfig;
 import io.druid.timeline.DataSegment;
@@ -41,7 +42,7 @@ public class GetafixQueryTimeServerSelectorStrategy implements ServerSelectorStr
 
   private final StatusResponseHandler responseHandler = new StatusResponseHandler(Charsets.UTF_8);
 
-  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
+  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment, SegmentDescriptor segmentDescriptor, String queryType)
   {
     if (servers.size() == 0) {
       log.error("[GETAFIX ROUTING] No QueryableDruidServers in the set");

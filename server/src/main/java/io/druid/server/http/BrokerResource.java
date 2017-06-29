@@ -53,6 +53,7 @@ public class BrokerResource
   private final DruidBroker druidBroker;
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private static final EmittingLogger log = new EmittingLogger(BrokerResource.class);
+  private static boolean startQueryEstimation = false;
 
   @Inject
   public BrokerResource(BrokerServerView brokerServerView, SegmentCollector segmentCollector, DruidBroker druidBroker)
@@ -96,6 +97,15 @@ public class BrokerResource
 
       // save the routing table
       druidBroker.setRoutingTable(rt);
+      // start doing query estimation only if more than 1 segment is present otherwise estimates are too low
+      //if(startQueryEstimation == true){
+          druidBroker.startQueryRuntimeEstimation();
+      //}
+
+      if(rt.keySet().size() > 1){
+          startQueryEstimation = true; // set this field now, but use it the next time
+      }
+      druidBroker.clearHNQueryTimeAllocationTable();
       log.info("Sent response of POST for routing table");
       return Response.ok().build();
   }

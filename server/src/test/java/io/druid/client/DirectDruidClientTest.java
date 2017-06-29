@@ -122,6 +122,7 @@ public class DirectDruidClientTest
         httpClient,
         "foo",
         new NoopServiceEmitter(),
+        null,
         null
     );
     DirectDruidClient client2 = new DirectDruidClient(
@@ -131,6 +132,7 @@ public class DirectDruidClientTest
         httpClient,
         "foo2",
         new NoopServiceEmitter(),
+        null,
         null
     );
 
@@ -234,6 +236,7 @@ public class DirectDruidClientTest
         httpClient,
         "foo",
         new NoopServiceEmitter(),
+        null,
         null
     );
 

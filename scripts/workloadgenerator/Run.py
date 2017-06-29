@@ -262,8 +262,8 @@ def threadoperation(queryPerSec):
             numQueries, querySchedule = genPoissonQuerySchedule(queryPerMilliSecond, numSamples)
             logger.info("Poisson numQueries = "+str(numQueries))
 
-            # sleep initially till the segmentpopularityinterval
-            yield gen.sleep(segmentpopularityinterval*60)
+            # sleep initially for 60 seconds and let the first few segments get written to HNs 
+            yield gen.sleep(60)
 
             queryScheduleIdx = 0
             count = 0

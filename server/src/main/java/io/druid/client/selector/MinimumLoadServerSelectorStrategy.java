@@ -14,6 +14,7 @@ import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.SegmentDescriptor;
 import io.druid.server.coordination.broker.DruidBroker;
 import io.druid.server.router.TieredBrokerConfig;
 import io.druid.timeline.DataSegment;
@@ -77,7 +78,7 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
 
   // Pick() the minimum loaded server as per a probability distribution
   @Override
-  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
+  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment, SegmentDescriptor segmentDescriptor, String queryType)
   {
       QueryableDruidServer chosenServer = null;
       long maxLoading = -1;
@@ -154,7 +155,7 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
 /*
   // Pick() the minimum loaded server which has few open connections
   @Override
-  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
+  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment, SegmentDescriptor segmentDescriptor, String queryType)
   {
     QueryableDruidServer chosenServer = null;
 

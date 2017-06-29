@@ -315,6 +315,10 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     // Compile list of all segments not pulled from cache
     for (Pair<ServerSelector, SegmentDescriptor> segment : segments) {
+      // set the segment descriptor for getafix query time estimated routing
+      segment.lhs.setQueryType(query.getType());
+      segment.lhs.setSegmentDescriptor(segment.rhs);
+
       final QueryableDruidServer queryableDruidServer = segment.lhs.pick();
 
       if (queryableDruidServer == null) {
@@ -331,7 +335,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
           descriptors = Lists.newArrayList();
           serverSegments.put(server, descriptors);
         }
-
+        log.info("Descriptor interval %s, version %s, partition %d", segment.rhs.getInterval().toString(), segment.rhs.getVersion(), segment.rhs.getPartitionNumber());
         descriptors.add(segment.rhs);
 
         if (segment.lhs.getStrategy() instanceof GetafixQueryTimeServerSelectorStrategy
