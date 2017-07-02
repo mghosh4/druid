@@ -126,7 +126,9 @@ public class ZkCoordinatorTest extends CuratorTestBase
         new DefaultObjectMapper(),
         new LocalCacheProvider().get(),
         new CacheConfig(),
-        new QueryManager()
+        new QueryManager(),
+        null,
+        null
     );
 
     final ZkPathsConfig zkPaths = new ZkPathsConfig()
