@@ -30,21 +30,19 @@ public class IntervalChunkingQueryRunnerDecorator
   private final ExecutorService executor;
   private final QueryWatcher queryWatcher;
   private final ServiceEmitter emitter;
-  private final QueryRuntimeEstimator estimator;
 
   @Inject
   public IntervalChunkingQueryRunnerDecorator(@Processing ExecutorService executor, QueryWatcher queryWatcher,
-      ServiceEmitter emitter, QueryRuntimeEstimator estimator)
+      ServiceEmitter emitter)
   {
     this.executor = executor;
     this.queryWatcher = queryWatcher;
     this.emitter = emitter;
-    this.estimator = estimator;
   }
 
   public <T> QueryRunner<T> decorate(QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest)
   {
     return new IntervalChunkingQueryRunner<T>(delegate, (QueryToolChest<T, Query<T>>)toolChest,
-        executor, queryWatcher, emitter, estimator);
+        executor, queryWatcher, emitter);
   }
 }

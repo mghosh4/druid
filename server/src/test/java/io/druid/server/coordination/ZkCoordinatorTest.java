@@ -128,6 +128,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
         new CacheConfig(),
         new QueryManager(),
         null,
+        null,
         null
     );
 
