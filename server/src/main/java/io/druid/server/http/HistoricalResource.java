@@ -83,6 +83,6 @@ public class HistoricalResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getCurrentQueryLoad()
   {
-    return Response.ok(manager.currentQueryLoad()).build();
+    return Response.ok(manager.currentWaitTime()).build();
   }
 }
