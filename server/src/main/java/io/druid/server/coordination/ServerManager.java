@@ -25,6 +25,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.*;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
+import com.metamx.common.Pair;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -34,31 +35,13 @@ import com.metamx.http.client.HttpClient;
 import io.druid.client.CachingQueryRunner;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
-import io.druid.client.selector.GetafixQueryTimeServerSelectorStrategyHelper;
 import io.druid.collections.CountingMap;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Processing;
 import io.druid.guice.annotations.Smile;
-import io.druid.query.BySegmentQueryRunner;
-import io.druid.query.CPUTimeMetricQueryRunner;
-import io.druid.query.DataSource;
-import io.druid.query.FinalizeResultsQueryRunner;
-import io.druid.query.MetricsEmittingExecutorService;
-import io.druid.query.MetricsEmittingQueryRunner;
-import io.druid.query.NoopQueryRunner;
-import io.druid.query.PrioritizedExecutorService;
-import io.druid.query.Query;
-import io.druid.query.QueryRunner;
-import io.druid.query.QueryRunnerFactory;
-import io.druid.query.QueryRunnerFactoryConglomerate;
-import io.druid.query.QuerySegmentWalker;
-import io.druid.query.QueryToolChest;
-import io.druid.query.ReferenceCountingSegmentQueryRunner;
-import io.druid.query.ReportTimelineMissingSegmentQueryRunner;
-import io.druid.query.SegmentDescriptor;
-import io.druid.query.TableDataSource;
+import io.druid.query.*;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
 import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.ReferenceCountingSegment;
@@ -66,14 +49,13 @@ import io.druid.segment.Segment;
 import io.druid.segment.loading.SegmentLoader;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.server.QueryManager;
-import io.druid.server.coordination.PeriodicLoadUpdate;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.PartitionHolder;
 
-import org.joda.time.Interval;
+import org.joda.time.*;
 
 import javax.annotation.Nullable;
 
@@ -102,9 +84,7 @@ public class ServerManager implements QuerySegmentWalker
   private final ObjectMapper objectMapper;
   private final CacheConfig cacheConfig;
   private final QueryManager manager;
-
-  private long estimatedLoad;
-  private long lastLoadEstimateTime;
+  private final QueryRuntimeEstimator estimator;
 
   private final String loadingPath = "/proj/DCSQ/mghosh4/druid/estimation/";
   private final String[] fullpaths = {loadingPath+"groupby.cdf", loadingPath+"timeseries.cdf", loadingPath+"topn.cdf"};
@@ -112,8 +92,12 @@ public class ServerManager implements QuerySegmentWalker
   private final HashMap<String, ArrayList<Double>> percentileCollection = new HashMap<String, ArrayList<Double>>();
   private final HashMap<String, HashMap<Double, Double>> histogramCollection = new HashMap<String, HashMap<Double, Double>>();
 
-  private final ConcurrentHashMap<String, Double> runtimeEstimate = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, MutablePair<Long, Long>> runtimeEstimate = new ConcurrentHashMap<>();
+  private long estimatedLoad;
+  private long lastLoadEstimateTime;
+
   private final String[] queryTypes = {Query.TIMESERIES, Query.TOPN, Query.GROUP_BY};
+
   private final ServerDiscoveryFactory serverDiscoveryFactory;
   private final ScheduledExecutorService pool;
   public static HttpClient httpClient;
@@ -129,6 +113,7 @@ public class ServerManager implements QuerySegmentWalker
       Cache cache,
       CacheConfig cacheConfig,
       QueryManager manager,
+      QueryRuntimeEstimator estimator,
       ServerDiscoveryFactory serverDiscoveryFactory,
       @Global HttpClient httpClient
   )
@@ -146,7 +131,8 @@ public class ServerManager implements QuerySegmentWalker
     this.cacheConfig = cacheConfig;
 
     this.manager = manager;
-    this.lastLoadEstimateTime = System.currentTimeMillis();
+    this.estimator = estimator;
+    this.lastLoadEstimateTime = DateTime.now().getMillis();
     this.estimatedLoad = 0;
 
     //populate all query time distribution data structures
@@ -350,8 +336,6 @@ public class ServerManager implements QuerySegmentWalker
       return new NoopQueryRunner<T>();
     }
 
-    estimateQueryRuntime(query);
-
     FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable
         .create(intervals)
         .transformCat(
@@ -417,11 +401,11 @@ public class ServerManager implements QuerySegmentWalker
         true
     );
   }
-  
+
   public String getConcurrentAccessMap()
   {
 	String result = null;
-	
+
 	try {
 		Map<String, Integer> concurrentAccessMap = Maps.newHashMap();
 		for (Map.Entry<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> dataSource : dataSources.entrySet())
@@ -433,21 +417,21 @@ public class ServerManager implements QuerySegmentWalker
                     concurrentAccessMap.put(segment.getIdentifier(), segment.getAndClearMaxConcurrentAccess());
             }
 		}
-		
+
 		result = objectMapper.writeValueAsString(concurrentAccessMap);
 		log.info("Serializing Concurrent Access Map [%d]", result.length());
 	} catch (JsonProcessingException e) {
 		// TODO Auto-generated catch block
 		e.printStackTrace();
 	}
-	
-	return result;	
+
+	return result;
   }
 
   public String getTotalAccessMap()
   {
 	String result = null;
-	
+
 	try {
 		Map<String, Integer> totalAccessMap = Maps.newHashMap();
 		for (Map.Entry<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> dataSource : dataSources.entrySet())
@@ -459,15 +443,15 @@ public class ServerManager implements QuerySegmentWalker
                     totalAccessMap.put(segment.getIdentifier(), segment.getAndClearTotalAccess());
             }
 		}
-		
+
 		result = objectMapper.writeValueAsString(totalAccessMap);
 		log.info("Serializing Total Access Map [%d]", result.length());
 	} catch (JsonProcessingException e) {
 		// TODO Auto-generated catch block
 		e.printStackTrace();
 	}
-	
-	return result;	
+
+	return result;
   }
 
   public String getSegmentAccessTimeMap()
@@ -529,6 +513,68 @@ public class ServerManager implements QuerySegmentWalker
     return Long.toString(finalLoadValue);
   }
 
+  public String currentWaitTime()
+  {
+    MetricsEmittingExecutorService service = (MetricsEmittingExecutorService)(exec);
+    if (service.getActiveTaskCount() < service.getCorePoolSize())
+      return Long.toString(0);
+
+    //TODO: Run only if a new task has been inserted
+    if (!service.isNewTaskAdded())
+    {
+        long currentTimeInMillis = DateTime.now().getMillis();
+        long timespent = currentTimeInMillis - lastLoadEstimateTime;
+        estimatedLoad = estimatedLoad - timespent;
+        if (estimatedLoad < 0)
+            estimatedLoad = 0;
+        lastLoadEstimateTime = currentTimeInMillis;
+
+        return Long.toString(estimatedLoad);
+    }
+
+    List<Pair<DateTime, String>> activeRunList = Lists.newArrayList(service.getActiveRunList());
+    List<String> queuedTasks = service.getQueuedTasks();
+    final DateTime simTime = DateTime.now();
+
+    while (!queuedTasks.isEmpty())
+    {
+      Pair<DateTime, String> minTask = Collections.min(activeRunList, new Comparator<Pair<DateTime, String>>() {
+        @Override
+        public int compare(Pair<DateTime, String> o1, Pair<DateTime, String> o2) {
+          //TODO: Handle wrong estimate or stragglers
+          long o1workleft = estimator.getQueryRuntimeEstimate(o1.rhs);
+          long o1timespent = simTime.getMillis() - o1.lhs.getMillis();
+          if (o1timespent > 0)
+            o1workleft = o1workleft - o1timespent;
+          //means estimate is wrong or the processor is just slow
+          if (o1workleft < 0)
+              o1workleft = 0;
+
+          long o2workleft = estimator.getQueryRuntimeEstimate(o2.rhs);
+          long o2timespent = simTime.getMillis() - o1.lhs.getMillis();
+          if (o2timespent > 0)
+            o2workleft = o2workleft - o2timespent;
+
+          if (o2workleft < 0)
+              o2workleft = 0;
+
+          return o1.lhs.withDurationAdded(o1workleft, 1).compareTo(
+                  o2.lhs.withDurationAdded(o2workleft, 1));
+        }
+      });
+
+      long incBy = minTask.lhs.getMillis() + estimator.getQueryRuntimeEstimate(minTask.rhs) - simTime.getMillis();
+      simTime.withDurationAdded(incBy, 1);
+      activeRunList.remove(minTask);
+      activeRunList.add(new Pair<>(simTime, queuedTasks.get(0)));
+      queuedTasks.remove(0);
+    }
+
+    lastLoadEstimateTime = DateTime.now().getMillis();
+    estimatedLoad = simTime.getMillis();
+    return Long.toString(estimatedLoad);
+  }
+
   private String getDataSourceName(DataSource dataSource)
   {
     return Iterables.getOnlyElement(dataSource.getNames());
@@ -560,8 +606,6 @@ public class ServerManager implements QuerySegmentWalker
 
     final Function<Query<T>, ServiceMetricEvent.Builder> builderFn = getBuilderFn(toolChest);
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
-
-    estimateQueryRuntime(query);
 
     FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable
         .create(specs)
@@ -645,7 +689,8 @@ public class ServerManager implements QuerySegmentWalker
                             new ReferenceCountingSegmentQueryRunner<T>(factory, adapter, segmentDescriptor),
                             "query/segment/time",
                             ImmutableMap.of("segment", adapter.getIdentifier()),
-                            adapter
+                            adapter,
+                            estimator
                         ),
                         cachingExec,
                         cacheConfig
@@ -653,7 +698,8 @@ public class ServerManager implements QuerySegmentWalker
                 ),
                 "query/segmentAndCache/time",
                 ImmutableMap.of("segment", adapter.getIdentifier()),
-                adapter
+                adapter,
+                estimator
             ).withWaitMeasuredFromNow(),
             segmentSpec
         ),
@@ -662,16 +708,6 @@ public class ServerManager implements QuerySegmentWalker
         cpuTimeAccumulator,
         false
     );
-  }
-
-  private <T> void estimateQueryRuntime(Query<T> query)
-  {
-    if (Arrays.asList(queryTypes).contains(query.getType())) {
-      this.runtimeEstimate.put(query.getId(),
-              GetafixQueryTimeServerSelectorStrategyHelper.selectRandomQueryTime(
-                      histogramCollection.get(query.getType()),
-                      percentileCollection.get(query.getType())));
-    }
   }
 
   private static <T> Function<Query<T>, ServiceMetricEvent.Builder> getBuilderFn(final QueryToolChest<T, Query<T>> toolChest)

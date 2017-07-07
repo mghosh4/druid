@@ -491,7 +491,7 @@ public class AggregationTestHelper
 
   public static IntervalChunkingQueryRunnerDecorator NoopIntervalChunkingQueryRunnerDecorator()
   {
-    return new IntervalChunkingQueryRunnerDecorator(null, null, null) {
+    return new IntervalChunkingQueryRunnerDecorator(null, null, null, null) {
       @Override
       public <T> QueryRunner<T> decorate(final QueryRunner<T> delegate,
                                          QueryToolChest<T, ? extends Query<T>> toolChest) {

@@ -22,9 +22,13 @@ package io.druid.query;
 import com.google.common.util.concurrent.ForwardingListeningExecutorService;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.metamx.common.Pair;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import org.joda.time.DateTime;
 
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 
 public class MetricsEmittingExecutorService extends ForwardingListeningExecutorService
@@ -66,6 +70,14 @@ public class MetricsEmittingExecutorService extends ForwardingListeningExecutorS
     delegate.execute(runnable);
   }
 
+  public List<String> getQueuedTasks()
+  {
+    if (delegate instanceof PrioritizedExecutorService)
+      return ((PrioritizedExecutorService) delegate).getQueuedTasks();
+
+    return null;
+  }
+
   public int getQueueSize()
   {
     if (delegate instanceof PrioritizedExecutorService) 
@@ -80,6 +92,30 @@ public class MetricsEmittingExecutorService extends ForwardingListeningExecutorS
       return ((PrioritizedExecutorService) delegate).getActiveTaskCount();
     
     return 0;
+  }
+
+  public int getCorePoolSize()
+  {
+    if (delegate instanceof PrioritizedExecutorService)
+      return ((PrioritizedExecutorService) delegate).getCorePoolSize();
+
+    return 0;
+  }
+
+  public Iterable<Pair<DateTime, String>> getActiveRunList()
+  {
+    if (delegate instanceof PrioritizedExecutorService)
+      return ((PrioritizedExecutorService) delegate).getActiveRunList();
+
+    return null;
+  }
+
+  public boolean isNewTaskAdded()
+  {
+    if (delegate instanceof PrioritizedExecutorService)
+      return ((PrioritizedExecutorService) delegate).isNewTaskAdded();
+
+    return false;
   }
 
   private void emitMetrics()

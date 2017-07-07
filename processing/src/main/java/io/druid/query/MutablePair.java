@@ -3,9 +3,10 @@
 // (powered by Fernflower decompiler)
 //
 
-package io.druid.server.coordination.broker;
+package io.druid.query;
 
 import com.google.common.base.Function;
+
 import java.util.Comparator;
 
 public class MutablePair<T1, T2> {

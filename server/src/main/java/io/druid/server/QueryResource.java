@@ -188,7 +188,7 @@ public class QueryResource
         try{
           ServerManager manager = (ServerManager)texasRanger;
           if (manager != null){
-            currentHNLoad = manager.currentHNLoad();
+            currentHNLoad = manager.currentWaitTime();
             //log.info("Current HN load [%s]", currentHNLoad);
           }
           else{
@@ -197,6 +197,7 @@ public class QueryResource
         }catch(ClassCastException cce){
           currentHNLoad = "0";
         }
+
         Response.ResponseBuilder builder = Response
             .ok(
                 new StreamingOutput()
