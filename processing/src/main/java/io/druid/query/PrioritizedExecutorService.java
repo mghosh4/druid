@@ -26,21 +26,13 @@ import com.google.common.util.concurrent.ListenableFutureTask;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.metamx.common.Pair;
 import com.metamx.common.lifecycle.Lifecycle;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.util.Comparator;
-import java.util.List;
-import java.util.concurrent.AbstractExecutorService;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
-import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.RunnableFuture;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class PrioritizedExecutorService extends AbstractExecutorService implements ListeningExecutorService
@@ -48,7 +40,7 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
   public static PrioritizedExecutorService create(Lifecycle lifecycle, DruidProcessingConfig config)
   {
     final PrioritizedExecutorService service = new PrioritizedExecutorService(
-        new ThreadPoolExecutor(
+        new MonitoredThreadPoolExecutor(
             config.getNumThreads(),
             config.getNumThreads(),
             0L,
@@ -84,10 +76,11 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
   private final boolean allowRegularTasks;
   private final int defaultPriority;
   private final DruidProcessingConfig config;
-  final ThreadPoolExecutor threadPoolExecutor; // Used in unit tests
+  final MonitoredThreadPoolExecutor threadPoolExecutor; // Used in unit tests
+  private boolean newTaskAdded;
 
   public PrioritizedExecutorService(
-      ThreadPoolExecutor threadPoolExecutor,
+      MonitoredThreadPoolExecutor threadPoolExecutor,
       DruidProcessingConfig config
   )
   {
@@ -95,7 +88,7 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
   }
 
   public PrioritizedExecutorService(
-      ThreadPoolExecutor threadPoolExecutor,
+      MonitoredThreadPoolExecutor threadPoolExecutor,
       boolean allowRegularTasks,
       int defaultPriority,
       DruidProcessingConfig config
@@ -107,6 +100,7 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
     this.allowRegularTasks = allowRegularTasks;
     this.defaultPriority = defaultPriority;
     this.config = config;
+    this.newTaskAdded = false;
   }
 
   @Override
@@ -116,12 +110,14 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
         allowRegularTasks || runnable instanceof PrioritizedRunnable,
         "task does not implement PrioritizedRunnable"
     );
+    newTaskAdded = true;
     return PrioritizedListenableFutureTask.create(
         ListenableFutureTask.create(runnable, value),
         runnable instanceof PrioritizedRunnable
         ? ((PrioritizedRunnable) runnable).getPriority()
         : defaultPriority,
-        config.isFifo() ? queuePosition.decrementAndGet() : 0
+        config.isFifo() ? queuePosition.decrementAndGet() : 0,
+        null
     );
   }
 
@@ -132,12 +128,17 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
         allowRegularTasks || callable instanceof PrioritizedCallable,
         "task does not implement PrioritizedCallable"
     );
+    newTaskAdded = true;
     return PrioritizedListenableFutureTask.create(
         ListenableFutureTask.create(callable),
         callable instanceof PrioritizedCallable
         ? ((PrioritizedCallable) callable).getPriority()
         : defaultPriority,
-        config.isFifo() ? queuePosition.decrementAndGet() : 0
+        config.isFifo() ? queuePosition.decrementAndGet() : 0,
+        callable instanceof PrioritizedCallable
+                ? ((PrioritizedCallable) callable).getQueryType()
+                : null
+
     );
   }
 
@@ -204,6 +205,29 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
   {
     return delegateQueue.size();
   }
+
+  public int getCorePoolSize() { return threadPoolExecutor.getCorePoolSize(); }
+
+  public Iterable<Pair<DateTime, String>> getActiveRunList() { return threadPoolExecutor.getActiveRunList(); }
+
+  public boolean isNewTaskAdded() { return newTaskAdded; }
+
+  public List<String> getQueuedTasks()
+  {
+      List<Runnable> queuedTasks = new ArrayList<>(delegateQueue);
+      List<String> queryTypes = new ArrayList<>();
+      for (Runnable task: queuedTasks)
+      {
+          Preconditions.checkArgument(
+                  task instanceof PrioritizedListenableFutureTask,
+                  "task does not implement PrioritizedListenableFutureTask"
+          );
+
+          queryTypes.add(((PrioritizedListenableFutureTask) task).getQueryType());
+      }
+
+      return queryTypes;
+  }
 }
 
 class PrioritizedListenableFutureTask<V> implements RunnableFuture<V>,
@@ -241,33 +265,37 @@ class PrioritizedListenableFutureTask<V> implements RunnableFuture<V>,
     return new PrioritizedListenableFutureTask<>(
         ListenableFutureTask.create(task, result),
         task.getPriority(),
-        position
+        position,
+        null
     );
   }
 
-  public static <V> PrioritizedListenableFutureTask<?> create(PrioritizedCallable<V> callable, long position)
+  public static <V> PrioritizedListenableFutureTask<?> create(PrioritizedCallable<V> callable, long position, String queryType)
   {
     return new PrioritizedListenableFutureTask<>(
         ListenableFutureTask.create(callable),
         callable.getPriority(),
-        position
+        position,
+        queryType
     );
   }
 
-  public static <V> PrioritizedListenableFutureTask<V> create(ListenableFutureTask<V> task, int priority, long position)
+  public static <V> PrioritizedListenableFutureTask<V> create(ListenableFutureTask<V> task, int priority, long position, String queryType)
   {
-    return new PrioritizedListenableFutureTask<>(task, priority, position);
+    return new PrioritizedListenableFutureTask<>(task, priority, position, queryType);
   }
 
   private final ListenableFutureTask<V> delegate;
   private final int priority;
   private final long insertionPlace;
+  private String queryType;
 
-  PrioritizedListenableFutureTask(ListenableFutureTask<V> delegate, int priority, long position)
+  PrioritizedListenableFutureTask(ListenableFutureTask<V> delegate, int priority, long position, String queryType)
   {
     this.delegate = delegate;
     this.priority = priority;
     this.insertionPlace = position; // Long.MAX_VALUE will always be "highest"
+    this.queryType = queryType;
   }
 
   @Override
@@ -323,9 +351,44 @@ class PrioritizedListenableFutureTask<V> implements RunnableFuture<V>,
     return insertionPlace;
   }
 
+  public String getQueryType() { return queryType; }
+
   @Override
   public int compareTo(PrioritizedListenableFutureTask otherTask)
   {
     return PRIORITY_COMPARATOR.compare(this, otherTask);
   }
 }
+
+class MonitoredThreadPoolExecutor extends ThreadPoolExecutor {
+  private final ConcurrentHashMap<Runnable, Pair<DateTime, String>> activeRunList = new ConcurrentHashMap<>();
+
+  public MonitoredThreadPoolExecutor(int corePoolSize,
+                                          int maximumPoolSize,
+                                          long keepAliveTime,
+                                          TimeUnit unit,
+                                          BlockingQueue<Runnable> workQueue,
+                                          ThreadFactory threadFactory)
+  { super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, threadFactory); }
+
+  @Override
+  protected void beforeExecute(Thread t, Runnable r) {
+      Preconditions.checkArgument(
+              r instanceof PrioritizedListenableFutureTask,
+              "task does not implement PrioritizedListenableFutureTask"
+      );
+
+      activeRunList.put(r, new Pair<>(DateTime.now(), ((PrioritizedListenableFutureTask) r).getQueryType()));
+  }
+
+  @Override
+  protected void afterExecute(Runnable r, Throwable t) {
+      activeRunList.remove(r);
+  }
+
+  public Iterable<Pair<DateTime, String>> getActiveRunList()
+  {
+      return activeRunList.values();
+  }
+};
+

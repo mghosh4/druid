@@ -105,7 +105,7 @@ public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
                     }
 
                     return exec.submit(
-                        new AbstractPrioritizedCallable<Void>(priority)
+                        new AbstractPrioritizedCallable<Void>(priority, query.getType())
                         {
                           @Override
                           public Void call() throws Exception

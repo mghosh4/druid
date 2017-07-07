@@ -19,10 +19,15 @@
 
 package io.druid.query;
 
-import java.util.concurrent.Callable;
-
-public interface PrioritizedCallable<V> extends Callable<V>
+/**
+ */
+public interface QueryRuntimeEstimator
 {
-  int getPriority();
-  String getQueryType();
+  void startQueryRuntimeEstimation();
+
+  void setQueryRuntimeEstimate(String queryType, long queryTime);
+
+  long getQueryRuntimeEstimate(String queryType);
+
+  void clearQueryRuntimeEstimate();
 }

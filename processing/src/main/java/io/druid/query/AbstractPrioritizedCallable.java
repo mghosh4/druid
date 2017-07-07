@@ -22,10 +22,12 @@ package io.druid.query;
 public abstract class AbstractPrioritizedCallable<V> implements PrioritizedCallable<V>
 {
   private final int priority;
+  private final String queryType;
 
-  public AbstractPrioritizedCallable(int priority)
+  public AbstractPrioritizedCallable(int priority, String queryType)
   {
     this.priority = priority;
+    this.queryType = queryType;
   }
 
   @Override
@@ -33,4 +35,7 @@ public abstract class AbstractPrioritizedCallable<V> implements PrioritizedCalla
   {
     return priority;
   }
+
+  @Override
+  public String getQueryType() { return  queryType; }
 }

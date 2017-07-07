@@ -34,6 +34,7 @@ import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Self;
 import io.druid.query.Query;
+import io.druid.query.MutablePair;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.broker.tasks.PeriodicPollHistoricalLoad;

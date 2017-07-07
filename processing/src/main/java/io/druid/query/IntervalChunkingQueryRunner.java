@@ -48,10 +48,12 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
   private final ExecutorService executor;
   private final QueryWatcher queryWatcher;
   private final ServiceEmitter emitter;
+  private final QueryRuntimeEstimator estimator;
 
   public IntervalChunkingQueryRunner(
       QueryRunner<T> baseRunner, QueryToolChest<T, Query<T>> toolChest,
-      ExecutorService executor, QueryWatcher queryWatcher, ServiceEmitter emitter
+      ExecutorService executor, QueryWatcher queryWatcher, ServiceEmitter emitter,
+      QueryRuntimeEstimator estimator
   )
   {
     this.baseRunner = baseRunner;
@@ -59,6 +61,7 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
     this.executor = executor;
     this.queryWatcher = queryWatcher;
     this.emitter = emitter;
+    this.estimator = estimator;
   }
 
   @Override
@@ -113,7 +116,8 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
                                 baseRunner,
                                 "query/intervalChunk/time",
                                 ImmutableMap.of("chunkInterval", singleInterval.toString()),
-                                null
+                                null,
+                                estimator
                             ).withWaitMeasuredFromNow()
                         ),
                         executor, queryWatcher
