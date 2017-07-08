@@ -30,6 +30,8 @@ import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -37,6 +39,17 @@ import java.util.Map;
  */
 public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
 {
+  public List<Long> segmentQueryTimes = Collections.synchronizedList(new ArrayList<Long>());
+
+  public void updateSegmentQueryTime(long timeTaken){
+    segmentQueryTimes.add(timeTaken);
+  }
+
+  public String getSegmentQueryTime(){
+    String str = segmentQueryTimes.toString();
+    return str.substring(1, str.length() - 1).replaceAll("\\s",""); // generates a comma separated list without any spaces
+  }
+
   public static <T> int getContextPriority(Query<T> query, int defaultValue)
   {
     return parseInt(query, "priority", defaultValue);

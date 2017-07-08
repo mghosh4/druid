@@ -35,6 +35,8 @@ import io.druid.query.topn.TopNQuery;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -66,6 +68,10 @@ public interface Query<T>
   boolean hasFilters();
 
   String getType();
+
+  void updateSegmentQueryTime(long timeTaken);
+
+  String getSegmentQueryTime();
 
   Sequence<T> run(QuerySegmentWalker walker, Map<String, Object> context);
 

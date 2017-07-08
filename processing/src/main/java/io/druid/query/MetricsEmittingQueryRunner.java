@@ -137,6 +137,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
           emitter.emit(builder.build(metricName, timeTaken));
           if (metricName == "query/segment/time" && adapter != null)
             adapter.updateSegmentQueryTime(timeTaken);
+            query.updateSegmentQueryTime(timeTaken);
 
           if (creationTime > 0) {
             emitter.emit(builder.build("query/wait/time", startTime - creationTime));

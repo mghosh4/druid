@@ -243,7 +243,8 @@ public class QueryResource
             .header("X-Druid-Query-Id", queryId)
             .header("CurrentHNLoad", currentHNLoad)
             .header("CurrentHNLoadTime", sdf.format(new Date()))
-            .header("HNQueryTime", String.valueOf(System.currentTimeMillis() - start));
+            .header("HNQuerySegmentTime", query.getSegmentQueryTime());
+            //.header("HNQueryTime", String.valueOf(System.currentTimeMillis() - start));
 
         //Limit the response-context header, see https://github.com/druid-io/druid/issues/2331
         //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
