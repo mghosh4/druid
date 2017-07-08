@@ -80,24 +80,14 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment, SegmentDescriptor segmentDescriptor, String queryType)
   {
-      QueryableDruidServer chosenServer = null;
-      long maxLoading = -1;
-      long minLoading = 1000000;
-      int minLoadingIndex = -1;
-      int counter = 0;
-      List<Long> loading = new ArrayList<Long>();
-      List<QueryableDruidServer> serverList = new ArrayList<QueryableDruidServer>();
+      if (servers.size() == 1)
+          return servers.iterator().next();
 
-      for (Iterator<QueryableDruidServer> iterator = servers.iterator(); iterator.hasNext();) {
-          QueryableDruidServer s = iterator.next();
-          //log.info("OpenConnections %d", s.getClient().getNumOpenConnections());
-          // remove the realtime node from the server list if other servers are available
-          if (s.getServer().getMetadata().getType().equals("realtime") && servers.size() > 1) {
-              iterator.remove();
-              log.info("Removed realtime server from the list load=%d openConnections=%d", s.getServer().getCurrentLoad(), s.getClient().getNumOpenConnections());
-          } else {
-              serverList.add(s);
-              long temp = s.getServer().getCurrentLoad();
+      List<QueryableDruidServer> serverList = new ArrayList<QueryableDruidServer>();
+      for (QueryableDruidServer server : servers) {
+          if (!server.getServer().getMetadata().getType().equals("realtime")) {
+              serverList.add(server);
+              // long temp = server.getServer().getCurrentLoad();
               // exponentially decay the load value
               /*
               Date currTime = new Date();
@@ -107,18 +97,6 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
               temp = (long) (temp * Math.pow(e, decayRate * refreshTime));
               log.info("Server name %s, Server host %s, Prev load %d, Decayed load %d, refreshTime %d", s.getServer().getMetadata().getName(), s.getServer().getMetadata().getHost(), s.getServer().getCurrentLoad(), temp, refreshTime);
               */
-              loading.add(temp);
-              // find max loading value
-              if (temp > maxLoading) {
-                  maxLoading = temp;
-              }
-              // find min loading value
-              if (temp < minLoading) {
-                  minLoading = temp;
-                  minLoadingIndex = counter;
-              }
-              counter++;
-              //log.info("Servers %s", s.getServer().getCurrentLoad());
           }
       }
 
@@ -148,8 +126,8 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
       //log.info("Selected index %d", i);
       return serverList.get(i);
       */
-      log.info("Selected server name %s, host %s, loading %d", serverList.get(minLoadingIndex).getServer().getMetadata().getName(), serverList.get(minLoadingIndex).getServer().getMetadata().getHost(), loading.get(minLoadingIndex));
-      return serverList.get(minLoadingIndex);
+      //log.info("Selected server name %s, host %s, loading %d", serverList.get(minLoadingIndex).getServer().getMetadata().getName(), serverList.get(minLoadingIndex).getServer().getMetadata().getHost(), loading.get(minLoadingIndex));
+      return Collections.min(serverList, loadcomparator);
   }
 
 /*
@@ -187,4 +165,5 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
   }
 */
 }
+
 
