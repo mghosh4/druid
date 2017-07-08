@@ -132,6 +132,8 @@ public class ServerManager implements QuerySegmentWalker
 
     this.manager = manager;
     this.estimator = estimator;
+    this.estimator.startQueryRuntimeEstimation();
+
     this.lastLoadEstimateTime = DateTime.now().getMillis();
     this.estimatedLoad = 0;
 

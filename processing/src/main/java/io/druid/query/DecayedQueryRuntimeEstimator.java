@@ -15,14 +15,14 @@ public class DecayedQueryRuntimeEstimator extends DefaultQueryRuntimeEstimator
     public void setQueryRuntimeEstimate(String queryType, long queryTime)
     {
         if (estimateQueryRuntime == true) {
-            int numSamples = 3;
+            float numSamples = 3;
             float alpha = 2/(1+numSamples);
             MutablePair<Long, Long> runtime = this.queryRuntimeEstimateTable.get(queryType);
             if (runtime != null) {
                 long oldEstimate = runtime.lhs;
                 long oldSamples = runtime.rhs;
 
-                runtime.lhs = Long.valueOf((long)(runtime.lhs*(1-alpha)) + (long)(queryTime*alpha));
+                runtime.lhs = Long.valueOf(Math.round(runtime.lhs*(1-alpha) + queryTime*alpha));;
                 runtime.rhs = runtime.rhs + 1L;
                 this.queryRuntimeEstimateTable.put(queryType, runtime);
 
