@@ -152,9 +152,9 @@ public class DruidBroker
     this.estimateQueryRuntime = true;
   }
 
-  public void setDecayedQueryRuntimeEstimate(String queryType, long queryDurationMillis, long queryTime){
+  public void setDecayedQueryRuntimeEstimate(String queryType, long queryDurationMillis, long querySegmentTime){
     if (estimateQueryRuntime == true) {
-      int numSamples = 3;
+      float numSamples = 3;
       float alpha = 2/(1+numSamples);
       ConcurrentHashMap<Long, MutablePair<Long, Long>> durationMap = this.queryRuntimeEstimateTable.get(queryType);
       if (durationMap != null) {
@@ -162,12 +162,12 @@ public class DruidBroker
         long oldEstimate = runtime.lhs;
         long oldSamples = runtime.rhs;
 
-        runtime.lhs = Long.valueOf((long)(runtime.lhs*(1-alpha)) + (long)(queryTime*alpha));
+        runtime.lhs = Long.valueOf((long)(runtime.lhs*(1-alpha)) + (long)(querySegmentTime*alpha));
         runtime.rhs = runtime.rhs + 1L;
         durationMap.put(queryDurationMillis, runtime);
 
         log.info("Set done queryRuntimeEstimateTable queryType %s, queryDuration %d, queryTime %d oldEstimate %d, oldSamples %d, newEstimate %d, newSamples %d",
-                queryType, queryDurationMillis, queryTime, oldEstimate, oldSamples, runtime.lhs, runtime.rhs);
+                queryType, queryDurationMillis, querySegmentTime, oldEstimate, oldSamples, runtime.lhs, runtime.rhs);
       } else {
         log.info("Error: query type %s not found in queryRuntimeEstimateTable ", queryType);
       }
