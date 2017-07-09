@@ -160,7 +160,7 @@ public class QueryResource
       }
 
       final Map<String, Object> responseContext = new MapMaker().makeMap();
-      log.info("Query details type %s, intervals %s, duration millis %d, datasource %s, context %s", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), query.getContext().toString());
+      log.info("Query details type %s, intervals %s, duration millis %d, datasource %s, context %s, segmentQueryTime list %s, query object %s", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), query.getContext().toString(), query.getSegmentQueryTime(), query);
       final Sequence res = query.run(texasRanger, responseContext);
       final Sequence results;
       if (res == null) {
@@ -197,6 +197,7 @@ public class QueryResource
         }catch(ClassCastException cce){
           currentHNLoad = "0";
         }
+        log.info("Post query processing segmentQueryTime list %s", query.getSegmentQueryTime());
         Response.ResponseBuilder builder = Response
             .ok(
                 new StreamingOutput()

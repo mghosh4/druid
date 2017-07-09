@@ -26,6 +26,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
+import com.metamx.common.logger.Logger;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -39,15 +40,21 @@ import java.util.Map;
  */
 public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
 {
+
+  private static final Logger log = new Logger(BaseQuery.class);
+
   public List<Long> segmentQueryTimes = Collections.synchronizedList(new ArrayList<Long>());
 
   public void updateSegmentQueryTime(long timeTaken){
     segmentQueryTimes.add(timeTaken);
+    log.info("Added new query segment time %d new list %s", timeTaken, segmentQueryTimes.toString());
   }
 
   public String getSegmentQueryTime(){
     String str = segmentQueryTimes.toString();
-    return str.substring(1, str.length() - 1).replaceAll("\\s",""); // generates a comma separated list without any spaces
+    String retStr = str.substring(1, str.length() - 1).replaceAll("\\s",""); // generates a comma separated list without any spaces
+    log.info("Getting query segment times %s formatted %s", str, retStr);
+    return retStr;
   }
 
   public static <T> int getContextPriority(Query<T> query, int defaultValue)
