@@ -32,11 +32,14 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import java.io.IOException;
 import java.util.Map;
 import io.druid.segment.ReferenceCountingSegment;
+import com.metamx.common.logger.Logger;
 
 /**
  */
 public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
 {
+  private static final Logger log = new Logger(MetricsEmittingQueryRunner.class);
+
   private static final String DEFAULT_METRIC_NAME = "query/partial/time";
 
   private final ServiceEmitter emitter;
@@ -133,11 +136,14 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
         }
         finally {
           long timeTaken = System.currentTimeMillis() - startTime;
+          if(metricName == "query/segment/time"){
+            query.updateSegmentQueryTime(timeTaken);
+            log.info("Updated segment query time %d", timeTaken);
+          }
 
           emitter.emit(builder.build(metricName, timeTaken));
           if (metricName == "query/segment/time" && adapter != null)
             adapter.updateSegmentQueryTime(timeTaken);
-            query.updateSegmentQueryTime(timeTaken);
 
           if (creationTime > 0) {
             emitter.emit(builder.build("query/wait/time", startTime - creationTime));
@@ -213,10 +219,14 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
               }
 
               long timeTaken = System.currentTimeMillis() - startTime;
+              if(metricName == "query/segment/time"){
+                query.updateSegmentQueryTime(timeTaken);
+                log.info("Updated segment query time %d", timeTaken);
+              }
+              
               emitter.emit(builder.build(metricName, timeTaken));
               if (metricName == "query/segment/time" && adapter != null)
                 adapter.updateSegmentQueryTime(timeTaken);
-
               if (creationTime > 0) {
                 emitter.emit(builder.build("query/wait/time", startTime - creationTime));
               }
