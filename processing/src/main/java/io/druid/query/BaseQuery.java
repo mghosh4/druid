@@ -41,9 +41,9 @@ import java.util.Map;
 public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
 {
 
-  private static final Logger log = new Logger(BaseQuery.class);
-
   public List<Long> segmentQueryTimes = Collections.synchronizedList(new ArrayList<Long>());
+
+  private static final Logger log = new Logger(BaseQuery.class);
 
   public void updateSegmentQueryTime(long timeTaken){
     segmentQueryTimes.add(timeTaken);

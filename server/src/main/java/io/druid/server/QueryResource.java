@@ -121,7 +121,7 @@ public class QueryResource
   ) throws IOException
   {
     final long start = System.currentTimeMillis();
-    BaseQuery query = null;
+    Query query = null;
     String queryId = null;
     String currentHNLoad = "0";
 
@@ -136,14 +136,14 @@ public class QueryResource
                                     : objectMapper.writer();
 
     try {
-      query = objectMapper.readValue(in, BaseQuery.class);
+      query = objectMapper.readValue(in, Query.class);
       queryId = query.getId();
       if (queryId == null) {
         queryId = UUID.randomUUID().toString();
-        query = (BaseQuery)query.withId(queryId);
+        query = query.withId(queryId);
       }
       if (query.getContextValue(QueryContextKeys.TIMEOUT) == null) {
-        query = (BaseQuery)query.withOverriddenContext(
+        query = query.withOverriddenContext(
             ImmutableMap.of(
                 QueryContextKeys.TIMEOUT,
                 config.getMaxIdleTime().toStandardDuration().getMillis()
@@ -156,7 +156,8 @@ public class QueryResource
       }
 
       final Map<String, Object> responseContext = new MapMaker().makeMap();
-      log.info("Query details type %s, intervals %s, duration millis %d, datasource %s, context %s, segmentQueryTime list %s", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), query.getContext().toString(), query.getSegmentQueryTime());
+      log.info("Query details type %s, intervals %s, duration millis %d, datasource %s, context %s, segmentQueryTime list %s object hascode %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), query.getContext().toString(), query.getSegmentQueryTime(), query.hashCode());
+
       final Sequence res = query.run(texasRanger, responseContext);
       final Sequence results;
       if (res == null) {
@@ -241,7 +242,7 @@ public class QueryResource
             .header("CurrentHNLoadTime", sdf.format(new Date()))
             //.header("HNQuerySegmentTime", query.getSegmentQueryTime());
             .header("HNQueryTime", String.valueOf(System.currentTimeMillis() - start));
-        log.info("Post query processing segmentQueryTime list %s", query.getSegmentQueryTime());
+        log.info("Post query processing segmentQueryTime list %s, hashcode %d", query.getSegmentQueryTime(), query.hashCode());
 
         //Limit the response-context header, see https://github.com/druid-io/druid/issues/2331
         //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()

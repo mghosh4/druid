@@ -138,7 +138,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
           long timeTaken = System.currentTimeMillis() - startTime;
           if(metricName == "query/segment/time"){
             query.updateSegmentQueryTime(timeTaken);
-            log.info("Updated segment query time %d", timeTaken);
+            log.info("Updated segment query time %d, hashcode %d", timeTaken, query.hashCode());
           }
 
           emitter.emit(builder.build(metricName, timeTaken));
@@ -221,7 +221,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
               long timeTaken = System.currentTimeMillis() - startTime;
               if(metricName == "query/segment/time"){
                 query.updateSegmentQueryTime(timeTaken);
-                log.info("Updated segment query time %d", timeTaken);
+                log.info("Updated segment query time %d, hashcode %d", timeTaken, query.hashCode());
               }
               
               emitter.emit(builder.build(metricName, timeTaken));
