@@ -35,11 +35,7 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
-import io.druid.query.DruidMetrics;
-import io.druid.query.Query;
-import io.druid.query.QueryContextKeys;
-import io.druid.query.QueryInterruptedException;
-import io.druid.query.QuerySegmentWalker;
+import io.druid.query.*;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.coordination.ServerManager;
@@ -125,7 +121,7 @@ public class QueryResource
   ) throws IOException
   {
     final long start = System.currentTimeMillis();
-    Query query = null;
+    BaseQuery query = null;
     String queryId = null;
     String currentHNLoad = "0";
 
@@ -140,14 +136,14 @@ public class QueryResource
                                     : objectMapper.writer();
 
     try {
-      query = objectMapper.readValue(in, Query.class);
+      query = objectMapper.readValue(in, BaseQuery.class);
       queryId = query.getId();
       if (queryId == null) {
         queryId = UUID.randomUUID().toString();
-        query = query.withId(queryId);
+        query = (BaseQuery)query.withId(queryId);
       }
       if (query.getContextValue(QueryContextKeys.TIMEOUT) == null) {
-        query = query.withOverriddenContext(
+        query = (BaseQuery)query.withOverriddenContext(
             ImmutableMap.of(
                 QueryContextKeys.TIMEOUT,
                 config.getMaxIdleTime().toStandardDuration().getMillis()
@@ -197,7 +193,6 @@ public class QueryResource
         }catch(ClassCastException cce){
           currentHNLoad = "0";
         }
-        //log.info("Post query processing segmentQueryTime list %s", query.getSegmentQueryTime());
         Response.ResponseBuilder builder = Response
             .ok(
                 new StreamingOutput()
@@ -246,6 +241,7 @@ public class QueryResource
             .header("CurrentHNLoadTime", sdf.format(new Date()))
             //.header("HNQuerySegmentTime", query.getSegmentQueryTime());
             .header("HNQueryTime", String.valueOf(System.currentTimeMillis() - start));
+        log.info("Post query processing segmentQueryTime list %s", query.getSegmentQueryTime());
 
         //Limit the response-context header, see https://github.com/druid-io/druid/issues/2331
         //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()

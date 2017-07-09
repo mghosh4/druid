@@ -283,6 +283,9 @@ public class DruidBroker
     return this.hnQueryTimeAllocation;
   }
 
+  public void printHNQueryTimeAllocationTable(){
+    log.info("HN query time allocation table %s", hnQueryTimeAllocation.toString());
+  }
   public void clearHNQueryTimeAllocationTable(){
     for(Map.Entry<String, Long> entry : this.hnQueryTimeAllocation.entrySet()){
       hnQueryTimeAllocation.put(entry.getKey(), 1L);

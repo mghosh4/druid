@@ -209,7 +209,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               // update queryRuntimeEstimateTable
               druidBroker.setDecayedQueryRuntimeEstimate(queryType, queryDurationMillis, hnQueryTimeMillis);
 
-              log.info("Stats queryType %s, query duration %d, query/node/time %d query/time %s", queryType, queryDurationMillis, (System.currentTimeMillis()-requestStartTime), hnQueryTimeMillis);
+              log.info("Stats queryType %s, query duration %d, query node time %d query time %s", queryType, queryDurationMillis, (System.currentTimeMillis()-requestStartTime), hnQueryTimeMillis);
 
               /*
               // calculate the exponential moving average of load over n data samples

@@ -118,7 +118,7 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
             if(hnQueryTimeAllocation.get(hn) == null){
                 hnQueryTimeAllocation.put(hn, 1L); // initialize with 1 to avoid div by 0 errors
             }
-            log.info("Queryable server %s, allocation %d", s.getServer().getMetadata().getName(), hnQueryTimeAllocation.get(hn));
+            log.info("Queryable server %s, allocation %d", s.getServer().getMetadata().getHost(), hnQueryTimeAllocation.get(hn));
             log.info("Goal value %d, Current value %d", firstHNValue, firstQueryTimeAllocationValue);
             if (firstHNValue == -1) {
                 //goalRatio[i] = 1.0F;

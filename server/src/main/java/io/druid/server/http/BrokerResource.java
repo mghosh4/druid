@@ -105,6 +105,7 @@ public class BrokerResource
       if(rt.keySet().size() > 1){
           startQueryEstimation = true; // set this field now, but use it the next time
       }
+      druidBroker.printHNQueryTimeAllocationTable();
       druidBroker.clearHNQueryTimeAllocationTable();
       log.info("Sent response of POST for routing table");
       return Response.ok().build();
