@@ -63,8 +63,6 @@ public interface Query<T>
   String TOPN = "topN";
   String DATASOURCE_METADATA = "dataSourceMetadata";
 
-  public List<Long> segmentQueryTimes = Collections.synchronizedList(new ArrayList<Long>());
-
   DataSource getDataSource();
 
   boolean hasFilters();

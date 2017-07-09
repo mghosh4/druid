@@ -200,16 +200,16 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
               final String currentHNLoad = response.headers().get("CurrentHNLoad");
               final Date currentHNLoadTime = sdf.parse(response.headers().get("CurrentHNLoadTime"));
-              //final long hnQueryTimeMillis = Long.valueOf(response.headers().get("HNQueryTime"));
-              String hnQuerySegmentTimeStr = response.headers().get("HNQuerySegmentTime");
-              long hnQuerySegmentTimeMillis = 0L;
-              if(hnQuerySegmentTimeStr != ""){
-                hnQuerySegmentTimeMillis = Long.valueOf(hnQuerySegmentTimeStr);
-              }
+              final long hnQueryTimeMillis = Long.valueOf(response.headers().get("HNQueryTime"));
+              //String hnQuerySegmentTimeStr = response.headers().get("HNQuerySegmentTime");
+              //long hnQuerySegmentTimeMillis = 0L;
+              //if(hnQuerySegmentTimeStr != ""){
+              //  hnQuerySegmentTimeMillis = Long.valueOf(hnQuerySegmentTimeStr);
+              //}
               // update queryRuntimeEstimateTable
-              druidBroker.setDecayedQueryRuntimeEstimate(queryType, queryDurationMillis, hnQuerySegmentTimeMillis);
+              druidBroker.setDecayedQueryRuntimeEstimate(queryType, queryDurationMillis, hnQueryTimeMillis);
 
-              log.info("Stats queryType %s, query duration %d, query/node/time %d query/segment/time %s", queryType, queryDurationMillis, (System.currentTimeMillis()-requestStartTime), hnQuerySegmentTimeMillis);
+              log.info("Stats queryType %s, query duration %d, query/node/time %d query/time %s", queryType, queryDurationMillis, (System.currentTimeMillis()-requestStartTime), hnQueryTimeMillis);
 
               /*
               // calculate the exponential moving average of load over n data samples

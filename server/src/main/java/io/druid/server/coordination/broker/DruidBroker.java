@@ -154,7 +154,7 @@ public class DruidBroker
 
   public void setDecayedQueryRuntimeEstimate(String queryType, long queryDurationMillis, long querySegmentTime){
     if (estimateQueryRuntime == true) {
-      float numSamples = 3;
+      float numSamples = 1;
       float alpha = 2/(1+numSamples);
       ConcurrentHashMap<Long, MutablePair<Long, Long>> durationMap = this.queryRuntimeEstimateTable.get(queryType);
       if (durationMap != null) {

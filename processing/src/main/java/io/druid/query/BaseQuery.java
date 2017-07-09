@@ -43,6 +43,8 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
 
   private static final Logger log = new Logger(BaseQuery.class);
 
+  public List<Long> segmentQueryTimes = Collections.synchronizedList(new ArrayList<Long>());
+
   public void updateSegmentQueryTime(long timeTaken){
     segmentQueryTimes.add(timeTaken);
     log.info("Added new query segment time %d new list %s", timeTaken, segmentQueryTimes.toString());
