@@ -250,7 +250,12 @@ public class DruidBroker
     if(durationMap != null) {
       log.info("Timeseries:");
       for (long i = 0L; i <= 60000; i = i + 1000) {
-        log.info("duration %d estimate %d", i, durationMap.get(i).lhs/durationMap.get(i).rhs);
+        long numSamples = durationMap.get(i).rhs;
+        long estimate = 0;
+        if (numSamples != 0){
+          estimate = durationMap.get(i).lhs/numSamples;
+        }
+        log.info("duration %d estimate %d", i, estimate);
       }
     }
 
@@ -258,7 +263,12 @@ public class DruidBroker
     if(durationMap != null) {
       log.info("TopN:");
       for (long i = 0L; i <= 60000; i = i + 1000) {
-        log.info("duration %d estimate %d", i, durationMap.get(i).lhs/durationMap.get(i).rhs);
+        long numSamples = durationMap.get(i).rhs;
+        long estimate = 0;
+        if (numSamples != 0){
+          estimate = durationMap.get(i).lhs/numSamples;
+        }
+        log.info("duration %d estimate %d", i, estimate);
       }
     }
 
@@ -266,7 +276,12 @@ public class DruidBroker
     if(durationMap != null) {
       log.info("GroupBy:");
       for (long i = 0L; i <= 60000; i = i + 1000) {
-        log.info("duration %d estimate %d", i, durationMap.get(i).lhs/durationMap.get(i).rhs);
+        long numSamples = durationMap.get(i).rhs;
+        long estimate = 0;
+        if (numSamples != 0){
+          estimate = durationMap.get(i).lhs/numSamples;
+        }
+        log.info("duration %d estimate %d", i, estimate);
       }
     }
   }
