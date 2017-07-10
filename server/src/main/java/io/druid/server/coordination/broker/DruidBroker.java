@@ -244,6 +244,10 @@ public class DruidBroker
     }
   }
 
+  public void printQueryRuntimeEstimateTable(){
+    log.info("Query runtime estimate table %s", queryRuntimeEstimateTable.toString());
+  }
+
 /*
   public void setQueryRuntimeEstimate(String queryType, long queryDurationMillis, long queryTime){
     log.info("Setting queryRuntimeEstimate table for queryType %s, queryDuration %d, queryTime %d", queryType, queryDurationMillis, queryTime);
