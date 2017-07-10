@@ -202,12 +202,18 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               final Date currentHNLoadTime = sdf.parse(response.headers().get("CurrentHNLoadTime"));
               final long hnQueryTimeMillis = Long.valueOf(response.headers().get("HNQueryTime"));
               String hnQuerySegmentTimeStr = response.headers().get("HNQuerySegmentTime");
+              String[] hnQuerySegmentTimes = hnQuerySegmentTimeStr.split(",");
               //long hnQuerySegmentTimeMillis = 0L;
               //if(hnQuerySegmentTimeStr != ""){
               //  hnQuerySegmentTimeMillis = Long.valueOf(hnQuerySegmentTimeStr);
               //}
+
               // update queryRuntimeEstimateTable
-              druidBroker.setDecayedQueryRuntimeEstimate(queryType, queryDurationMillis, hnQueryTimeMillis);
+              //druidBroker.setDecayedQueryRuntimeEstimate(queryType, queryDurationMillis, hnQueryTimeMillis);
+              for(int i=0; i<hnQuerySegmentTimes.length/2; i=i+2) {
+                druidBroker.setDecayedQueryRuntimeEstimate(queryType, Long.valueOf(hnQuerySegmentTimes[i]), Long.valueOf(hnQuerySegmentTimes[i+1]));
+                log.info("Setting decayed estimate queryId %s, queryType %s, duration %d, query segment time %d", query.getId(), query.getType(), Long.valueOf(hnQuerySegmentTimes[i]), Long.valueOf(hnQuerySegmentTimes[i+1]));
+              }
 
               log.info("Stats queryId %s, queryType %s, query duration %d, query node time %d, query time %d, query segment time %s", query.getId(), queryType, queryDurationMillis, (System.currentTimeMillis()-requestStartTime), hnQueryTimeMillis, hnQuerySegmentTimeStr);
 

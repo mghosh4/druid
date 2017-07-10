@@ -77,8 +77,12 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
 
     List<MutablePair<Long, Long>> segmentQueryTimeList = querySegmentTimeMap.remove(queryID);
     if(segmentQueryTimeList != null){
-      String str = segmentQueryTimeList.toString();
-      String retStr = str.substring(1, str.length() - 1).replaceAll("\\s",""); // generates a comma separated list without any spaces
+      String retStr = "";
+      for(MutablePair<Long, Long> pair : segmentQueryTimeList){
+        retStr = retStr+Long.toString(pair.lhs)+","+Long.toString(pair.rhs)+",";
+      }
+      //String str = segmentQueryTimeList.toString();
+      //String retStr = str.substring(1, str.length() - 1).replaceAll("\\s",""); // generates a comma separated list without any spaces
       log.info("Getting query segment queryID %s queryType %s list %s formatted list %s", queryID, this.getType(), segmentQueryTimeList.toString(), retStr);
       return retStr;
     }
