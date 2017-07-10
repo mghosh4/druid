@@ -73,6 +73,7 @@ public class DruidBroker
   // map maintains Segment id to <HN, allocation> map
   private volatile ConcurrentHashMap<String, ConcurrentHashMap<String, Long>> segmentHNQueryTimeAllocation = new ConcurrentHashMap<>();
   private volatile static boolean estimateQueryRuntime = false;
+  private volatile boolean printDecayedEstimates = false;
   private static final EmittingLogger log = new EmittingLogger(DruidBroker.class);
 
   //QueryTime distribution data structures
@@ -154,6 +155,7 @@ public class DruidBroker
   }
 
   public void setDecayedQueryRuntimeEstimate(String queryType, long queryDurationMillis, long querySegmentTime){
+    printDecayedEstimates = true;
     if (estimateQueryRuntime == true) {
       float numSamples = 3;
       float alpha = 2/(1+numSamples);
@@ -253,7 +255,12 @@ public class DruidBroker
         long numSamples = durationMap.get(i).rhs;
         long estimate = 0;
         if (numSamples != 0){
-          estimate = durationMap.get(i).lhs/numSamples;
+          if(printDecayedEstimates){
+            estimate = durationMap.get(i).lhs;
+          }
+          else {
+            estimate = durationMap.get(i).lhs / numSamples;
+          }
         }
         log.info("duration %d estimate %d", i, estimate);
       }
@@ -266,7 +273,12 @@ public class DruidBroker
         long numSamples = durationMap.get(i).rhs;
         long estimate = 0;
         if (numSamples != 0){
-          estimate = durationMap.get(i).lhs/numSamples;
+          if(printDecayedEstimates){
+            estimate = durationMap.get(i).lhs;
+          }
+          else {
+            estimate = durationMap.get(i).lhs / numSamples;
+          }
         }
         log.info("duration %d estimate %d", i, estimate);
       }
@@ -279,7 +291,12 @@ public class DruidBroker
         long numSamples = durationMap.get(i).rhs;
         long estimate = 0;
         if (numSamples != 0){
-          estimate = durationMap.get(i).lhs/numSamples;
+          if(printDecayedEstimates){
+            estimate = durationMap.get(i).lhs;
+          }
+          else {
+            estimate = durationMap.get(i).lhs / numSamples;
+          }
         }
         log.info("duration %d estimate %d", i, estimate);
       }
