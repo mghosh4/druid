@@ -213,7 +213,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               if(!hnQuerySegmentTimeStr.equals("")) {
                 for (int i = 0; i < hnQuerySegmentTimes.length; i = i + 2) {
                   druidBroker.setQueryRuntimeEstimate(queryType, Long.valueOf(hnQuerySegmentTimes[i]), Long.valueOf(hnQuerySegmentTimes[i + 1]));
-                  log.info("Setting decayed estimate queryId %s, queryType %s, duration %d, query segment time %d", query.getId(), query.getType(), Long.valueOf(hnQuerySegmentTimes[i]), Long.valueOf(hnQuerySegmentTimes[i + 1]));
+                  //log.info("Setting decayed estimate queryId %s, queryType %s, duration %d, query segment time %d", query.getId(), query.getType(), Long.valueOf(hnQuerySegmentTimes[i]), Long.valueOf(hnQuerySegmentTimes[i + 1]));
                 }
               }
               else{

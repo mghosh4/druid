@@ -62,7 +62,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     if(segmentQueryTimeList != null){
       segmentQueryTimeList.add(new MutablePair<Long, Long>(duration, timeTaken));
       querySegmentTimeMap.put(queryID, segmentQueryTimeList);
-      log.info("Added new query segment queryID %s queryType %s duration %d time %d new list %s", queryID, queryType, duration, timeTaken, segmentQueryTimeList.toString());
+      //log.info("Added new query segment queryID %s queryType %s duration %d time %d new list %s", queryID, queryType, duration, timeTaken, segmentQueryTimeList.toString());
     }
     else{
       log.info("Trying to insert into querySegmentTimeMap, key doesnt exist");
@@ -83,7 +83,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
       }
       //String str = segmentQueryTimeList.toString();
       //String retStr = str.substring(1, str.length() - 1).replaceAll("\\s",""); // generates a comma separated list without any spaces
-      log.info("Getting query segment queryID %s queryType %s list %s formatted list %s", queryID, this.getType(), segmentQueryTimeList.toString(), retStr);
+      //log.info("Getting query segment queryID %s queryType %s list %s formatted list %s", queryID, this.getType(), segmentQueryTimeList.toString(), retStr);
       return retStr;
     }
     else{

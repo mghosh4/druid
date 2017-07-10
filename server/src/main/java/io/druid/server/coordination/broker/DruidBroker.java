@@ -245,7 +245,24 @@ public class DruidBroker
   }
 
   public void printQueryRuntimeEstimateTable(){
-    log.info("Query runtime estimate table %s", queryRuntimeEstimateTable.toString());
+    log.info("Query runtime estimate table");
+    ConcurrentHashMap<Long, MutablePair<Long, Long>> durationMap = this.queryRuntimeEstimateTable.get(Query.TIMESERIES);
+    log.info("Timeseries:");
+    for(int i=1; i<=60000; i=i+1000){
+      log.info("duration %d estimate %d", durationMap.get(i).lhs, durationMap.get(i).rhs);
+    }
+
+    durationMap = this.queryRuntimeEstimateTable.get(Query.TOPN);
+    log.info("TopN:");
+    for(int i=1; i<=60000; i=i+1000){
+      log.info("duration %d estimate %d", durationMap.get(i).lhs, durationMap.get(i).rhs);
+    }
+
+    durationMap = this.queryRuntimeEstimateTable.get(Query.GROUP_BY);
+    log.info("GroupBy:");
+    for(int i=1; i<=60000; i=i+1000){
+      log.info("duration %d estimate %d", durationMap.get(i).lhs, durationMap.get(i).rhs);
+    }
   }
 
 /*
