@@ -210,9 +210,14 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
               // update queryRuntimeEstimateTable
               //druidBroker.setQueryRuntimeEstimate(queryType, queryDurationMillis, hnQueryTimeMillis);
-              for(int i=0; i<hnQuerySegmentTimes.length; i=i+2) {
-                druidBroker.setQueryRuntimeEstimate(queryType, Long.valueOf(hnQuerySegmentTimes[i]), Long.valueOf(hnQuerySegmentTimes[i+1]));
-                log.info("Setting decayed estimate queryId %s, queryType %s, duration %d, query segment time %d", query.getId(), query.getType(), Long.valueOf(hnQuerySegmentTimes[i]), Long.valueOf(hnQuerySegmentTimes[i+1]));
+              if(!hnQuerySegmentTimeStr.equals("")) {
+                for (int i = 0; i < hnQuerySegmentTimes.length; i = i + 2) {
+                  druidBroker.setQueryRuntimeEstimate(queryType, Long.valueOf(hnQuerySegmentTimes[i]), Long.valueOf(hnQuerySegmentTimes[i + 1]));
+                  log.info("Setting decayed estimate queryId %s, queryType %s, duration %d, query segment time %d", query.getId(), query.getType(), Long.valueOf(hnQuerySegmentTimes[i]), Long.valueOf(hnQuerySegmentTimes[i + 1]));
+                }
+              }
+              else{
+                log.info("Received empty query segment time queryID %s queryType %s hnQuerySegmentTimeStr %s", query.getId(), query.getType(), hnQuerySegmentTimeStr);
               }
 
               log.info("Stats queryId %s, queryType %s, query duration %d, query node time %d, query time %d, query segment time %s", query.getId(), queryType, queryDurationMillis, (System.currentTimeMillis()-requestStartTime), hnQueryTimeMillis, hnQuerySegmentTimeStr);
