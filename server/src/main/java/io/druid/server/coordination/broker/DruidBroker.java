@@ -70,8 +70,8 @@ public class DruidBroker
   // duration to a tuple of (query runtime sum, number of samples over which that sum was taken). Number of
   // samples is used to computed the query runtime mean.
   private volatile ConcurrentHashMap<String, ConcurrentHashMap<Long, MutablePair<Long, Long>>> queryRuntimeEstimateTable = new ConcurrentHashMap<>();
-  // map maintains the history of query allocations to different HNs
-  private volatile ConcurrentHashMap<String, Long> hnQueryTimeAllocation = new ConcurrentHashMap<>();
+  // map maintains Segment id to <HN, allocation> map
+  private volatile ConcurrentHashMap<String, ConcurrentHashMap<String, Long>> segmentHNQueryTimeAllocation = new ConcurrentHashMap<>();
   private volatile static boolean estimateQueryRuntime = false;
   private static final EmittingLogger log = new EmittingLogger(DruidBroker.class);
 
@@ -247,21 +247,27 @@ public class DruidBroker
   public void printQueryRuntimeEstimateTable(){
     log.info("Query runtime estimate table");
     ConcurrentHashMap<Long, MutablePair<Long, Long>> durationMap = this.queryRuntimeEstimateTable.get(Query.TIMESERIES);
-    log.info("Timeseries:");
-    for(int i=1; i<=60000; i=i+1000){
-      log.info("duration %d estimate %d", durationMap.get(i).lhs, durationMap.get(i).rhs);
+    if(durationMap != null) {
+      log.info("Timeseries:");
+      for (long i = 0L; i <= 60000; i = i + 1000) {
+        log.info("duration %d estimate %d", durationMap.get(i).lhs, durationMap.get(i).rhs);
+      }
     }
 
     durationMap = this.queryRuntimeEstimateTable.get(Query.TOPN);
-    log.info("TopN:");
-    for(int i=1; i<=60000; i=i+1000){
-      log.info("duration %d estimate %d", durationMap.get(i).lhs, durationMap.get(i).rhs);
+    if(durationMap != null) {
+      log.info("TopN:");
+      for (long i = 0L; i <= 60000; i = i + 1000) {
+        log.info("duration %d estimate %d", durationMap.get(i).lhs, durationMap.get(i).rhs);
+      }
     }
 
     durationMap = this.queryRuntimeEstimateTable.get(Query.GROUP_BY);
-    log.info("GroupBy:");
-    for(int i=1; i<=60000; i=i+1000){
-      log.info("duration %d estimate %d", durationMap.get(i).lhs, durationMap.get(i).rhs);
+    if(durationMap != null) {
+      log.info("GroupBy:");
+      for (long i = 0L; i <= 60000; i = i + 1000) {
+        log.info("duration %d estimate %d", durationMap.get(i).lhs, durationMap.get(i).rhs);
+      }
     }
   }
 
@@ -301,16 +307,20 @@ public class DruidBroker
     }
   }
 */
-  public ConcurrentHashMap<String, Long> getHNQueryTimeAllocation(){
-    return this.hnQueryTimeAllocation;
+  public ConcurrentHashMap<String, ConcurrentHashMap<String, Long>> getSegmentHNQueryTimeAllocation(){
+    return this.segmentHNQueryTimeAllocation;
   }
 
-  public void printHNQueryTimeAllocationTable(){
-    log.info("HN query time allocation table %s", hnQueryTimeAllocation.toString());
+  public void printSegmentHNQueryTimeAllocationTable(){
+    log.info("HN query time allocation table %s", segmentHNQueryTimeAllocation.toString());
   }
-  public void clearHNQueryTimeAllocationTable(){
-    for(Map.Entry<String, Long> entry : this.hnQueryTimeAllocation.entrySet()){
-      hnQueryTimeAllocation.put(entry.getKey(), 1L);
+  public void clearSegmentHNQueryTimeAllocationTable(){
+    for(Map.Entry<String, ConcurrentHashMap<String, Long>> e1 : this.segmentHNQueryTimeAllocation.entrySet()) {
+      for (Map.Entry<String, Long> e2 : e1.getValue().entrySet()){
+        ConcurrentHashMap<String, Long> temp = new ConcurrentHashMap<>();
+        temp.put(e2.getKey(), 1L);
+        segmentHNQueryTimeAllocation.put(e1.getKey(), temp);
+      }
     }
   }
 

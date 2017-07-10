@@ -61,7 +61,13 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
         List<QueryableDruidServer> serversBackup = new ArrayList<QueryableDruidServer>(servers);
 
         Map<String, Long> segmentRoutingTable = druidBroker.getRoutingTable().get(segment.getIdentifier());
-        ConcurrentHashMap<String, Long> hnQueryTimeAllocation = druidBroker.getHNQueryTimeAllocation();
+        ConcurrentHashMap<String, ConcurrentHashMap<String, Long>> segmentHNQueryTimeAllocation = druidBroker.getSegmentHNQueryTimeAllocation();
+        if(segmentHNQueryTimeAllocation.get(segment.getIdentifier()) == null){
+            ConcurrentHashMap<String, Long> temp = new ConcurrentHashMap<>();
+            segmentHNQueryTimeAllocation.put(segment.getIdentifier(), temp);
+        }
+        ConcurrentHashMap<String, Long> hnQueryTimeAllocation = segmentHNQueryTimeAllocation.get(segment.getIdentifier());
+
         // get the query runtime estimate
         long queryRuntimeEstimate = druidBroker.getQueryRuntimeEstimate(queryType, segmentDescriptor.getInterval().toDurationMillis());
         log.info("Query run time estimate for queryType %s, duration %d, estimate %d",
@@ -122,6 +128,7 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
         for(QueryableDruidServer s : servers){
             //candidateHNList[i] = s.getServer().getMetadata().toString();
             String hn = s.getServer().getMetadata().toString();
+
             if(hnQueryTimeAllocation.get(hn) == null){
                 hnQueryTimeAllocation.put(hn, 1L); // initialize with 1 to avoid div by 0 errors
             }
@@ -155,6 +162,7 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
         // update the hnQueryTimeAllocation table
         long newAllocation = hnQueryTimeAllocation.get(chosenServer.getServer().getMetadata().toString()) + queryRuntimeEstimate;
         hnQueryTimeAllocation.put(chosenServer.getServer().getMetadata().toString(), newAllocation);
+        segmentHNQueryTimeAllocation.put(segment.getIdentifier(), hnQueryTimeAllocation);
         log.info("Queryable server %s newAllocation %d", chosenServer.getServer().getMetadata().getName(), newAllocation);
 
         log.info("DataSegment interval %s, version %s, partition %d, runtimeEstimate %d",

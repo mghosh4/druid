@@ -106,8 +106,8 @@ public class BrokerResource
           startQueryEstimation = true; // set this field now, but use it the next time
       }
       druidBroker.printQueryRuntimeEstimateTable();
-      druidBroker.printHNQueryTimeAllocationTable();
-      druidBroker.clearHNQueryTimeAllocationTable();
+      druidBroker.printSegmentHNQueryTimeAllocationTable();
+      druidBroker.clearSegmentHNQueryTimeAllocationTable();
       log.info("Sent response of POST for routing table");
       return Response.ok().build();
   }
