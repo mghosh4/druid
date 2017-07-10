@@ -157,7 +157,7 @@ public class DruidBroker
   public void setDecayedQueryRuntimeEstimate(String queryType, long queryDurationMillis, long querySegmentTime){
     printDecayedEstimates = true;
     if (estimateQueryRuntime == true) {
-      float numSamples = 3;
+      float numSamples = 19;
       float alpha = 2/(1+numSamples);
       ConcurrentHashMap<Long, MutablePair<Long, Long>> durationMap = this.queryRuntimeEstimateTable.get(queryType);
       if (durationMap != null) {
@@ -166,6 +166,10 @@ public class DruidBroker
         long oldSamples = runtime.rhs;
 
         runtime.lhs = Long.valueOf((long)(runtime.lhs*(1-alpha)) + (long)(querySegmentTime*alpha));
+        Long smallerDurationEstimate = durationMap.get(queryDurationMillis-1000).lhs;
+        if(runtime.lhs <= smallerDurationEstimate){
+          runtime.lhs = smallerDurationEstimate + 1;
+        }
         runtime.rhs = runtime.rhs + 1L;
         durationMap.put(queryDurationMillis, runtime);
 
@@ -205,6 +209,10 @@ public class DruidBroker
         long oldEstimate = runtime.lhs;
         long oldSamples = runtime.rhs;
 
+        Long smallerDurationEstimate = durationMap.get(queryDurationMillis-1000).lhs;
+        if(queryTime <= smallerDurationEstimate){
+          queryTime = smallerDurationEstimate + 1;
+        }
         runtime.lhs = runtime.lhs + queryTime;
         runtime.rhs = runtime.rhs + 1L;
         durationMap.put(queryDurationMillis, runtime);
