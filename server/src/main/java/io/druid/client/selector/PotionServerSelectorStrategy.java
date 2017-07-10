@@ -69,7 +69,7 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
         ConcurrentHashMap<String, Long> hnQueryTimeAllocation = segmentHNQueryTimeAllocation.get(segment.getIdentifier());
 
         // get the query runtime estimate
-        long queryRuntimeEstimate = druidBroker.getQueryRuntimeEstimate(queryType, segmentDescriptor.getInterval().toDurationMillis());
+        long queryRuntimeEstimate = druidBroker.getDecayedQueryRuntimeEstimate(queryType, segmentDescriptor.getInterval().toDurationMillis());
         log.info("Query run time estimate for queryType %s, duration %d, estimate %d",
                 queryType, segmentDescriptor.getInterval().toDurationMillis(), queryRuntimeEstimate);
 
