@@ -156,7 +156,9 @@ public class QueryResource
       }
 
       final Map<String, Object> responseContext = new MapMaker().makeMap();
-      log.info("Query details type %s, intervals %s, duration millis %d, datasource %s, context %s, segmentQueryTime list %s object hascode %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), query.getContext().toString(), query.getSegmentQueryTime(), query.hashCode());
+      log.info("Query details type %s, intervals %s, duration millis %d, datasource %s, context %s, object hascode %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), query.getContext().toString(), query.hashCode());
+
+      query.initSegmentQueryTimeEntry(query.getId());
 
       final Sequence res = query.run(texasRanger, responseContext);
       final Sequence results;
@@ -240,9 +242,8 @@ public class QueryResource
             .header("X-Druid-Query-Id", queryId)
             .header("CurrentHNLoad", currentHNLoad)
             .header("CurrentHNLoadTime", sdf.format(new Date()))
-            //.header("HNQuerySegmentTime", query.getSegmentQueryTime());
-            .header("HNQueryTime", String.valueOf(System.currentTimeMillis() - start));
-        log.info("Post query processing segmentQueryTime list %s, hashcode %d", query.getSegmentQueryTime(), query.hashCode());
+            .header("HNQueryTime", String.valueOf(System.currentTimeMillis() - start))
+            .header("HNQuerySegmentTime", query.getAndRemoveSegmentQueryTime(query.getId()));
 
         //Limit the response-context header, see https://github.com/druid-io/druid/issues/2331
         //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()

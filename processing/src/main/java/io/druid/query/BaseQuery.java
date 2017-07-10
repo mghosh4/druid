@@ -40,21 +40,52 @@ import java.util.Map;
  */
 public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
 {
-
-  public List<Long> segmentQueryTimes = Collections.synchronizedList(new ArrayList<Long>());
-
   private static final Logger log = new Logger(BaseQuery.class);
 
-  public void updateSegmentQueryTime(long timeTaken){
-    segmentQueryTimes.add(timeTaken);
-    log.info("Added new query segment time %d new list %s", timeTaken, segmentQueryTimes.toString());
+  public void initSegmentQueryTimeEntry(String queryID){
+
+    if(querySegmentTimeMap.get(queryID) != null){
+      log.info("Trying to initialize querySegmentTimeMap, key already exists");
+    }
+    List<MutablePair<Long, Long>> segmentQueryTimeList = Collections.synchronizedList(new ArrayList<MutablePair<Long, Long>>());
+    querySegmentTimeMap.put(queryID, segmentQueryTimeList);
   }
 
-  public String getSegmentQueryTime(){
-    String str = segmentQueryTimes.toString();
-    String retStr = str.substring(1, str.length() - 1).replaceAll("\\s",""); // generates a comma separated list without any spaces
-    log.info("Getting query segment times %s formatted %s", str, retStr);
-    return retStr;
+  public void updateSegmentQueryTime(String queryID, String queryType, long duration, long timeTaken){
+
+    if(!queryID.equals(this.getId()) || !queryType.equals(this.getType())){
+      log.info("Error: queryID and type didnt match.");
+      return;
+    }
+    List<MutablePair<Long, Long>> segmentQueryTimeList = querySegmentTimeMap.get(queryID);
+
+    if(segmentQueryTimeList != null){
+      segmentQueryTimeList.add(new MutablePair<Long, Long>(duration, timeTaken));
+      querySegmentTimeMap.put(queryID, segmentQueryTimeList);
+      log.info("Added new query segment queryID %s queryType %s duration %d time %d new list %s", queryID, queryType, duration, timeTaken, segmentQueryTimeList.toString());
+    }
+    else{
+      log.info("Trying to insert into querySegmentTimeMap, key doesnt exist");
+    }
+  }
+
+  public String getAndRemoveSegmentQueryTime(String queryID){
+    if(!queryID.equals(this.getId())){
+      log.info("Error: queryID and type didnt match.");
+      return null;
+    }
+
+    List<MutablePair<Long, Long>> segmentQueryTimeList = querySegmentTimeMap.remove(queryID);
+    if(segmentQueryTimeList != null){
+      String str = segmentQueryTimeList.toString();
+      String retStr = str.substring(1, str.length() - 1).replaceAll("\\s",""); // generates a comma separated list without any spaces
+      log.info("Getting query segment queryID %s queryType %s list %s formatted list %s", queryID, this.getType(), segmentQueryTimeList.toString(), retStr);
+      return retStr;
+    }
+    else{
+      log.info("Trying to get from querySegmentTimeMap, key doesnt exist");
+      return null;
+    }
   }
 
   public static <T> int getContextPriority(Query<T> query, int defaultValue)

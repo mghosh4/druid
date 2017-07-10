@@ -39,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "queryType")
 @JsonSubTypes(value = {
@@ -63,15 +64,21 @@ public interface Query<T>
   String TOPN = "topN";
   String DATASOURCE_METADATA = "dataSourceMetadata";
 
+  //public List<Long> segmentQueryTimes = Collections.synchronizedList(new ArrayList<Long>());
+  // Map for query ID string to List of (query duration, query segment time) pairs
+  public ConcurrentHashMap<String, List<MutablePair<Long, Long>>> querySegmentTimeMap = new ConcurrentHashMap<String, List<MutablePair<Long, Long>>>();
+
   DataSource getDataSource();
 
   boolean hasFilters();
 
   String getType();
 
-  void updateSegmentQueryTime(long timeTaken);
+  void initSegmentQueryTimeEntry(String queryID);
 
-  String getSegmentQueryTime();
+  void updateSegmentQueryTime(String queryID, String queryType, long duration, long timeTaken);
+
+  String getAndRemoveSegmentQueryTime(String queryID);
 
   Sequence<T> run(QuerySegmentWalker walker, Map<String, Object> context);
 
