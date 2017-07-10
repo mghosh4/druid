@@ -209,9 +209,12 @@ public class DruidBroker
         long oldEstimate = runtime.lhs;
         long oldSamples = runtime.rhs;
 
-        Long smallerDurationEstimate = durationMap.get(queryDurationMillis-1000).lhs;
-        if(queryTime <= smallerDurationEstimate){
-          queryTime = smallerDurationEstimate + 1;
+        long numSmallerDurationSamples = durationMap.get(queryDurationMillis-1000).rhs;
+        if(numSmallerDurationSamples != 0) {
+          long smallerDurationEstimate = durationMap.get(queryDurationMillis - 1000).lhs / numSmallerDurationSamples;
+          if(queryTime <= smallerDurationEstimate){
+            queryTime = smallerDurationEstimate + 1L;
+          }
         }
         runtime.lhs = runtime.lhs + queryTime;
         runtime.rhs = runtime.rhs + 1L;
