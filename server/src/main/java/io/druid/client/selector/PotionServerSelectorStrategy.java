@@ -70,7 +70,14 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
         // if routing table is not setup or no estimate is available for the current query, then route it with connection count
         if(segmentRoutingTable == null || queryRuntimeEstimate == 0){
             log.info("Routing query using connection count queryRuntimeEstimate %d, servers size %d", queryRuntimeEstimate, servers.size());
-            return Collections.min(serversBackup, comparator);
+            for (Iterator<QueryableDruidServer> iterator = servers.iterator(); iterator.hasNext();) {
+                QueryableDruidServer s = iterator.next();
+                // remove the realtime node from the server list if other servers are available
+                if (s.getServer().getMetadata().getType().equals("realtime") && servers.size() > 1) {
+                    iterator.remove();
+                }
+            }
+            return Collections.min(servers, comparator);
         }
 
         // filter out HNs for which the routing table allocation is 0 or if the HN is not present in the routing table

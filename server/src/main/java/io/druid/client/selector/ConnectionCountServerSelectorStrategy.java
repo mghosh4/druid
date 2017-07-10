@@ -49,7 +49,7 @@ public class ConnectionCountServerSelectorStrategy implements ServerSelectorStra
               iterator.remove();
               //log.info("Removed realtime server from the list load=%d openConnections=%d", s.getServer().getCurrentLoad(), s.getClient().getNumOpenConnections());
           }
-    }
-    return Collections.min(servers, comparator);
+      }
+      return Collections.min(servers, comparator);
   }
 }
