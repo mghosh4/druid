@@ -85,7 +85,6 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
             return Collections.min(servers, comparator);
         }
 
-        /*
         // filter out HNs for which the routing table allocation is 0 or if the HN is not present in the routing table
         for (Iterator<QueryableDruidServer> iterator = servers.iterator(); iterator.hasNext();) {
             QueryableDruidServer s = iterator.next();
@@ -114,7 +113,6 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
             //log.info("Routing query using connection count (no servers left) queryRuntimeEstimate %d, servers size %d", queryRuntimeEstimate, servers.size());
             //return Collections.min(serversBackup, comparator);
         }
-        */
  
         //log.info("Segment routing table %s", segmentRoutingTable.toString());
         //log.info("Queryable druid servers %s", servers.toString());
