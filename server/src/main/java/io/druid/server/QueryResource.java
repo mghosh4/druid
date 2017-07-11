@@ -157,6 +157,7 @@ public class QueryResource
 
       final Map<String, Object> responseContext = new MapMaker().makeMap();
 
+      log.info("Debug info header %s, all headers %s", req.getHeader("QueryRuntimeEstimate"), req.getHeaderNames());
       long queryRuntimeEstimate = Long.valueOf(req.getHeader("QueryRuntimeEstimate"));
       long currentLoadInRuntime = 0;
       try {
