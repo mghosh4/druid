@@ -124,6 +124,7 @@ public class QueryResource
     Query query = null;
     String queryId = null;
     String currentHNLoad = "0";
+    ServerManager manager = (ServerManager)texasRanger;
 
     final String reqContentType = req.getContentType();
     final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(reqContentType)
@@ -156,7 +157,11 @@ public class QueryResource
       }
 
       final Map<String, Object> responseContext = new MapMaker().makeMap();
-      log.info("Query details type %s, intervals %s, duration millis %d, datasource %s, context %s, object hascode %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), query.getContext().toString(), query.hashCode());
+
+      long queryRuntimeEstimate = Long.valueOf(req.getHeader("QueryRuntimeEstimate"));
+      long currentLoadInRuntime = manager.updateLoadRuntimeEstimate(queryRuntimeEstimate);
+
+      log.info("Query details type %s, intervals %s, duration millis %d, datasource %s, context %s, runtimeEstimate %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), query.getContext().toString(), queryRuntimeEstimate);
 
       query.initSegmentQueryTimeEntry(query.getId());
 
@@ -185,7 +190,6 @@ public class QueryResource
         final Query theQuery = query;
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         try{
-          ServerManager manager = (ServerManager)texasRanger;
           if (manager != null){
             currentHNLoad = manager.currentHNLoad();
             //log.info("Current HN load [%s]", currentHNLoad);
@@ -196,6 +200,7 @@ public class QueryResource
         }catch(ClassCastException cce){
           currentHNLoad = "0";
         }
+        currentLoadInRuntime = manager.updateLoadRuntimeEstimate(-queryRuntimeEstimate);
         Response.ResponseBuilder builder = Response
             .ok(
                 new StreamingOutput()
@@ -241,6 +246,7 @@ public class QueryResource
             )
             .header("X-Druid-Query-Id", queryId)
             .header("CurrentHNLoad", currentHNLoad)
+            .header("CurrentHNLoadRuntime", currentLoadInRuntime)
             .header("CurrentHNLoadTime", sdf.format(new Date()))
             .header("HNQueryTime", String.valueOf(System.currentTimeMillis() - start))
             .header("HNQuerySegmentTime", query.getAndRemoveSegmentQueryTime(query.getId()));

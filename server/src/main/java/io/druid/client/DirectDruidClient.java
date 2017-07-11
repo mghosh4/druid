@@ -199,6 +199,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             try {
               SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
               final String currentHNLoad = response.headers().get("CurrentHNLoad");
+              final String currentHNLoadRuntime = response.headers().get("CurrentHNLoadRuntime");
               final Date currentHNLoadTime = sdf.parse(response.headers().get("CurrentHNLoadTime"));
               final long hnQueryTimeMillis = Long.valueOf(response.headers().get("HNQueryTime"));
               String hnQuerySegmentTimeStr = response.headers().get("HNQuerySegmentTime");
@@ -220,7 +221,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 log.info("Received empty query segment time queryID %s queryType %s hnQuerySegmentTimeStr %s", query.getId(), query.getType(), hnQuerySegmentTimeStr);
               }
 
-              log.info("Stats queryId %s, queryType %s, query duration %d, query node time %d, query time %d, query segment time %s", query.getId(), queryType, queryDurationMillis, (System.currentTimeMillis()-requestStartTime), hnQueryTimeMillis, hnQuerySegmentTimeStr);
+              log.info("Stats queryId %s, queryType %s, query duration %d, query node time %d, query time %d, query segment time %s, hn load %s, hn load runtime %s", query.getId(), queryType, queryDurationMillis, (System.currentTimeMillis()-requestStartTime), hnQueryTimeMillis, hnQuerySegmentTimeStr, currentHNLoad, currentHNLoadRuntime);
 
               /*
               // calculate the exponential moving average of load over n data samples
@@ -243,7 +244,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 log.info("Out of order server load updates prev=%s, new=%s", sdf.format(server.getCurrentLoadTimeAtServer()), sdf.format(currentHNLoadTime));
               }
               else{
-                server.setCurrentLoad(Long.parseLong(currentHNLoad));
+                //server.setCurrentLoad(Long.parseLong(currentHNLoad));
+                server.setCurrentLoad(Long.parseLong((currentHNLoadRuntime)));
                 server.setCurrentLoadTimeAtServer(currentHNLoadTime);
               }
               //log.info("Current HN [%s] load [%s]", host, currentHNLoad);
@@ -389,6 +391,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         }
       };
       log.info("Query details type %s, intervals %s, duration millis %d, datasource %s, context %s", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), query.getContext().toString());
+      long queryRuntimeEstimate = druidBroker.getQueryRuntimeEstimate(query.getType(), query.getDuration().getMillis());
       future = httpClient.go(
           new Request(
               HttpMethod.POST,
@@ -397,7 +400,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
            .setHeader(
                HttpHeaders.Names.CONTENT_TYPE,
                isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
-           ),
+           )
+           .addHeader("QueryRuntimeEstimate", String.valueOf(queryRuntimeEstimate)),
           responseHandler
       );
 

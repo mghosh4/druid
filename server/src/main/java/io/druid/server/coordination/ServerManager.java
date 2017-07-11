@@ -118,6 +118,10 @@ public class ServerManager implements QuerySegmentWalker
   private final ScheduledExecutorService pool;
   public static HttpClient httpClient;
 
+  // Map maintains list of queries being processed
+  //private volatile ConcurrentHashMap<Query, Long> loadRuntimeEstimateMap = new ConcurrentHashMap<>();
+  private volatile AtomicLong loadRuntimeEstimate = new AtomicLong();
+
   @Inject
   public ServerManager(
       SegmentLoader segmentLoader,
@@ -497,6 +501,10 @@ public class ServerManager implements QuerySegmentWalker
     }
 
     return result;
+  }
+
+  public long updateLoadRuntimeEstimate(long delta){
+    return loadRuntimeEstimate.addAndGet(delta);
   }
 
   public String currentQueryLoad()
