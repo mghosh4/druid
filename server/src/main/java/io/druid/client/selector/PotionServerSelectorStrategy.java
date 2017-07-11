@@ -55,10 +55,10 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
             log.error("No QueryableDruidServers in the set");
             return null;
         }
-        log.info("Got segment %s numQueryableServers %d", segment.getInterval(), servers.size());
+        //log.info("Got segment %s numQueryableServers %d", segment.getInterval(), servers.size());
         
         // keep a copy of servers, used in case no server is selected based on allocation
-        List<QueryableDruidServer> serversBackup = new ArrayList<QueryableDruidServer>(servers);
+        //List<QueryableDruidServer> serversBackup = new ArrayList<QueryableDruidServer>(servers);
 
         Map<String, Long> segmentRoutingTable = druidBroker.getRoutingTable().get(segment.getIdentifier());
         ConcurrentHashMap<String, ConcurrentHashMap<String, Long>> segmentHNQueryTimeAllocation = druidBroker.getSegmentHNQueryTimeAllocation();
@@ -70,8 +70,7 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
 
         // get the query runtime estimate
         long queryRuntimeEstimate = druidBroker.getQueryRuntimeEstimate(queryType, segmentDescriptor.getInterval().toDurationMillis());
-        log.info("Query run time estimate for queryType %s, duration %d, estimate %d",
-                queryType, segmentDescriptor.getInterval().toDurationMillis(), queryRuntimeEstimate);
+        //log.info("Query run time estimate for queryType %s, duration %d, estimate %d", queryType, segmentDescriptor.getInterval().toDurationMillis(), queryRuntimeEstimate);
 
         // if routing table is not setup or no estimate is available for the current query, then route it with connection count
         if(segmentRoutingTable == null || queryRuntimeEstimate == 0){
@@ -86,6 +85,7 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
             return Collections.min(servers, comparator);
         }
 
+        /*
         // filter out HNs for which the routing table allocation is 0 or if the HN is not present in the routing table
         for (Iterator<QueryableDruidServer> iterator = servers.iterator(); iterator.hasNext();) {
             QueryableDruidServer s = iterator.next();
@@ -109,17 +109,17 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
 
         // if no servers are left, then route on backup servers with connection count
         if(servers.size() == 0){
-            log.info("Routing query using connection count (no servers left) queryRuntimeEstimate %d, servers size %d", queryRuntimeEstimate, servers.size());
-            return Collections.min(serversBackup, comparator);
+            log.info("Error: no servers left for routing");
+            return null;
+            //log.info("Routing query using connection count (no servers left) queryRuntimeEstimate %d, servers size %d", queryRuntimeEstimate, servers.size());
+            //return Collections.min(serversBackup, comparator);
         }
+        */
  
-        log.info("Segment routing table %s", segmentRoutingTable.toString());
-        log.info("Queryable druid servers %s", servers.toString());
+        //log.info("Segment routing table %s", segmentRoutingTable.toString());
+        //log.info("Queryable druid servers %s", servers.toString());
         
         // get the server IDs under consideration
-        //String [] candidateHNList = new String[servers.size()];
-        //float [] goalRatio = new float[servers.size()];
-        //float [] currentRatio = new float[servers.size()];
         long firstHNValue = -1;
         long firstQueryTimeAllocationValue = -1;
         int i =0;
@@ -132,16 +132,16 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
             if(hnQueryTimeAllocation.get(hn) == null){
                 hnQueryTimeAllocation.put(hn, 1L); // initialize with 1 to avoid div by 0 errors
             }
-            log.info("Queryable server %s, allocation %d", s.getServer().getMetadata().getHost(), hnQueryTimeAllocation.get(hn));
-            log.info("Goal value %d, Current value %d", firstHNValue, firstQueryTimeAllocationValue);
+            //log.info("Queryable server %s, allocation %d", s.getServer().getMetadata().getHost(), hnQueryTimeAllocation.get(hn));
+            //log.info("Goal value %d, Current value %d", firstHNValue, firstQueryTimeAllocationValue);
             if (firstHNValue == -1) {
                 //goalRatio[i] = 1.0F;
                 maxDeltaRatio = 0;
                 chosenServer = s;
                 firstHNValue = segmentRoutingTable.get(hn);
                 firstQueryTimeAllocationValue = hnQueryTimeAllocation.get(hn);
-                log.info("Ratio comparison hn %s goalRatio 1.0, currentRatio 1.0, deltaRatio 0.0, maxDeltaRatio 0.0, chosenServer %s",
-                        s.getServer().getMetadata().getName(), s.getServer().getMetadata().getName());
+                //log.info("Ratio comparison hn %s goalRatio 1.0, currentRatio 1.0, deltaRatio 0.0, maxDeltaRatio 0.0, chosenServer %s",
+                // s.getServer().getMetadata().getName(), s.getServer().getMetadata().getName());
             }
             else{
                 //goalRatio[i] = segmentRoutingTable.get(hn)/firstHNValue;
@@ -153,8 +153,8 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
                     maxDeltaRatio = deltaRatio;
                     chosenServer = s;
                 }
-                log.info("Ratio comparison hn %s goalRatio %.4f, currentRatio %.4f, deltaRatio %.4f, maxDeltaRatio %.4f, chosenServer %s",
-                        s.getServer().getMetadata().getName(), goalRatio, currentRatio, deltaRatio, maxDeltaRatio, s.getServer().getMetadata().getName());
+                //log.info("Ratio comparison hn %s goalRatio %.4f, currentRatio %.4f, deltaRatio %.4f, maxDeltaRatio %.4f, chosenServer %s",
+                // s.getServer().getMetadata().getName(), goalRatio, currentRatio, deltaRatio, maxDeltaRatio, s.getServer().getMetadata().getName());
             }
             i++;
         }
@@ -163,11 +163,12 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
         long newAllocation = hnQueryTimeAllocation.get(chosenServer.getServer().getMetadata().toString()) + queryRuntimeEstimate;
         hnQueryTimeAllocation.put(chosenServer.getServer().getMetadata().toString(), newAllocation);
         segmentHNQueryTimeAllocation.put(segment.getIdentifier(), hnQueryTimeAllocation);
-        log.info("Queryable server %s newAllocation %d", chosenServer.getServer().getMetadata().getName(), newAllocation);
 
-        log.info("DataSegment interval %s, version %s, partition %d, runtimeEstimate %d",
-                segment.getInterval(), segment.getVersion(), segment.getShardSpec().getPartitionNum(), queryRuntimeEstimate);
+        //log.info("Queryable server %s newAllocation %d", chosenServer.getServer().getMetadata().getName(), newAllocation);
+        //log.info("DataSegment interval %s, version %s, partition %d, runtimeEstimate %d",
+        // segment.getInterval(), segment.getVersion(), segment.getShardSpec().getPartitionNum(), queryRuntimeEstimate);
 
+        /*
         if (chosenServer == null) {
             log.error("Error: cannot find a server in routingTable to match");
             return null;
@@ -175,5 +176,7 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
         else {
             return chosenServer;
         }
+        */
+        return chosenServer;
     }
 }
