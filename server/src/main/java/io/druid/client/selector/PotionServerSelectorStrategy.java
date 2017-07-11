@@ -85,6 +85,7 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
             return Collections.min(servers, comparator);
         }
 
+        /*
         // filter out HNs for which the routing table allocation is 0 or if the HN is not present in the routing table
         for (Iterator<QueryableDruidServer> iterator = servers.iterator(); iterator.hasNext();) {
             QueryableDruidServer s = iterator.next();
@@ -105,6 +106,7 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
                 iterator.remove();
             }
         }
+        */
 
         // if no servers are left, then route on backup servers with connection count
         if(servers.size() == 0){
@@ -123,7 +125,22 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
         int i =0;
         float maxDeltaRatio = -Float.MAX_VALUE;
         QueryableDruidServer chosenServer = null;
-        for(QueryableDruidServer s : servers){
+        for (Iterator<QueryableDruidServer> iterator = servers.iterator(); iterator.hasNext();) {
+            QueryableDruidServer s = iterator.next();
+            boolean remove = true;
+            for(Map.Entry<String, Long> entry : segmentRoutingTable.entrySet()) {
+                if (s.getServer().getMetadata().toString().equals(entry.getKey())) {
+                    remove = false;
+                    break;
+                }
+            }
+            if (remove == true){
+                log.info("Removed server %s type %s from list", s.getServer().getMetadata().getName(), s.getServer().getMetadata().getType());
+                iterator.remove();
+                continue;
+            }
+
+        //for(QueryableDruidServer s : servers){
             //candidateHNList[i] = s.getServer().getMetadata().toString();
             String hn = s.getServer().getMetadata().toString();
 
