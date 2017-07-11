@@ -124,7 +124,6 @@ public class QueryResource
     Query query = null;
     String queryId = null;
     String currentHNLoad = "0";
-    ServerManager manager = (ServerManager)texasRanger;
 
     final String reqContentType = req.getContentType();
     final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(reqContentType)
@@ -159,7 +158,18 @@ public class QueryResource
       final Map<String, Object> responseContext = new MapMaker().makeMap();
 
       long queryRuntimeEstimate = Long.valueOf(req.getHeader("QueryRuntimeEstimate"));
-      long currentLoadInRuntime = manager.updateLoadRuntimeEstimate(queryRuntimeEstimate);
+      long currentLoadInRuntime = 0;
+      try {
+        ServerManager manager = (ServerManager) texasRanger;
+        if (manager != null) {
+          currentLoadInRuntime = manager.updateLoadRuntimeEstimate(queryRuntimeEstimate);
+        }
+        else{
+          log.info("Server manager null, setting load runtime to 0");
+        }
+      }catch(ClassCastException cce){
+        log.info("Server manager CCE, setting load runtime to 0");
+      }
 
       log.info("Query details type %s, intervals %s, duration millis %d, datasource %s, context %s, runtimeEstimate %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), query.getContext().toString(), queryRuntimeEstimate);
 
@@ -190,17 +200,22 @@ public class QueryResource
         final Query theQuery = query;
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         try{
+          ServerManager manager = (ServerManager)texasRanger;
           if (manager != null){
             currentHNLoad = manager.currentHNLoad();
-            //log.info("Current HN load [%s]", currentHNLoad);
+            currentLoadInRuntime = manager.updateLoadRuntimeEstimate(-queryRuntimeEstimate);
+            log.info("Current HN load %s, current load runtime %d", currentHNLoad, currentLoadInRuntime);
           }
           else{
             currentHNLoad = "0";
+            currentLoadInRuntime = 0;
+            log.info("Server manager null, setting loads to 0");
           }
         }catch(ClassCastException cce){
           currentHNLoad = "0";
+          currentLoadInRuntime = 0;
+          log.info("Server manager cce, setting loads to 0");
         }
-        currentLoadInRuntime = manager.updateLoadRuntimeEstimate(-queryRuntimeEstimate);
         Response.ResponseBuilder builder = Response
             .ok(
                 new StreamingOutput()
