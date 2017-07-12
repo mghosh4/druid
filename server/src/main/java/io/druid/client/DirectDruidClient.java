@@ -205,7 +205,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
               // update queryRuntimeEstimateTable
               //druidBroker.setQueryRuntimeEstimate(queryType, queryDurationMillis, hnQueryTimeMillis);
-              if(!hnQuerySegmentTimeStr.equals("")) {
+              if(hnQuerySegmentTimeStr != null) {
                 String[] hnQuerySegmentTimes = hnQuerySegmentTimeStr.split(",");
                 for (int i = 0; i < hnQuerySegmentTimes.length; i = i + 2) {
                   druidBroker.setQueryRuntimeEstimate(queryType, Long.valueOf(hnQuerySegmentTimes[i]), Long.valueOf(hnQuerySegmentTimes[i + 1]));

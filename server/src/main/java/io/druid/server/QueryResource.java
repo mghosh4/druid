@@ -164,7 +164,7 @@ public class QueryResource
         queryRuntimeEstimate = Long.valueOf(queryRuntimeEstimateStr);
       }
       else{
-        log.info("Got null query runtime estimate header queryID %s, queryType %s", query.getId(), query.getType());
+        log.info("Got null query runtime estimate header queryID %s, queryType %s, str %s", query.getId(), query.getType(), queryRuntimeEstimateStr);
       }
 
       // long queryRuntimeEstimate = Long.valueOf(req.getCookies()[0].getValue());
