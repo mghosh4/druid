@@ -158,20 +158,19 @@ public class QueryResource
       final Map<String, Object> responseContext = new MapMaker().makeMap();
 
       log.info("Debug info header %s, all headers %s", req.getHeader("QueryRuntimeEstimate"), req.getHeaderNames().toString());
-      long queryRuntimeEstimate = 0;
       long currentLoadInRuntime = 0;
-//      queryRuntimeEstimate = Long.valueOf(req.getHeader("QueryRuntimeEstimate"));
-//      try {
-//        ServerManager manager = (ServerManager) texasRanger;
-//        if (manager != null) {
-//          currentLoadInRuntime = manager.updateLoadRuntimeEstimate(queryRuntimeEstimate);
-//        }
-//        else{
-//          log.info("Server manager null, setting load runtime to 0");
-//        }
-//      }catch(ClassCastException cce){
-//        log.info("Server manager CCE, setting load runtime to 0");
-//      }
+      long queryRuntimeEstimate = Long.valueOf(req.getHeader("QueryRuntimeEstimate"));
+      try {
+        ServerManager manager = (ServerManager) texasRanger;
+        if (manager != null) {
+          currentLoadInRuntime = manager.updateLoadRuntimeEstimate(queryRuntimeEstimate);
+        }
+        else{
+          log.info("Server manager null, setting load runtime to 0");
+        }
+      }catch(ClassCastException cce){
+        log.info("Server manager CCE, setting load runtime to 0");
+      }
 
       log.info("Query details type %s, intervals %s, duration millis %d, datasource %s, context %s, runtimeEstimate %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), query.getContext().toString(), queryRuntimeEstimate);
 
@@ -205,7 +204,7 @@ public class QueryResource
           ServerManager manager = (ServerManager)texasRanger;
           if (manager != null){
             currentHNLoad = manager.currentHNLoad();
-            //currentLoadInRuntime = manager.updateLoadRuntimeEstimate(-queryRuntimeEstimate);
+            currentLoadInRuntime = manager.updateLoadRuntimeEstimate(-queryRuntimeEstimate);
             log.info("Current HN load %s, current load runtime %d", currentHNLoad, currentLoadInRuntime);
           }
           else{
@@ -262,11 +261,11 @@ public class QueryResource
                 contentType
             )
             .header("X-Druid-Query-Id", queryId)
-            .header("CurrentHNLoad", currentHNLoad)
-            //.header("CurrentHNLoadRuntime", currentLoadInRuntime)
-            .header("CurrentHNLoadTime", sdf.format(new Date()));
+            //.header("CurrentHNLoad", currentHNLoad)
+            .header("CurrentHNLoadRuntime", currentLoadInRuntime)
+            .header("CurrentHNLoadTime", sdf.format(new Date()))
             //.header("HNQueryTime", String.valueOf(System.currentTimeMillis() - start))
-            //.header("HNQuerySegmentTime", query.getAndRemoveSegmentQueryTime(query.getId()));
+            .header("HNQuerySegmentTime", query.getAndRemoveSegmentQueryTime(query.getId()));
 
         //Limit the response-context header, see https://github.com/druid-io/druid/issues/2331
         //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()

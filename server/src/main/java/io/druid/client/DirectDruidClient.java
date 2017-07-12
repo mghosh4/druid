@@ -198,16 +198,17 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           try {
             try {
               SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-              final String currentHNLoad = response.headers().get("CurrentHNLoad");
-              final String currentHNLoadRuntime = "";//response.headers().get("CurrentHNLoadRuntime");
+              final String currentHNLoad = "0";//response.headers().get("CurrentHNLoad");
+              final String currentHNLoadRuntime = response.headers().get("CurrentHNLoadRuntime");
               final Date currentHNLoadTime = sdf.parse(response.headers().get("CurrentHNLoadTime"));
               final long hnQueryTimeMillis = 0;//Long.valueOf(response.headers().get("HNQueryTime"));
-              String hnQuerySegmentTimeStr = "";//response.headers().get("HNQuerySegmentTime");
+              String hnQuerySegmentTimeStr = response.headers().get("HNQuerySegmentTime");
+
               String[] hnQuerySegmentTimes = hnQuerySegmentTimeStr.split(",");
-              //long hnQuerySegmentTimeMillis = 0L;
-              //if(hnQuerySegmentTimeStr != ""){
-              //  hnQuerySegmentTimeMillis = Long.valueOf(hnQuerySegmentTimeStr);
-              //}
+              long hnQuerySegmentTimeMillis = 0L;
+              if(hnQuerySegmentTimeStr != ""){
+                hnQuerySegmentTimeMillis = Long.valueOf(hnQuerySegmentTimeStr);
+              }
 
               // update queryRuntimeEstimateTable
               //druidBroker.setQueryRuntimeEstimate(queryType, queryDurationMillis, hnQueryTimeMillis);
@@ -244,8 +245,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 log.info("Out of order server load updates prev=%s, new=%s", sdf.format(server.getCurrentLoadTimeAtServer()), sdf.format(currentHNLoadTime));
               }
               else{
-                server.setCurrentLoad(Long.parseLong(currentHNLoad));
-                //server.setCurrentLoad(Long.parseLong((currentHNLoadRuntime)));
+                //server.setCurrentLoad(Long.parseLong(currentHNLoad));
+                server.setCurrentLoad(Long.parseLong((currentHNLoadRuntime)));
                 server.setCurrentLoadTimeAtServer(currentHNLoadTime);
               }
               //log.info("Current HN [%s] load [%s]", host, currentHNLoad);

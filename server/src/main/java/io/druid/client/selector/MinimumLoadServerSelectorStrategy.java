@@ -98,7 +98,7 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
           } else {
               serverList.add(s);
               long load = s.getServer().getCurrentLoad();
-              long cc = s.getClient().getNumOpenConnections();
+              //long cc = s.getClient().getNumOpenConnections();
               //float weight = load*0.5F + cc*0.5F;
               float weight = load;
 
