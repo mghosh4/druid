@@ -83,7 +83,7 @@ public class DruidBroker
   HashMap<String, ArrayList<Double>> percentileCollection = new HashMap<String, ArrayList<Double>>();
   HashMap<String, HashMap<Double, Double>> histogramCollection = new HashMap<String, HashMap<Double, Double>>();
   ConcurrentHashMap<String, ConcurrentHashMap<String, Double>> allocationTable = new ConcurrentHashMap<>();
-  String[] queryTypes = {Query.TIMESERIES, Query.TOPN, Query.GROUP_BY};
+  public String[] queryTypes = {Query.TIMESERIES, Query.TOPN, Query.GROUP_BY};
 
   @Inject
   public DruidBroker(
