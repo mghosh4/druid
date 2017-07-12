@@ -65,15 +65,19 @@ public class DruidBroker
   private volatile boolean started = false;
 
   // getafix routing table. Maps segment ID to <HN, allocation> map
-  private volatile Map<String, Map<String, Long>> routingTable;
+  private volatile static Map<String, Map<String, Long>> routingTable;
   // query runtime estimate. Maps query type to query duration bucket (60buckets, 1sec in size). Duration bucket maps
   // duration to a tuple of (query runtime sum, number of samples over which that sum was taken). Number of
   // samples is used to computed the query runtime mean.
-  private volatile ConcurrentHashMap<String, ConcurrentHashMap<Long, MutablePair<Long, Long>>> queryRuntimeEstimateTable = new ConcurrentHashMap<>();
+  private volatile static ConcurrentHashMap<String, ConcurrentHashMap<Long, MutablePair<Long, Long>>> queryRuntimeEstimateTable = new ConcurrentHashMap<>();
   // map maintains Segment id to <HN, allocation> map
-  private volatile ConcurrentHashMap<String, ConcurrentHashMap<String, Long>> segmentHNQueryTimeAllocation = new ConcurrentHashMap<>();
+  private volatile static ConcurrentHashMap<String, ConcurrentHashMap<String, Long>> segmentHNQueryTimeAllocation = new ConcurrentHashMap<>();
   private volatile static boolean estimateQueryRuntime = true;
-  private volatile boolean printDecayedEstimates = false;
+  // These variables are used to ignore the initial estimates as they are not accurate
+  private static int numEstimateValuesToIgnore = 10;
+  private volatile static ConcurrentHashMap<String, Long> ignoredEstimates = new ConcurrentHashMap<>();
+
+  private volatile static boolean printDecayedEstimates = false;
   private static final EmittingLogger log = new EmittingLogger(DruidBroker.class);
 
   //QueryTime distribution data structures
@@ -147,6 +151,7 @@ public class DruidBroker
         temp.put(i, p);
       }
       this.queryRuntimeEstimateTable.put(qt, temp);
+      this.ignoredEstimates.put(qt, 0L);
     }
   }
 
@@ -155,29 +160,36 @@ public class DruidBroker
   }
 
   public void setDecayedQueryRuntimeEstimate(String queryType, long queryDurationMillis, long querySegmentTime){
-    printDecayedEstimates = true;
-    if (estimateQueryRuntime == true) {
-      float numSamples = 19;
-      float alpha = 2/(1+numSamples);
-      ConcurrentHashMap<Long, MutablePair<Long, Long>> durationMap = this.queryRuntimeEstimateTable.get(queryType);
-      if (durationMap != null) {
-        MutablePair<Long, Long> runtime = durationMap.get(queryDurationMillis);
-        long oldEstimate = runtime.lhs;
-        long oldSamples = runtime.rhs;
+    long numIgnoredEstimates = ignoredEstimates.get(queryType);
+    if(numIgnoredEstimates > numEstimateValuesToIgnore) {
+      printDecayedEstimates = true;
+      if (estimateQueryRuntime == true) {
+        float numSamples = 19;
+        float alpha = 2/(1+numSamples);
+        ConcurrentHashMap<Long, MutablePair<Long, Long>> durationMap = this.queryRuntimeEstimateTable.get(queryType);
+        if (durationMap != null) {
+          MutablePair<Long, Long> runtime = durationMap.get(queryDurationMillis);
+          long oldEstimate = runtime.lhs;
+          long oldSamples = runtime.rhs;
 
-        runtime.lhs = Long.valueOf((long)(runtime.lhs*(1-alpha)) + (long)(querySegmentTime*alpha));
-        Long smallerDurationEstimate = durationMap.get(queryDurationMillis-1000).lhs;
-        if(runtime.lhs <= smallerDurationEstimate){
-          runtime.lhs = smallerDurationEstimate + 1;
+          runtime.lhs = Long.valueOf((long)(runtime.lhs*(1-alpha)) + (long)(querySegmentTime*alpha));
+          Long smallerDurationEstimate = durationMap.get(queryDurationMillis-1000).lhs;
+          if(runtime.lhs <= smallerDurationEstimate){
+            runtime.lhs = smallerDurationEstimate + 1;
+          }
+          runtime.rhs = runtime.rhs + 1L;
+          durationMap.put(queryDurationMillis, runtime);
+
+          log.info("Set done queryRuntimeEstimateTable queryType %s, queryDuration %d, queryTime %d oldEstimate %d, oldSamples %d, newEstimate %d, newSamples %d",
+                  queryType, queryDurationMillis, querySegmentTime, oldEstimate, oldSamples, runtime.lhs, runtime.rhs);
+        } else {
+          log.info("Error: query type %s not found in queryRuntimeEstimateTable ", queryType);
         }
-        runtime.rhs = runtime.rhs + 1L;
-        durationMap.put(queryDurationMillis, runtime);
-
-        log.info("Set done queryRuntimeEstimateTable queryType %s, queryDuration %d, queryTime %d oldEstimate %d, oldSamples %d, newEstimate %d, newSamples %d",
-                queryType, queryDurationMillis, querySegmentTime, oldEstimate, oldSamples, runtime.lhs, runtime.rhs);
-      } else {
-        log.info("Error: query type %s not found in queryRuntimeEstimateTable ", queryType);
       }
+    }
+    else{
+      log.info("Ignoring estimate for %s, count ", queryType, numIgnoredEstimates);
+      ignoredEstimates.put(queryType, numIgnoredEstimates+1);
     }
   }
 
@@ -201,30 +213,37 @@ public class DruidBroker
   }
 
   public void setQueryRuntimeEstimate(String queryType, long queryDurationMillis, long queryTime){
-    log.info("Setting queryRuntimeEstimate table for queryType %s, queryDuration %d, queryTime %d", queryType, queryDurationMillis, queryTime);    
-    if (estimateQueryRuntime == true) {
-      ConcurrentHashMap<Long, MutablePair<Long, Long>> durationMap = this.queryRuntimeEstimateTable.get(queryType);
-      if (durationMap != null) {
-        MutablePair<Long, Long> runtime = durationMap.get(queryDurationMillis);
-        long oldEstimate = runtime.lhs;
-        long oldSamples = runtime.rhs;
+    long numIgnoredEstimates = ignoredEstimates.get(queryType);
+    if(numIgnoredEstimates > numEstimateValuesToIgnore) {
+      log.info("Setting queryRuntimeEstimate table for queryType %s, queryDuration %d, queryTime %d", queryType, queryDurationMillis, queryTime);
+      if (estimateQueryRuntime == true) {
+        ConcurrentHashMap<Long, MutablePair<Long, Long>> durationMap = this.queryRuntimeEstimateTable.get(queryType);
+        if (durationMap != null) {
+          MutablePair<Long, Long> runtime = durationMap.get(queryDurationMillis);
+          long oldEstimate = runtime.lhs;
+          long oldSamples = runtime.rhs;
 
-        long numSmallerDurationSamples = durationMap.get(queryDurationMillis-1000).rhs;
-        if(numSmallerDurationSamples != 0) {
-          long smallerDurationEstimate = durationMap.get(queryDurationMillis - 1000).lhs / numSmallerDurationSamples;
-          if(queryTime <= smallerDurationEstimate){
-            queryTime = smallerDurationEstimate + 1L;
+          long numSmallerDurationSamples = durationMap.get(queryDurationMillis - 1000).rhs;
+          if (numSmallerDurationSamples != 0) {
+            long smallerDurationEstimate = durationMap.get(queryDurationMillis - 1000).lhs / numSmallerDurationSamples;
+            if (queryTime <= smallerDurationEstimate) {
+              queryTime = smallerDurationEstimate + 1L;
+            }
           }
-        }
-        runtime.lhs = runtime.lhs + queryTime;
-        runtime.rhs = runtime.rhs + 1L;
-        durationMap.put(queryDurationMillis, runtime);
+          runtime.lhs = runtime.lhs + queryTime;
+          runtime.rhs = runtime.rhs + 1L;
+          durationMap.put(queryDurationMillis, runtime);
 
-        log.info("Set done queryRuntimeEstimateTable queryType %s, queryDuration %d, queryTime %d oldEstimate %d, oldSamples %d, newEstimate %d, newSamples %d",
-                queryType, queryDurationMillis, queryTime, oldEstimate, oldSamples, runtime.lhs, runtime.rhs);
-      } else {
-        log.info("Error: query type %s not found in queryRuntimeEstimateTable ", queryType);
+          log.info("Set done queryRuntimeEstimateTable queryType %s, queryDuration %d, queryTime %d oldEstimate %d, oldSamples %d, newEstimate %d, newSamples %d",
+                  queryType, queryDurationMillis, queryTime, oldEstimate, oldSamples, runtime.lhs, runtime.rhs);
+        } else {
+          log.info("Error: query type %s not found in queryRuntimeEstimateTable ", queryType);
+        }
       }
+    }
+    else{
+      log.info("Ignoring estimate for %s, count ", queryType, numIgnoredEstimates);
+      ignoredEstimates.put(queryType, numIgnoredEstimates+1);
     }
   }
 
