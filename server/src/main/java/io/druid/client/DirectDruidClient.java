@@ -204,10 +204,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               String hnQuerySegmentTimeStr = response.headers().get("HNQuerySegmentTime");
 
               String[] hnQuerySegmentTimes = hnQuerySegmentTimeStr.split(",");
-              long hnQuerySegmentTimeMillis = 0L;
-              if(hnQuerySegmentTimeStr != ""){
-                hnQuerySegmentTimeMillis = Long.valueOf(hnQuerySegmentTimeStr);
-              }
+//              long hnQuerySegmentTimeMillis = 0L;
+//              if(hnQuerySegmentTimeStr != ""){
+//                hnQuerySegmentTimeMillis = Long.valueOf(hnQuerySegmentTimeStr);
+//              }
 
               // update queryRuntimeEstimateTable
               //druidBroker.setQueryRuntimeEstimate(queryType, queryDurationMillis, hnQueryTimeMillis);
