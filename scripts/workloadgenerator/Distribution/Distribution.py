@@ -1,6 +1,7 @@
 import numpy
 import matplotlib.pyplot as plt
 from scipy.interpolate import UnivariateSpline
+from datetime import datetime, timedelta
 
 class Uniform(object):
 
@@ -38,38 +39,51 @@ class Zipfian(object):
         samples = [t-1 for t in v]
         return samples
 
-def plotDistribution(data, filename):
-
-    numBins = len(data)/10
-    p, x = numpy.histogram(data, bins=len(data)/10) # bin it into 10 bins
-    x = x[:-1] + (x[1] - x[0])/2   # convert bin edges to centers
-    f = UnivariateSpline(x, p, data=numBins)
-    plt.plot(x, f(x))
-    plt.title('Druid distribution')
-    # plt.ylabel('Total segment access')
-    # plt.xlabel('Time')
-    # plt.ylim(0, float(1.25*max(y)))
-    # plt.grid(True) 
-    plt.savefig(filename)
-
 class Druid(Zipfian):
 
+    def plotDistribution(self, data, figfilename, figtitle):
+
+        #numBins = len(data)/10
+        #p, x = numpy.histogram(data, bins=len(data)/10) # bin it into 10 bins
+        #x = x[:-1] + (x[1] - x[0])/2   # convert bin edges to centers
+        #f = UnivariateSpline(x, p, s=numBins)
+        #plt.plot(x, f(x))
+        plt.plot(list(range(0,len(data))), data, 'b,')
+        plt.title(figtitle)
+        # plt.ylabel('Total segment access')
+        # plt.xlabel('Time')
+        # plt.ylim(0, float(1.25*max(y)))
+        # plt.grid(True)
+        plt.savefig(figfilename)
+
     def generateDistribution(self, minSample, maxSample, numSamples, popularityList, logger):
-        latestsample = super(Druid, self).generateDistribution(minSample, maxSample, numSamples, popularityList, logger)
+        # use 9:1 split of old segment vs new segment range
+        numLatestSegmentSamples = numSamples/10
+        numOldSegmentSamples = numSamples - numLatestSegmentSamples 
+        oldsamples = super(Druid, self).generateDistribution(minSample, (maxSample-(timedelta(minutes=1).total_seconds())), numOldSegmentSamples, popularityList, logger)
 
-        datalatest = [maxSample - x + minSample for x in latestsample]
-        plotDistribution(datalatest, 'latest_distribution.png')
-
+        latestsamples = super(Druid, self).generateDistribution(minSample, maxSample, numLatestSegmentSamples, popularityList, logger)
+         
+        allsamples = [(maxSample-(timedelta(minutes=1).total_seconds())) - x + minSample for x in oldsamples] + [maxSample - x + minSample for x in latestsamples]
+        
+        #self.plotDistribution(allsamples, 'druid_distribution.png', 'Druid-Distribution')
+        
         # convert zipfian to druid distribution
-        numBins = len(data)/10
-        chunk1 = data[0:numBins].reverse()
-        datadruid = data[numBins:-1] + chunk1
+        #numBins = 10 
+        #binSize = len(allsamples)/numBins
+        #chunk1 = datalatest[0:binSize+1]
+        #chunk1.reverse()
+        #chunk2 = datalatest[binSize:-1]
+        #datadruid = chunk2 + chunk1
+        #print datalatest[0:50]
+        #print datalatest[-50:-1]
+        #print datadruid[0:50]
+        #print datadruid[-50:-1]
+        #abd
 
-        print len(datalatest), len(datadruid)
+        #self.plotDistribution(datadruid, 'druid_distribution.png', 'Druid-Distribution')
 
-        plotDistribution(datadruid, 'druid_distribution.png')
-
-    #return data
+        return allsamples
 
 
 class DynamicZipfian(object):

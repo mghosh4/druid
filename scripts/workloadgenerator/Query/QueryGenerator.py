@@ -23,6 +23,8 @@ class QueryGenerator(object):
 		accesslist = accessGenerator.generateDistribution(0, elapsed, numQueries, popularityList, logger)
 
 		periodlist = periodGenerator.generateDistribution(1, elapsed, numQueries, popularityList, logger)
+                #pllen = len(periodlist)
+                #periodlist = [10]*pllen # set all query durations to 10sec
 		histogram = {}
 		logger.info("Params "+str(startTime)+"$ "+str(endTime)+"$ "+str(numQueries)+"$ "+str(popularityList))
 		for i in xrange(numQueries):

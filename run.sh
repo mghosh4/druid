@@ -1,15 +1,15 @@
 #!/bin/bash -e
 
 seconds=$(date +"%S")
-if [ $seconds -lt 55 ]
+if [ $seconds -lt 57 ]
 then
-	((duration=55-seconds))
+	((duration=57-seconds))
 else
-	((duration=55+60-seconds))
+	((duration=57+60-seconds))
 fi
 #echo Waiting for $duration secs before ingesting and running workload
 sleep $duration
 
-( cd scripts/workloadgenerator ; ./ingestAndRunWorkloadGen_raina4.sh node-19 node-20 node-21 node-22 node-23 node-24 )
+( cd scripts/workloadgenerator ; ./ingestAndRunWorkloadGen_raina4.sh node-19 node-20 )
 screen -ls
 
