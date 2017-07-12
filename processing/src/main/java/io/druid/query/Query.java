@@ -35,10 +35,7 @@ import io.druid.query.topn.TopNQuery;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "queryType")
@@ -66,7 +63,7 @@ public interface Query<T>
 
   //public List<Long> segmentQueryTimes = Collections.synchronizedList(new ArrayList<Long>());
   // Map for query ID string to List of (query duration, query segment time) pairs
-  public ConcurrentHashMap<String, List<MutablePair<Long, Long>>> querySegmentTimeMap = new ConcurrentHashMap<String, List<MutablePair<Long, Long>>>();
+  public HashMap<String, List<MutablePair<Long, Long>>> querySegmentTimeMap = new HashMap<String, List<MutablePair<Long, Long>>>();
 
   DataSource getDataSource();
 

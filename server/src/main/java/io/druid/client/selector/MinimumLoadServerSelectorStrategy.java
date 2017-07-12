@@ -155,9 +155,10 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
       */
       if(minValueIndex == -1){
           minValueIndex = 0;
+          log.info("Selected default server, no min load server found");
       }
       //log.info("Selected server name %s, host %s, loading %d", serverList.get(minLoadingIndex).getServer().getMetadata().getName(), serverList.get(minLoadingIndex).getServer().getMetadata().getHost(), loading.get(minLoadingIndex));
-      log.info("Selected server name %s, host %s", serverList.get(minValueIndex).getServer().getMetadata().getName(), serverList.get(minValueIndex).getServer().getMetadata().getHost());
+      //log.info("Selected server name %s, host %s", serverList.get(minValueIndex).getServer().getMetadata().getName(), serverList.get(minValueIndex).getServer().getMetadata().getHost());
       return serverList.get(minValueIndex);
   }
 
