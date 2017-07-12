@@ -159,7 +159,7 @@ public class QueryResource
 
       log.info("Debug info header %s, all headers %s", req.getHeader("QueryRuntimeEstimate"), req.getHeaderNames().toString());
       long currentLoadInRuntime = 0;
-      long queryRuntimeEstimate = Long.valueOf(req.getHeader("QueryRuntimeEstimate"));
+      long queryRuntimeEstimate = 0;//Long.valueOf(req.getHeader("QueryRuntimeEstimate"));
       try {
         ServerManager manager = (ServerManager) texasRanger;
         if (manager != null) {

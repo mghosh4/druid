@@ -405,7 +405,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                HttpHeaders.Names.CONTENT_TYPE,
                isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
            )
-           .addHeader("QueryRuntimeEstimate", String.valueOf(queryRuntimeEstimate)),
+           .setHeader("QueryRuntimeEstimate", String.valueOf(queryRuntimeEstimate)),
           responseHandler
       );
 
