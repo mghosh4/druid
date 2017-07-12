@@ -401,8 +401,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           ).setContent(objectMapper.writeValueAsBytes(query))
            .setHeader(
                HttpHeaders.Names.CONTENT_TYPE,
-               isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE+","+String.valueOf(queryRuntimeEstimate) :
-               MediaType.APPLICATION_JSON+","+String.valueOf(queryRuntimeEstimate)
+               isSmile ? (SmileMediaTypes.APPLICATION_JACKSON_SMILE+","+String.valueOf(queryRuntimeEstimate)) :
+                       (MediaType.APPLICATION_JSON+","+String.valueOf(queryRuntimeEstimate))
            ),
            //.setHeader(HttpHeaders.Names.COOKIE, String.valueOf(queryRuntimeEstimate)),
           responseHandler

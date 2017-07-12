@@ -126,6 +126,7 @@ public class QueryResource
     String currentHNLoad = "0";
 
     String temp = req.getContentType();
+    log.info("Content type temp %s", temp);
     final String reqContentType = temp.split(",")[0];
     //final String reqContentType = req.getContentType();
     final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(reqContentType)
