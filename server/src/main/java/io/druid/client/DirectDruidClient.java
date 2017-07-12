@@ -398,12 +398,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           new Request(
               HttpMethod.POST,
               new URL(url)
-          ),//.setContent(objectMapper.writeValueAsBytes(query))
+          )//.setContent(objectMapper.writeValueAsBytes(query))
            //.setHeader(
            //    HttpHeaders.Names.CONTENT_TYPE,
            //    isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
            //)
-           //.setHeader("QueryRuntimeEstimate", String.valueOf(queryRuntimeEstimate)),
+           .addHeader("QueryRuntimeEstimate", String.valueOf(queryRuntimeEstimate)),
           responseHandler
       );
 
