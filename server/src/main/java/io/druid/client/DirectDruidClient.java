@@ -393,7 +393,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
       long queryRuntimeEstimate = druidBroker.getQueryRuntimeEstimate(query.getType(), query.getDuration().getMillis());
       log.info("Query details type %s, intervals %s, duration millis %d, datasource %s, runtime estimate %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), queryRuntimeEstimate);
-      
+
       future = httpClient.go(
           new Request(
               HttpMethod.POST,
@@ -401,9 +401,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           ).setContent(objectMapper.writeValueAsBytes(query))
            .setHeader(
                HttpHeaders.Names.CONTENT_TYPE,
-               isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
-           )
-           .setHeader(HttpHeaders.Names.COOKIE, String.valueOf(queryRuntimeEstimate)),
+               isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE+","+String.valueOf(queryRuntimeEstimate) :
+               MediaType.APPLICATION_JSON+","+String.valueOf(queryRuntimeEstimate)
+           ),
+           //.setHeader(HttpHeaders.Names.COOKIE, String.valueOf(queryRuntimeEstimate)),
           responseHandler
       );
 

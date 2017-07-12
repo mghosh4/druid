@@ -125,7 +125,9 @@ public class QueryResource
     String queryId = null;
     String currentHNLoad = "0";
 
-    final String reqContentType = req.getContentType();
+    String temp = req.getContentType();
+    final String reqContentType = temp.split(",")[0];
+    //final String reqContentType = req.getContentType();
     final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(reqContentType)
                             || APPLICATION_SMILE.equals(reqContentType);
     final String contentType = isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON;
@@ -157,9 +159,10 @@ public class QueryResource
 
       final Map<String, Object> responseContext = new MapMaker().makeMap();
 
-      log.info("Debug info cookie name %s, value %s", req.getCookies()[0].getName(), req.getCookies()[0].getValue());
+      log.info("Debug info cookie str %s, value %s", temp, temp.split(",")[1]);
       long currentLoadInRuntime = 0;
-      long queryRuntimeEstimate = Long.valueOf(req.getCookies()[0].getValue());
+      long queryRuntimeEstimate = Long.valueOf(temp.split(",")[1]);
+      // long queryRuntimeEstimate = Long.valueOf(req.getCookies()[0].getValue());
       //long queryRuntimeEstimate = Long.valueOf(req.getHeader("QueryRuntimeEstimate"));
       try {
         ServerManager manager = (ServerManager)texasRanger;
