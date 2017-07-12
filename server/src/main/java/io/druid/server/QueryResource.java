@@ -157,9 +157,10 @@ public class QueryResource
 
       final Map<String, Object> responseContext = new MapMaker().makeMap();
 
-      log.info("Debug info header %s, all headers %s", req.getHeader("QueryRuntimeEstimate"), req.getHeaderNames().toString());
+      log.info("Debug info cookie name %s, value %s", req.getCookies()[0].getName(), req.getCookies()[0].getValue());
       long currentLoadInRuntime = 0;
-      long queryRuntimeEstimate = 0;//Long.valueOf(req.getHeader("QueryRuntimeEstimate"));
+      long queryRuntimeEstimate = Long.valueOf(req.getCookies()[0].getValue());
+      //long queryRuntimeEstimate = Long.valueOf(req.getHeader("QueryRuntimeEstimate"));
       try {
         ServerManager manager = (ServerManager)texasRanger;
         if (manager != null) {

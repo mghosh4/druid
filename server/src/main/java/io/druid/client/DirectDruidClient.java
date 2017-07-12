@@ -178,10 +178,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       builder.setDimension("server", host);
       builder.setDimension(DruidMetrics.ID, Strings.nullToEmpty(query.getId()));
 
-      long queryRuntimeEstimate = 0;
-      queryRuntimeEstimate = druidBroker.getQueryRuntimeEstimate(query.getType(), query.getDuration().getMillis());
-      log.info("Query details type %s, intervals %s, duration millis %d, datasource %s, runtime estimate %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), queryRuntimeEstimate);
-
       final HttpResponseHandler<InputStream, InputStream> responseHandler = new HttpResponseHandler<InputStream, InputStream>()
       {
         private long responseStartTime;
@@ -394,16 +390,20 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           }
         }
       };
+
+      long queryRuntimeEstimate = druidBroker.getQueryRuntimeEstimate(query.getType(), query.getDuration().getMillis());
+      log.info("Query details type %s, intervals %s, duration millis %d, datasource %s, runtime estimate %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), queryRuntimeEstimate);
+      
       future = httpClient.go(
           new Request(
               HttpMethod.POST,
               new URL(url)
-          )//.setContent(objectMapper.writeValueAsBytes(query))
-           //.setHeader(
-           //    HttpHeaders.Names.CONTENT_TYPE,
-           //    isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
-           //)
-           .addHeader("QueryRuntimeEstimate", String.valueOf(queryRuntimeEstimate)),
+          ).setContent(objectMapper.writeValueAsBytes(query))
+           .setHeader(
+               HttpHeaders.Names.CONTENT_TYPE,
+               isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
+           )
+           .setHeader(HttpHeaders.Names.COOKIE, String.valueOf(queryRuntimeEstimate)),
           responseHandler
       );
 
