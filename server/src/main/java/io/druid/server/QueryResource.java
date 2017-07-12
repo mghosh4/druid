@@ -161,7 +161,7 @@ public class QueryResource
       long currentLoadInRuntime = 0;
       long queryRuntimeEstimate = 0;//Long.valueOf(req.getHeader("QueryRuntimeEstimate"));
       try {
-        ServerManager manager = (ServerManager) texasRanger;
+        ServerManager manager = (ServerManager)texasRanger;
         if (manager != null) {
           currentLoadInRuntime = manager.updateLoadRuntimeEstimate(queryRuntimeEstimate);
         }
@@ -169,7 +169,7 @@ public class QueryResource
           log.info("Server manager null, setting load runtime to 0");
         }
       }catch(ClassCastException cce){
-        log.info("Server manager CCE, setting load runtime to 0");
+        log.info("Server manager cce, setting load runtime to 0");
       }
 
       log.info("Query details type %s, intervals %s, duration millis %d, datasource %s, context %s, runtimeEstimate %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), query.getContext().toString(), queryRuntimeEstimate);
@@ -210,12 +210,12 @@ public class QueryResource
           else{
             currentHNLoad = "0";
             currentLoadInRuntime = 0;
-            log.info("Server manager null, setting loads to 0");
+            log.info("Server manager NULL, setting loads to 0");
           }
         }catch(ClassCastException cce){
           currentHNLoad = "0";
           currentLoadInRuntime = 0;
-          log.info("Server manager cce, setting loads to 0");
+          log.info("Server manager CCE, setting loads to 0");
         }
         Response.ResponseBuilder builder = Response
             .ok(

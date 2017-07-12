@@ -179,10 +179,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       builder.setDimension(DruidMetrics.ID, Strings.nullToEmpty(query.getId()));
 
       long queryRuntimeEstimate = 0;
-      if(query.getType() == Query.TIMESERIES || query.getType() == Query.TOPN || query.getType() == Query.GROUP_BY) {
-        queryRuntimeEstimate = druidBroker.getQueryRuntimeEstimate(query.getType(), query.getDuration().getMillis());
-        log.info("Query details type %s, intervals %s, duration millis %d, datasource %s, runtime estimate %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), queryRuntimeEstimate);
-      }
+      queryRuntimeEstimate = druidBroker.getQueryRuntimeEstimate(query.getType(), query.getDuration().getMillis());
+      log.info("Query details type %s, intervals %s, duration millis %d, datasource %s, runtime estimate %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), queryRuntimeEstimate);
 
       final HttpResponseHandler<InputStream, InputStream> responseHandler = new HttpResponseHandler<InputStream, InputStream>()
       {
@@ -400,12 +398,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           new Request(
               HttpMethod.POST,
               new URL(url)
-          ).setContent(objectMapper.writeValueAsBytes(query))
-           .setHeader(
-               HttpHeaders.Names.CONTENT_TYPE,
-               isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
-           )
-           .setHeader("QueryRuntimeEstimate", String.valueOf(queryRuntimeEstimate)),
+          ),//.setContent(objectMapper.writeValueAsBytes(query))
+           //.setHeader(
+           //    HttpHeaders.Names.CONTENT_TYPE,
+           //    isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
+           //)
+           //.setHeader("QueryRuntimeEstimate", String.valueOf(queryRuntimeEstimate)),
           responseHandler
       );
 
