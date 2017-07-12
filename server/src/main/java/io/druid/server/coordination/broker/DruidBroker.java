@@ -72,7 +72,7 @@ public class DruidBroker
   private volatile ConcurrentHashMap<String, ConcurrentHashMap<Long, MutablePair<Long, Long>>> queryRuntimeEstimateTable = new ConcurrentHashMap<>();
   // map maintains Segment id to <HN, allocation> map
   private volatile ConcurrentHashMap<String, ConcurrentHashMap<String, Long>> segmentHNQueryTimeAllocation = new ConcurrentHashMap<>();
-  private volatile static boolean estimateQueryRuntime = false;
+  private volatile static boolean estimateQueryRuntime = true;
   private volatile boolean printDecayedEstimates = false;
   private static final EmittingLogger log = new EmittingLogger(DruidBroker.class);
 
@@ -189,14 +189,14 @@ public class DruidBroker
         if (numSamples != 0) {
           return estimate;
         } else {
-          return 0L;
+          return 0;
         }
       } else {
-        return 0L;
+        return 0;
       }
     }
     else{
-      return 0L;
+      return 0;
     }
   }
 
@@ -236,14 +236,14 @@ public class DruidBroker
         if (numSamples != 0) {
           return totalRuntime / numSamples;
         } else {
-          return 0L;
+          return 0;
         }
       } else {
-        return 0L;
+        return 0;
       }
     }
     else{
-      return 0L;
+      return 0;
     }
   }
 
