@@ -125,10 +125,7 @@ public class QueryResource
     String queryId = null;
     String currentHNLoad = "0";
 
-    String temp = req.getContentType();
-    log.info("Content type temp %s", temp);
-    final String reqContentType = temp.split(",")[0];
-    //final String reqContentType = req.getContentType();
+    final String reqContentType = req.getContentType();
     final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(reqContentType)
                             || APPLICATION_SMILE.equals(reqContentType);
     final String contentType = isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON;
@@ -160,9 +157,13 @@ public class QueryResource
 
       final Map<String, Object> responseContext = new MapMaker().makeMap();
 
-      log.info("Debug info cookie str %s, value %s", temp, temp.split(",")[1]);
       long currentLoadInRuntime = 0;
-      long queryRuntimeEstimate = Long.valueOf(temp.split(",")[1]);
+      long queryRuntimeEstimate = 0;
+      String queryRuntimeEstimateStr = req.getHeader("QueryRuntimeEstimate");
+      if(queryRuntimeEstimateStr!=null) {
+        queryRuntimeEstimate = Long.valueOf(queryRuntimeEstimateStr);
+      }
+
       // long queryRuntimeEstimate = Long.valueOf(req.getCookies()[0].getValue());
       //long queryRuntimeEstimate = Long.valueOf(req.getHeader("QueryRuntimeEstimate"));
       try {

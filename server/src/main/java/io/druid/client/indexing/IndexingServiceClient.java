@@ -45,7 +45,6 @@ import java.util.List;
 
 public class IndexingServiceClient
 {
-  private static final EmittingLogger log = new EmittingLogger(IndexingServiceClient.class);
   private static final InputStreamResponseHandler RESPONSE_HANDLER = new InputStreamResponseHandler();
 
   private final HttpClient client;
@@ -99,7 +98,6 @@ public class IndexingServiceClient
 
   private InputStream runQuery(Object queryObject)
   {
-    log.info("Indexing debug");
     try {
       return client.go(
           new Request(
