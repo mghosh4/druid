@@ -24,12 +24,14 @@ import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.InputStreamResponseHandler;
 import io.druid.client.selector.Server;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.guice.annotations.Global;
+import io.druid.server.coordination.PeriodicLoadUpdate;
 import io.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
@@ -43,6 +45,7 @@ import java.util.List;
 
 public class IndexingServiceClient
 {
+  private static final EmittingLogger log = new EmittingLogger(IndexingServiceClient.class);
   private static final InputStreamResponseHandler RESPONSE_HANDLER = new InputStreamResponseHandler();
 
   private final HttpClient client;
@@ -96,6 +99,7 @@ public class IndexingServiceClient
 
   private InputStream runQuery(Object queryObject)
   {
+    log.info("Indexing debug");
     try {
       return client.go(
           new Request(
