@@ -163,6 +163,9 @@ public class QueryResource
       if(queryRuntimeEstimateStr!=null) {
         queryRuntimeEstimate = Long.valueOf(queryRuntimeEstimateStr);
       }
+      else{
+        log.info("Got null query runtime estimate header queryID %s, queryType %s", query.getId(), query.getType());
+      }
 
       // long queryRuntimeEstimate = Long.valueOf(req.getCookies()[0].getValue());
       //long queryRuntimeEstimate = Long.valueOf(req.getHeader("QueryRuntimeEstimate"));
@@ -178,7 +181,7 @@ public class QueryResource
         log.info("Server manager cce, setting load runtime to 0");
       }
 
-      log.info("Query details type %s, intervals %s, duration millis %d, datasource %s, context %s, runtimeEstimate %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), query.getContext().toString(), queryRuntimeEstimate);
+      log.info("QR query details type %s, intervals %s, duration millis %d, datasource %s, context %s, runtimeEstimate %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), query.getContext().toString(), queryRuntimeEstimate);
 
       query.initSegmentQueryTimeEntry(query.getId());
 

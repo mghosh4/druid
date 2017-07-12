@@ -203,15 +203,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               final long hnQueryTimeMillis = 0;//Long.valueOf(response.headers().get("HNQueryTime"));
               String hnQuerySegmentTimeStr = response.headers().get("HNQuerySegmentTime");
 
-              String[] hnQuerySegmentTimes = hnQuerySegmentTimeStr.split(",");
-//              long hnQuerySegmentTimeMillis = 0L;
-//              if(hnQuerySegmentTimeStr != ""){
-//                hnQuerySegmentTimeMillis = Long.valueOf(hnQuerySegmentTimeStr);
-//              }
-
               // update queryRuntimeEstimateTable
               //druidBroker.setQueryRuntimeEstimate(queryType, queryDurationMillis, hnQueryTimeMillis);
               if(!hnQuerySegmentTimeStr.equals("")) {
+                String[] hnQuerySegmentTimes = hnQuerySegmentTimeStr.split(",");
                 for (int i = 0; i < hnQuerySegmentTimes.length; i = i + 2) {
                   druidBroker.setQueryRuntimeEstimate(queryType, Long.valueOf(hnQuerySegmentTimes[i]), Long.valueOf(hnQuerySegmentTimes[i + 1]));
                   //log.info("Setting decayed estimate queryId %s, queryType %s, duration %d, query segment time %d", query.getId(), query.getType(), Long.valueOf(hnQuerySegmentTimes[i]), Long.valueOf(hnQuerySegmentTimes[i + 1]));
@@ -392,7 +387,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       };
 
       long queryRuntimeEstimate = druidBroker.getQueryRuntimeEstimate(query.getType(), query.getDuration().getMillis());
-      log.info("Query details type %s, intervals %s, duration millis %d, datasource %s, runtime estimate %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), queryRuntimeEstimate);
+      log.info("DDC query details type %s, intervals %s, duration millis %d, datasource %s, runtime estimate %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), queryRuntimeEstimate);
 
       future = httpClient.go(
           new Request(

@@ -138,7 +138,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
           long timeTaken = System.currentTimeMillis() - startTime;
           if(metricName == "query/segment/time"){
             query.updateSegmentQueryTime(query.getId(), query.getType(), query.getDuration().getMillis(), timeTaken);
-            //log.info("Updated segment queryID %s, querySegment %s, queryIntervals %s, query time %d, hashcode %d", query.getId(), query.getDuration().getMillis(), query.getIntervals().toString(), timeTaken, query.hashCode());
+            log.info("Updated segment queryID %s, query type %s, querySegment %s, queryIntervals %s, query segment time %d", query.getId(), query.getType(), query.getDuration().getMillis(), query.getIntervals().toString(), timeTaken);
           }
 
           emitter.emit(builder.build(metricName, timeTaken));
@@ -221,7 +221,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
               long timeTaken = System.currentTimeMillis() - startTime;
               if(metricName == "query/segment/time"){
                 query.updateSegmentQueryTime(query.getId(), query.getType(), query.getDuration().getMillis(), timeTaken);
-                //log.info("Updated segment queryID %s, querySegment %s, queryIntervals %s, query time %d, hashcode %d", query.getId(), query.getDuration().getMillis(), query.getIntervals().toString(), timeTaken, query.hashCode());
+                log.info("Updated segment queryID %s, query type %s, querySegment %s, queryIntervals %s, query segment time %d", query.getId(), query.getType(), query.getDuration().getMillis(), query.getIntervals().toString(), timeTaken);
               }
               
               emitter.emit(builder.build(metricName, timeTaken));
