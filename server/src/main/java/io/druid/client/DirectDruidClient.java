@@ -389,7 +389,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       };
 
       //String newurl = url+"{"+String.valueOf(queryRuntimeEstimate)+"}/";
-      log.info("DDC query details type %s, intervals %s, duration millis %d, datasource %s, runtime estimate %d, isSmile %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), queryRuntimeEstimate, isSmile);
+      log.info("DDC query details type %s, intervals %s, duration millis %d, datasource %s, runtime estimate %d, isSmile %b", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), queryRuntimeEstimate, isSmile);
 
       future = httpClient.go(
           new Request(
