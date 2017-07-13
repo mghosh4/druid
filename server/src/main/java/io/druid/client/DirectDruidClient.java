@@ -167,7 +167,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
     long queryRuntimeEstimate = druidBroker.getQueryRuntimeEstimate(query.getType(), query.getDuration().getMillis());
     final ListenableFuture<InputStream> future;
-    final String url = String.format("http://%s/druid/v2/query/%s", host, String.valueOf(queryRuntimeEstimate));
+    final String url = String.format("http://%s/druid/v2/", host);
+    //final String url = String.format("http://%s/druid/v2/query/%s", host, String.valueOf(queryRuntimeEstimate));
     final String cancelUrl = String.format("http://%s/druid/v2/%s", host, query.getId());
 
     try {
@@ -398,8 +399,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
            .setHeader(
                HttpHeaders.Names.CONTENT_TYPE,
                isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
-           ),
-           //.addHeader("QueryRuntimeEstimate", String.valueOf(queryRuntimeEstimate)),
+           )
+           .setHeader("QueryRuntimeEstimate", String.valueOf(queryRuntimeEstimate)),
           responseHandler
       );
 

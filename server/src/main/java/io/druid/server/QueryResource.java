@@ -112,12 +112,12 @@ public class QueryResource
   }
 
   @POST
-  @Path("/query/{estimate}")
+  //@Path("/query/{estimate}")
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE, APPLICATION_SMILE})
   public Response doPost(
       InputStream in,
-      @PathParam("estimate") String queryRuntimeEstimateStr,
+      //@PathParam("estimate") String queryRuntimeEstimateStr,
       @QueryParam("pretty") String pretty,
       @Context final HttpServletRequest req // used only to get request content-type and remote address
   ) throws IOException
@@ -161,7 +161,7 @@ public class QueryResource
 
       long currentLoadInRuntime = 0;
       long queryRuntimeEstimate = 0;
-      //String queryRuntimeEstimateStr = req.getHeader("QueryRuntimeEstimate");
+      String queryRuntimeEstimateStr = req.getHeader("QueryRuntimeEstimate");
       //String queryRuntimeEstimateStr1 = url.substring(url.indexOf("{")+1,url.indexOf("}"));
       log.info("Path param estimate %s", queryRuntimeEstimateStr);
       if(queryRuntimeEstimateStr!=null) {
