@@ -203,9 +203,11 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               final long hnQueryTimeMillis = 0;//Long.valueOf(response.headers().get("HNQueryTime"));
               String hnQuerySegmentTimeStr = response.headers().get("HNQuerySegmentTime");
 
+              log.info("Stats queryId %s, queryType %s, query duration %d, query node time %d, query time %d, query segment time %s, hn load %s, hn load runtime %s", query.getId(), queryType, queryDurationMillis, (System.currentTimeMillis()-requestStartTime), hnQueryTimeMillis, hnQuerySegmentTimeStr, currentHNLoad, currentHNLoadRuntime);
+
               // update queryRuntimeEstimateTable
               //druidBroker.setQueryRuntimeEstimate(queryType, queryDurationMillis, hnQueryTimeMillis);
-              if(hnQuerySegmentTimeStr != null) {
+              if(hnQuerySegmentTimeStr != null && hnQuerySegmentTimeStr != "") {
                 String[] hnQuerySegmentTimes = hnQuerySegmentTimeStr.split(",");
                 for (int i = 0; i < hnQuerySegmentTimes.length; i = i + 2) {
                   druidBroker.setQueryRuntimeEstimate(queryType, Long.valueOf(hnQuerySegmentTimes[i]), Long.valueOf(hnQuerySegmentTimes[i + 1]));
@@ -215,8 +217,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               else{
                 log.info("Received empty query segment time queryID %s queryType %s hnQuerySegmentTimeStr %s", query.getId(), query.getType(), hnQuerySegmentTimeStr);
               }
-
-              log.info("Stats queryId %s, queryType %s, query duration %d, query node time %d, query time %d, query segment time %s, hn load %s, hn load runtime %s", query.getId(), queryType, queryDurationMillis, (System.currentTimeMillis()-requestStartTime), hnQueryTimeMillis, hnQuerySegmentTimeStr, currentHNLoad, currentHNLoadRuntime);
 
               /*
               // calculate the exponential moving average of load over n data samples
