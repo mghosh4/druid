@@ -396,19 +396,18 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       };
 
       //String newurl = url+"{"+String.valueOf(queryRuntimeEstimate)+"}/";
-      log.info("DDC query details type %s, intervals %s, duration millis %d, datasource %s, runtime estimate %d, isSmile %b", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), queryRuntimeEstimate, isSmile);
+      log.info("DDC query details type %s, intervals %s, duration millis %d, datasource %s, runtime estimate %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), queryRuntimeEstimate);
 
       future = httpClient.go(
           new Request(
               HttpMethod.POST,
               new URL(url)
           ).setContent(objectMapper.writeValueAsBytes(query))
-//           .setHeader(
-//               HttpHeaders.Names.CONTENT_TYPE,
-//               isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
-//           )
-           .setHeader(HttpHeaders.Names.CONTENT_TYPE, String.valueOf(queryRuntimeEstimate)),
-           //.setHeader(HttpHeaders.Names.AGE, String.valueOf(queryRuntimeEstimate)),
+           .setHeader(
+               HttpHeaders.Names.CONTENT_TYPE,
+               isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
+           )
+           .addHeader("QueryRuntimeEstimate", String.valueOf(queryRuntimeEstimate)),
           responseHandler
       );
 
