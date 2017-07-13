@@ -40,6 +40,7 @@ import java.lang.Math;
 public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
 {
   private static final EmittingLogger log = new EmittingLogger(MinimumLoadServerSelectorStrategy.class);
+  private static int numSegmentsProcessed = 0;
 
   @JacksonInject
   DruidBroker druidBroker;
@@ -80,6 +81,21 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment, SegmentDescriptor segmentDescriptor, String queryType)
   {
+      // Use CC till query runtime estimation table converges
+      if(numSegmentsProcessed < 15000) {
+          for (Iterator<QueryableDruidServer> iterator = servers.iterator(); iterator.hasNext(); ) {
+              QueryableDruidServer s = iterator.next();
+              // remove the realtime node from the server list if other servers are available
+              if (s.getServer().getMetadata().getType().equals("realtime") && servers.size() > 1) {
+                  iterator.remove();
+                  //log.info("Removed realtime server from the list load=%d openConnections=%d", s.getServer().getCurrentLoad(), s.getClient().getNumOpenConnections());
+              }
+          }
+          numSegmentsProcessed++;
+          log.info("Routing using cc numSegmentsProcessed %d", numSegmentsProcessed);
+          return Collections.min(servers, comparator);
+      }
+
       QueryableDruidServer chosenServer = null;
       float maxValue = -1;
       float minValue = 1000000;
