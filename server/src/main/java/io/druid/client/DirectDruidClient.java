@@ -387,12 +387,13 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       };
 
       long queryRuntimeEstimate = druidBroker.getQueryRuntimeEstimate(query.getType(), query.getDuration().getMillis());
-      log.info("DDC query details type %s, intervals %s, duration millis %d, datasource %s, runtime estimate %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), queryRuntimeEstimate);
+      String newurl = url+"{"+String.valueOf(queryRuntimeEstimate)+"}/";
+      log.info("DDC query details type %s, intervals %s, duration millis %d, datasource %s, runtime estimate %d, newurl", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), queryRuntimeEstimate, newurl);
 
       future = httpClient.go(
           new Request(
               HttpMethod.POST,
-              new URL(url)
+              new URL(newurl)
           ).setContent(objectMapper.writeValueAsBytes(query))
            .setHeader(
                HttpHeaders.Names.CONTENT_TYPE,

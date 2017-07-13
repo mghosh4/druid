@@ -73,8 +73,8 @@ public class DruidBroker
   // map maintains Segment id to <HN, allocation> map
   private volatile static ConcurrentHashMap<String, ConcurrentHashMap<String, Long>> segmentHNQueryTimeAllocation = new ConcurrentHashMap<>();
   private volatile static boolean estimateQueryRuntime = true;
-  // These variables are used to ignore the initial estimates as they are not accurate
-  private static int numEstimateValuesToIgnore = 10;
+  // These variables are used to ignore the initial estimates as they are not accurate.
+  private static int numEstimateValuesToIgnore = 5; // this threshold is not strictly followed due to multi-threading
   private volatile static ConcurrentHashMap<String, Long> ignoredEstimates = new ConcurrentHashMap<>();
 
   private volatile static boolean printDecayedEstimates = false;
@@ -173,10 +173,10 @@ public class DruidBroker
           long oldSamples = runtime.rhs;
 
           runtime.lhs = Long.valueOf((long)(runtime.lhs*(1-alpha)) + (long)(querySegmentTime*alpha));
-          Long smallerDurationEstimate = durationMap.get(queryDurationMillis-1000).lhs;
-          if(runtime.lhs <= smallerDurationEstimate){
-            runtime.lhs = smallerDurationEstimate + 1;
-          }
+//          Long smallerDurationEstimate = durationMap.get(queryDurationMillis-1000).lhs;
+//          if(runtime.lhs <= smallerDurationEstimate){
+//            runtime.lhs = smallerDurationEstimate + 1;
+//          }
           runtime.rhs = runtime.rhs + 1L;
           durationMap.put(queryDurationMillis, runtime);
 
@@ -223,13 +223,13 @@ public class DruidBroker
           long oldEstimate = runtime.lhs;
           long oldSamples = runtime.rhs;
 
-          long numSmallerDurationSamples = durationMap.get(queryDurationMillis - 1000).rhs;
-          if (numSmallerDurationSamples != 0) {
-            long smallerDurationEstimate = durationMap.get(queryDurationMillis - 1000).lhs / numSmallerDurationSamples;
-            if (queryTime <= smallerDurationEstimate) {
-              queryTime = smallerDurationEstimate + 1L;
-            }
-          }
+//          long numSmallerDurationSamples = durationMap.get(queryDurationMillis - 1000).rhs;
+//          if (numSmallerDurationSamples != 0) {
+//            long smallerDurationEstimate = durationMap.get(queryDurationMillis - 1000).lhs / numSmallerDurationSamples;
+//            if (queryTime <= smallerDurationEstimate) {
+//              queryTime = smallerDurationEstimate + 1L;
+//            }
+//          }
           runtime.lhs = runtime.lhs + queryTime;
           runtime.rhs = runtime.rhs + 1L;
           durationMap.put(queryDurationMillis, runtime);

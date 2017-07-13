@@ -160,6 +160,9 @@ public class QueryResource
       long currentLoadInRuntime = 0;
       long queryRuntimeEstimate = 0;
       String queryRuntimeEstimateStr = req.getHeader("QueryRuntimeEstimate");
+      String url = req.getRequestURL().toString();
+      String queryRuntimeEstimateStr1 = url.substring(url.indexOf("{")+1,url.indexOf("}"));
+      log.info("Trying url %s, url estimate %s, other estimate %s", url, queryRuntimeEstimateStr1, queryRuntimeEstimateStr);
       if(queryRuntimeEstimateStr!=null) {
         queryRuntimeEstimate = Long.valueOf(queryRuntimeEstimateStr);
       }
