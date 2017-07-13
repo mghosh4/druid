@@ -199,11 +199,18 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           try {
             try {
               SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-              final String currentHNLoad = "0";//response.headers().get("CurrentHNLoad");
-              final String currentHNLoadRuntime = response.headers().get("CurrentHNLoadRuntime");
-              final Date currentHNLoadTime = sdf.parse(response.headers().get("CurrentHNLoadTime"));
-              final long hnQueryTimeMillis = 0;//Long.valueOf(response.headers().get("HNQueryTime"));
-              String hnQuerySegmentTimeStr = response.headers().get("HNQuerySegmentTime");
+              String currentHNLoad = "0";
+              String currentHNLoadRuntime = "0";
+              Date currentHNLoadTime = new Date();
+              long hnQueryTimeMillis = 0;
+              String hnQuerySegmentTimeStr = "";
+              if(query.getType() != Query.TIME_BOUNDARY) {
+                currentHNLoad = "0";//response.headers().get("CurrentHNLoad");
+                currentHNLoadRuntime = response.headers().get("CurrentHNLoadRuntime");
+                currentHNLoadTime = sdf.parse(response.headers().get("CurrentHNLoadTime"));
+                hnQueryTimeMillis = 0;//Long.valueOf(response.headers().get("HNQueryTime"));
+                hnQuerySegmentTimeStr = response.headers().get("HNQuerySegmentTime");
+              }
 
               log.info("Stats queryId %s, queryType %s, query duration %d, query node time %d, query time %d, query segment time %s, hn load %s, hn load runtime %s", query.getId(), queryType, queryDurationMillis, (System.currentTimeMillis()-requestStartTime), hnQueryTimeMillis, hnQuerySegmentTimeStr, currentHNLoad, currentHNLoadRuntime);
 

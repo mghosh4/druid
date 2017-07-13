@@ -168,6 +168,7 @@ public class QueryResource
       //log.info("Path param estimate %s", queryRuntimeEstimateStr);
       if(queryRuntimeEstimateStr!=null && queryRuntimeEstimateStr!="application/json") {
         queryRuntimeEstimate = Long.valueOf(queryRuntimeEstimateStr);
+        log.info("Got query runtime estimate %d", queryRuntimeEstimate);
       }
       else{
         log.info("Got null query runtime estimate header queryID %s, queryType %s, str %s", query.getId(), query.getType(), queryRuntimeEstimateStr);
