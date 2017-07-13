@@ -166,7 +166,7 @@ public class QueryResource
       log.info("Content type is %s", queryRuntimeEstimateStr);
       //String queryRuntimeEstimateStr1 = url.substring(url.indexOf("{")+1,url.indexOf("}"));
       //log.info("Path param estimate %s", queryRuntimeEstimateStr);
-      if(queryRuntimeEstimateStr!=null) {
+      if(queryRuntimeEstimateStr!=null && queryRuntimeEstimateStr!="application/json") {
         queryRuntimeEstimate = Long.valueOf(queryRuntimeEstimateStr);
       }
       else{
