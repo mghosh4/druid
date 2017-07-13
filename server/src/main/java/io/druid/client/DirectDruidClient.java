@@ -165,8 +165,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       typeRef = types.lhs;
     }
 
+    long queryRuntimeEstimate = druidBroker.getQueryRuntimeEstimate(query.getType(), query.getDuration().getMillis());
     final ListenableFuture<InputStream> future;
-    final String url = String.format("http://%s/druid/v2/", host);
+    final String url = String.format("http://%s/druid/v2/query/%s", host, String.valueOf(queryRuntimeEstimate));
     final String cancelUrl = String.format("http://%s/druid/v2/%s", host, query.getId());
 
     try {
@@ -386,20 +387,19 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         }
       };
 
-      long queryRuntimeEstimate = druidBroker.getQueryRuntimeEstimate(query.getType(), query.getDuration().getMillis());
-      String newurl = url+"{"+String.valueOf(queryRuntimeEstimate)+"}/";
-      log.info("DDC query details type %s, intervals %s, duration millis %d, datasource %s, runtime estimate %d, newurl", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), queryRuntimeEstimate, newurl);
+      //String newurl = url+"{"+String.valueOf(queryRuntimeEstimate)+"}/";
+      log.info("DDC query details type %s, intervals %s, duration millis %d, datasource %s, runtime estimate %d, url %s", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), queryRuntimeEstimate, url);
 
       future = httpClient.go(
           new Request(
               HttpMethod.POST,
-              new URL(newurl)
+              new URL(url)
           ).setContent(objectMapper.writeValueAsBytes(query))
            .setHeader(
                HttpHeaders.Names.CONTENT_TYPE,
                isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
-           )
-           .addHeader("QueryRuntimeEstimate", String.valueOf(queryRuntimeEstimate)),
+           ),
+           //.addHeader("QueryRuntimeEstimate", String.valueOf(queryRuntimeEstimate)),
           responseHandler
       );
 
