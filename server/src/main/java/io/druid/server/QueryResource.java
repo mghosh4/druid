@@ -127,7 +127,8 @@ public class QueryResource
     String queryId = null;
     String currentHNLoad = "0";
 
-    final String reqContentType = req.getContentType();
+    //final String reqContentType = req.getContentType();
+    final String reqContentType = MediaType.APPLICATION_JSON;
     final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(reqContentType)
                             || APPLICATION_SMILE.equals(reqContentType);
     final String contentType = isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON;
@@ -161,28 +162,29 @@ public class QueryResource
 
       long currentLoadInRuntime = 0;
       long queryRuntimeEstimate = 0;
-      //String queryRuntimeEstimateStr = req.getHeader("QueryRuntimeEstimate");
+      String queryRuntimeEstimateStr = req.getContentType();
+      log.info("Content type is %s", queryRuntimeEstimateStr);
       //String queryRuntimeEstimateStr1 = url.substring(url.indexOf("{")+1,url.indexOf("}"));
       //log.info("Path param estimate %s", queryRuntimeEstimateStr);
-//      if(queryRuntimeEstimateStr!=null) {
-//        queryRuntimeEstimate = Long.valueOf(queryRuntimeEstimateStr);
-//      }
-//      else{
-//        log.info("Got null query runtime estimate header queryID %s, queryType %s, str %s", query.getId(), query.getType(), queryRuntimeEstimateStr);
-//      }
+      if(queryRuntimeEstimateStr!=null) {
+        queryRuntimeEstimate = Long.valueOf(queryRuntimeEstimateStr);
+      }
+      else{
+        log.info("Got null query runtime estimate header queryID %s, queryType %s, str %s", query.getId(), query.getType(), queryRuntimeEstimateStr);
+      }
 
       //long queryRuntimeEstimate = Long.valueOf(req.getHeader("QueryRuntimeEstimate"));
-//      try {
-//        ServerManager manager = (ServerManager)texasRanger;
-//        if (manager != null) {
-//          currentLoadInRuntime = manager.updateLoadRuntimeEstimate(queryRuntimeEstimate);
-//        }
-//        else{
-//          log.info("Server manager null, setting load runtime to 0");
-//        }
-//      }catch(ClassCastException cce){
-//        log.info("Server manager cce, setting load runtime to 0");
-//      }
+      try {
+        ServerManager manager = (ServerManager)texasRanger;
+        if (manager != null) {
+          currentLoadInRuntime = manager.updateLoadRuntimeEstimate(queryRuntimeEstimate);
+        }
+        else{
+          log.info("Server manager null, setting load runtime to 0");
+        }
+      }catch(ClassCastException cce){
+        log.info("Server manager cce, setting load runtime to 0");
+      }
 
       log.info("QR query details type %s, intervals %s, duration millis %d, datasource %s, context %s, runtimeEstimate %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), query.getContext().toString(), queryRuntimeEstimate);
 
@@ -216,7 +218,7 @@ public class QueryResource
           ServerManager manager = (ServerManager)texasRanger;
           if (manager != null){
             currentHNLoad = manager.currentHNLoad();
-            //currentLoadInRuntime = manager.updateLoadRuntimeEstimate(-queryRuntimeEstimate);
+            currentLoadInRuntime = manager.updateLoadRuntimeEstimate(-queryRuntimeEstimate);
             log.info("Current HN load %s, current load runtime %d", currentHNLoad, currentLoadInRuntime);
           }
           else{
