@@ -389,7 +389,7 @@ public class DruidBroker
           ratioStr = ratioStr+" : "+String.valueOf(ratio);
         }
       }
-      log.info("routing table segment %s, ratio", e1.getKey(), ratioStr);
+      log.info("Routing table ratios segment %s, ratio %s", e1.getKey(), ratioStr);
     }
 
     log.info("Allocation table ratios");
@@ -407,7 +407,7 @@ public class DruidBroker
           ratioStr = ratioStr+" : "+String.valueOf(ratio);
         }
       }
-      log.info("allocation table segment %s, ratio", e1.getKey(), ratioStr);
+      log.info("Allocation table ratios segment %s, ratio %s", e1.getKey(), ratioStr);
     }
   }
 
