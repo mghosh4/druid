@@ -57,9 +57,6 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
         }
         //log.info("Got segment %s numQueryableServers %d", segment.getInterval(), servers.size());
         
-        // keep a copy of servers, used in case no server is selected based on allocation
-        //List<QueryableDruidServer> serversBackup = new ArrayList<QueryableDruidServer>(servers);
-
         Map<String, Long> segmentRoutingTable = druidBroker.getRoutingTable().get(segment.getIdentifier());
         ConcurrentHashMap<String, ConcurrentHashMap<String, Long>> segmentHNQueryTimeAllocation = druidBroker.getSegmentHNQueryTimeAllocation();
         if(segmentHNQueryTimeAllocation.get(segment.getIdentifier()) == null){
@@ -84,29 +81,6 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
             }
             return Collections.min(servers, comparator);
         }
-
-        /*
-        // filter out HNs for which the routing table allocation is 0 or if the HN is not present in the routing table
-        for (Iterator<QueryableDruidServer> iterator = servers.iterator(); iterator.hasNext();) {
-            QueryableDruidServer s = iterator.next();
-            boolean remove = true;
-            for(Map.Entry<String, Long> entry : segmentRoutingTable.entrySet()) {
-                if(s.getServer().getMetadata().toString().equals(entry.getKey())){
-                    if (entry.getValue() != 0) {
-                        remove = false;
-                    }
-                    else{
-                        log.info("Removed server %s from list due to 0 routing table allocation", entry.getKey());
-                    }
-                    break;
-                }
-            }
-            if (remove == true){
-                log.info("Removed server %s type %s from list", s.getServer().getMetadata().getName(), s.getServer().getMetadata().getType());
-                iterator.remove();
-            }
-        }
-        */
 
         // if no servers are left, then route on backup servers with connection count
         if(servers.size() == 0){
@@ -140,8 +114,6 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
                 continue;
             }
 
-        //for(QueryableDruidServer s : servers){
-            //candidateHNList[i] = s.getServer().getMetadata().toString();
             String hn = s.getServer().getMetadata().toString();
 
             if(hnQueryTimeAllocation.get(hn) == null){
@@ -159,8 +131,6 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
                 // s.getServer().getMetadata().getName(), s.getServer().getMetadata().getName());
             }
             else{
-                //goalRatio[i] = segmentRoutingTable.get(hn)/firstHNValue;
-                //currentRatio[i] = hnQueryTimeAllocation.get(hn)/firstQueryTimeAllocationValue;
                 float goalRatio = (float)segmentRoutingTable.get(hn)/(float)firstHNValue;
                 float currentRatio = (float)hnQueryTimeAllocation.get(hn)/(float)firstQueryTimeAllocationValue;
                 float deltaRatio =  goalRatio - currentRatio;
