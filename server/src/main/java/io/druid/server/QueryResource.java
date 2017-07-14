@@ -158,24 +158,23 @@ public class QueryResource
       final Map<String, Object> responseContext = new MapMaker().makeMap();
 
       long currentLoadInRuntime = 0;
-      long queryRuntimeEstimate = 0;
-      String queryRuntimeEstimateStr = req.getHeader("QueryRuntimeEstimate");
-      log.info("Content type is %s", queryRuntimeEstimateStr);
-      //String queryRuntimeEstimateStr1 = url.substring(url.indexOf("{")+1,url.indexOf("}"));
-      //log.info("Path param estimate %s", queryRuntimeEstimateStr);
-      if(queryRuntimeEstimateStr!=null) {
-        queryRuntimeEstimate = Long.valueOf(queryRuntimeEstimateStr);
-        log.info("Got query runtime estimate %d", queryRuntimeEstimate);
-      }
-      else{
-        log.info("Got null query runtime estimate header queryID %s, queryType %s, str %s", query.getId(), query.getType(), queryRuntimeEstimateStr);
-      }
+//      long queryRuntimeEstimate = 0;
+//      String queryRuntimeEstimateStr = req.getHeader("QueryRuntimeEstimate");
+//      log.info("Content type is %s", queryRuntimeEstimateStr);
+//      if(queryRuntimeEstimateStr!=null) {
+//        queryRuntimeEstimate = Long.valueOf(queryRuntimeEstimateStr);
+//        log.info("Got query runtime estimate %d", queryRuntimeEstimate);
+//      }
+//      else{
+//        log.info("Got null query runtime estimate header queryID %s, queryType %s, str %s", query.getId(), query.getType(), queryRuntimeEstimateStr);
+//      }
 
       //long queryRuntimeEstimate = Long.valueOf(req.getHeader("QueryRuntimeEstimate"));
       try {
         ServerManager manager = (ServerManager)texasRanger;
         if (manager != null) {
-          currentLoadInRuntime = manager.updateLoadRuntimeEstimate(queryRuntimeEstimate);
+          currentLoadInRuntime = 0;
+          //currentLoadInRuntime = manager.updateLoadRuntimeEstimate(queryRuntimeEstimate);
         }
         else{
           log.info("Server manager null, setting load runtime to 0");
@@ -184,7 +183,7 @@ public class QueryResource
         log.info("Server manager cce, setting load runtime to 0");
       }
 
-      log.info("QR query details type %s, intervals %s, duration millis %d, datasource %s, context %s, runtimeEstimate %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), query.getContext().toString(), queryRuntimeEstimate);
+      log.info("QR query details type %s, intervals %s, duration millis %d, datasource %s, context %s", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), query.getContext().toString());
 
       query.initSegmentQueryTimeEntry(query.getId());
 
@@ -216,7 +215,7 @@ public class QueryResource
           ServerManager manager = (ServerManager)texasRanger;
           if (manager != null){
             currentHNLoad = manager.currentHNLoad();
-            currentLoadInRuntime = manager.updateLoadRuntimeEstimate(-queryRuntimeEstimate);
+            //currentLoadInRuntime = manager.updateLoadRuntimeEstimate(-queryRuntimeEstimate);
             log.info("Current HN load %s, current load runtime %d", currentHNLoad, currentLoadInRuntime);
           }
           else{

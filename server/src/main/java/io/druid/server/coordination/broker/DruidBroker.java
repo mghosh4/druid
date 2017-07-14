@@ -370,14 +370,52 @@ public class DruidBroker
   }
 */
   public ConcurrentHashMap<String, ConcurrentHashMap<String, Long>> getSegmentHNQueryTimeAllocation(){
-    return this.segmentHNQueryTimeAllocation;
+    return segmentHNQueryTimeAllocation;
+  }
+
+  public void compareRoutingTableExpectationVsReality(){
+    log.info("Routing table ratios");
+    for(Map.Entry<String, Map<String, Long>> e1 : routingTable.entrySet()) {
+      String ratioStr = "1";
+      Float firstValue = 0F;
+      boolean isFirstValue = true;
+      for (Map.Entry<String, Long> e2 : e1.getValue().entrySet()){
+        if(isFirstValue){
+          firstValue = (float)e2.getValue();
+          isFirstValue = false;
+        }
+        else{
+          Float ratio = (float)e2.getValue()/firstValue;
+          ratioStr = ratioStr+" : "+String.valueOf(ratio);
+        }
+      }
+      log.info("routing table segment %s, ratio", e1.getKey(), ratioStr);
+    }
+
+    log.info("Allocation table ratios");
+    for(Map.Entry<String, ConcurrentHashMap<String, Long>> e1 : segmentHNQueryTimeAllocation.entrySet()) {
+      String ratioStr = "1";
+      Float firstValue = 0F;
+      boolean isFirstValue = true;
+      for (Map.Entry<String, Long> e2 : e1.getValue().entrySet()){
+        if(isFirstValue){
+          firstValue = (float)e2.getValue();
+          isFirstValue = false;
+        }
+        else{
+          Float ratio = (float)e2.getValue()/firstValue;
+          ratioStr = ratioStr+" : "+String.valueOf(ratio);
+        }
+      }
+      log.info("allocation table segment %s, ratio", e1.getKey(), ratioStr);
+    }
   }
 
   public void printSegmentHNQueryTimeAllocationTable(){
     log.info("HN query time allocation table %s", segmentHNQueryTimeAllocation.toString());
   }
   public void clearSegmentHNQueryTimeAllocationTable(){
-    for(Map.Entry<String, ConcurrentHashMap<String, Long>> e1 : this.segmentHNQueryTimeAllocation.entrySet()) {
+    for(Map.Entry<String, ConcurrentHashMap<String, Long>> e1 : segmentHNQueryTimeAllocation.entrySet()) {
       for (Map.Entry<String, Long> e2 : e1.getValue().entrySet()){
         ConcurrentHashMap<String, Long> temp = new ConcurrentHashMap<>();
         temp.put(e2.getKey(), 1L);
