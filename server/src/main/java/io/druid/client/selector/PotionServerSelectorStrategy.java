@@ -13,6 +13,7 @@ import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.MutablePair;
 import io.druid.query.Query;
 import io.druid.query.SegmentDescriptor;
 import io.druid.server.coordination.broker.DruidBroker;
@@ -58,12 +59,12 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
         //log.info("Got segment %s numQueryableServers %d", segment.getInterval(), servers.size());
         
         Map<String, Long> segmentRoutingTable = druidBroker.getRoutingTable().get(segment.getIdentifier());
-        ConcurrentHashMap<String, ConcurrentHashMap<String, Long>> segmentHNQueryTimeAllocation = druidBroker.getSegmentHNQueryTimeAllocation();
+        ConcurrentHashMap<String, ConcurrentHashMap<String, MutablePair<Long, Long>>> segmentHNQueryTimeAllocation = druidBroker.getSegmentHNQueryTimeAllocation();
         if(segmentHNQueryTimeAllocation.get(segment.getIdentifier()) == null){
-            ConcurrentHashMap<String, Long> temp = new ConcurrentHashMap<>();
+            ConcurrentHashMap<String, MutablePair<Long, Long>> temp = new ConcurrentHashMap<>();
             segmentHNQueryTimeAllocation.put(segment.getIdentifier(), temp);
         }
-        ConcurrentHashMap<String, Long> hnQueryTimeAllocation = segmentHNQueryTimeAllocation.get(segment.getIdentifier());
+        ConcurrentHashMap<String, MutablePair<Long, Long>> hnQueryTimeAllocation = segmentHNQueryTimeAllocation.get(segment.getIdentifier());
 
         // get the query runtime estimate
         long queryRuntimeEstimate = druidBroker.getQueryRuntimeEstimate(queryType, segmentDescriptor.getInterval().toDurationMillis());
@@ -117,7 +118,7 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
             String hn = s.getServer().getMetadata().toString();
 
             if(hnQueryTimeAllocation.get(hn) == null){
-                hnQueryTimeAllocation.put(hn, 1L); // initialize with 1 to avoid div by 0 errors
+                hnQueryTimeAllocation.put(hn, new MutablePair<Long, Long>(1L, 1L)); // initialize with 1 to avoid div by 0 errors
             }
             //log.info("Queryable server %s, allocation %d", s.getServer().getMetadata().getHost(), hnQueryTimeAllocation.get(hn));
             //log.info("Goal value %d, Current value %d", firstHNValue, firstQueryTimeAllocationValue);
@@ -126,13 +127,20 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
                 maxDeltaRatio = 0;
                 chosenServer = s;
                 firstHNValue = segmentRoutingTable.get(hn);
-                firstQueryTimeAllocationValue = hnQueryTimeAllocation.get(hn);
+                Long allocation = hnQueryTimeAllocation.get(hn).lhs;
+                Long numSegmentTasks = hnQueryTimeAllocation.get(hn).rhs;
+                Long numHnThreadsAllottedToSegment = druidBroker.getSegmentNumHnThreadsAllotted(hn, segment.getIdentifier());
+                firstQueryTimeAllocationValue = allocation*((long)Math.ceil((float)numSegmentTasks/(float)numHnThreadsAllottedToSegment));
                 //log.info("Ratio comparison hn %s goalRatio 1.0, currentRatio 1.0, deltaRatio 0.0, maxDeltaRatio 0.0, chosenServer %s",
                 // s.getServer().getMetadata().getName(), s.getServer().getMetadata().getName());
             }
             else{
                 float goalRatio = (float)segmentRoutingTable.get(hn)/(float)firstHNValue;
-                float currentRatio = (float)hnQueryTimeAllocation.get(hn)/(float)firstQueryTimeAllocationValue;
+                Long allocation = hnQueryTimeAllocation.get(hn).lhs;
+                Long numSegmentTasks = hnQueryTimeAllocation.get(hn).rhs;
+                Long numHnThreadsAllottedToSegment = druidBroker.getSegmentNumHnThreadsAllotted(hn, segment.getIdentifier());
+                Long modifiedAllocation = allocation*((long)Math.ceil((float)numSegmentTasks/(float)numHnThreadsAllottedToSegment));
+                float currentRatio = (float)modifiedAllocation/(float)firstQueryTimeAllocationValue;
                 float deltaRatio =  goalRatio - currentRatio;
                 if(deltaRatio > maxDeltaRatio){
                     maxDeltaRatio = deltaRatio;
@@ -150,8 +158,9 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
         }
         else {
             // update the hnQueryTimeAllocation table
-            long newAllocation = hnQueryTimeAllocation.get(chosenServer.getServer().getMetadata().toString()) + queryRuntimeEstimate;
-            hnQueryTimeAllocation.put(chosenServer.getServer().getMetadata().toString(), newAllocation);
+            long newAllocation = hnQueryTimeAllocation.get(chosenServer.getServer().getMetadata().toString()).lhs + queryRuntimeEstimate;
+            long numSegmentTasks = hnQueryTimeAllocation.get(chosenServer.getServer().getMetadata().toString()).rhs + 1;
+            hnQueryTimeAllocation.put(chosenServer.getServer().getMetadata().toString(), new MutablePair<Long, Long>(newAllocation, numSegmentTasks));
             segmentHNQueryTimeAllocation.put(segment.getIdentifier(), hnQueryTimeAllocation);
             return chosenServer;
         }

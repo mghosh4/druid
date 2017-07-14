@@ -70,8 +70,11 @@ public class DruidBroker
   // duration to a tuple of (query runtime sum, number of samples over which that sum was taken). Number of
   // samples is used to computed the query runtime mean.
   private volatile static ConcurrentHashMap<String, ConcurrentHashMap<Long, MutablePair<Long, Long>>> queryRuntimeEstimateTable = new ConcurrentHashMap<>();
-  // map maintains Segment id to <HN, allocation> map
-  private volatile static ConcurrentHashMap<String, ConcurrentHashMap<String, Long>> segmentHNQueryTimeAllocation = new ConcurrentHashMap<>();
+  // map maintains Segment id to <HN, <allocation, number of tasks allocated>> map
+  private volatile static ConcurrentHashMap<String, ConcurrentHashMap<String, MutablePair<Long, Long>>> segmentHNQueryTimeAllocation = new ConcurrentHashMap<>();
+  // map maintains HN to segments mapping and HN routing table (allocation, %age of cpu threads) tuple
+  private volatile static HashMap<String, HashMap<String, MutablePair<Long, Long>>> hnToSegmentMap = new HashMap<>();
+  private final long numThreadsAtEachHN = 15;
   private volatile static boolean estimateQueryRuntime = true;
   // These variables are used to ignore the initial estimates as they are not accurate.
   private static int numEstimateValuesToIgnore = 5; // this threshold is not strictly followed due to multi-threading
@@ -333,43 +336,7 @@ public class DruidBroker
     }
   }
 
-/*
-  public void setQueryRuntimeEstimate(String queryType, long queryDurationMillis, long queryTime){
-    log.info("Setting queryRuntimeEstimate table for queryType %s, queryDuration %d, queryTime %d", queryType, queryDurationMillis, queryTime);
-    ConcurrentHashMap<Long, MutablePair<Long, Long>> durationMap = this.queryRuntimeEstimateTable.get(queryType);
-    if (durationMap != null){
-      MutablePair<Long, Long> runtime = durationMap.get(queryDurationMillis);
-      long oldEstimate = runtime.lhs;
-      long oldSamples = runtime.rhs;
-
-      runtime.lhs = runtime.lhs + queryTime;
-      runtime.rhs = runtime.rhs + 1L;
-      durationMap.put(queryDurationMillis, runtime);
-
-      log.info("Set done queryRuntimeEstimateTable queryType %s, queryDuration %d, queryTime %d oldEstimate %d, oldSamples %d, newEstimate %d, newSamples %d",
-              queryType, queryDurationMillis, queryTime, oldEstimate, oldSamples, runtime.lhs, runtime.rhs);
-    }
-    else{
-      log.info("Error: query type %s not found in queryRuntimeEstimateTable ", queryType);
-    }
-  }
-
-  public long getQueryRuntimeEstimate(String queryType, long queryDurationMillis){
-    if(this.queryRuntimeEstimateTable.get(queryType) != null) {
-      long totalRuntime = this.queryRuntimeEstimateTable.get(queryType).get(queryDurationMillis).lhs;
-      long numSamples = this.queryRuntimeEstimateTable.get(queryType).get(queryDurationMillis).rhs;
-      if (numSamples != 0) {
-        return totalRuntime / numSamples;
-      } else {
-        return 0L;
-      }
-    }
-    else{
-      return 0L;
-    }
-  }
-*/
-  public ConcurrentHashMap<String, ConcurrentHashMap<String, Long>> getSegmentHNQueryTimeAllocation(){
+  public ConcurrentHashMap<String, ConcurrentHashMap<String, MutablePair<Long, Long>>> getSegmentHNQueryTimeAllocation(){
     return segmentHNQueryTimeAllocation;
   }
 
@@ -393,17 +360,17 @@ public class DruidBroker
     }
 
     log.info("Allocation table ratios");
-    for(Map.Entry<String, ConcurrentHashMap<String, Long>> e1 : segmentHNQueryTimeAllocation.entrySet()) {
+    for(Map.Entry<String, ConcurrentHashMap<String, MutablePair<Long, Long>>> e1 : segmentHNQueryTimeAllocation.entrySet()) {
       String ratioStr = "1";
       Float firstValue = 0F;
       boolean isFirstValue = true;
-      for (Map.Entry<String, Long> e2 : e1.getValue().entrySet()){
+      for (Map.Entry<String, MutablePair<Long, Long>> e2 : e1.getValue().entrySet()){
         if(isFirstValue){
-          firstValue = (float)e2.getValue();
+          firstValue = (float)e2.getValue().lhs;
           isFirstValue = false;
         }
         else{
-          Float ratio = (float)e2.getValue()/firstValue;
+          Float ratio = (float)e2.getValue().lhs/firstValue;
           ratioStr = ratioStr+" : "+String.valueOf(ratio);
         }
       }
@@ -415,10 +382,10 @@ public class DruidBroker
     log.info("HN query time allocation table %s", segmentHNQueryTimeAllocation.toString());
   }
   public void clearSegmentHNQueryTimeAllocationTable(){
-    for(Map.Entry<String, ConcurrentHashMap<String, Long>> e1 : segmentHNQueryTimeAllocation.entrySet()) {
-      for (Map.Entry<String, Long> e2 : e1.getValue().entrySet()){
-        ConcurrentHashMap<String, Long> temp = new ConcurrentHashMap<>();
-        temp.put(e2.getKey(), 1L);
+    for(Map.Entry<String, ConcurrentHashMap<String, MutablePair<Long, Long>>> e1 : segmentHNQueryTimeAllocation.entrySet()) {
+      for (Map.Entry<String, MutablePair<Long, Long>> e2 : e1.getValue().entrySet()){
+        ConcurrentHashMap<String, MutablePair<Long, Long>> temp = new ConcurrentHashMap<>();
+        temp.put(e2.getKey(), new MutablePair<Long, Long>(1L, 1L));
         segmentHNQueryTimeAllocation.put(e1.getKey(), temp);
       }
     }
@@ -495,6 +462,65 @@ public class DruidBroker
     this.routingTable = routingTable;
     log.info("Received routing table");
     printRoutingTable(routingTable);
+  }
+
+  public void updateHNToSegmentMap(){
+
+    hnToSegmentMap.clear();
+
+    for(Map.Entry<String, Map<String, Long>> e1 : routingTable.entrySet()){
+      String segmentId = e1.getKey();
+      for(Map.Entry<String, Long> e2: e1.getValue().entrySet()){
+        String hn = e2.getKey();
+        Long allocation = e2.getValue();
+        HashMap<String, MutablePair<Long, Long>> temp = hnToSegmentMap.get(hn);
+        if(temp==null){
+          temp = new HashMap<>();
+        }
+        temp.put(segmentId, new MutablePair<Long, Long>(allocation, 1L)); // temporary value 1L, gets updated in for loop below
+        hnToSegmentMap.put(hn, temp);
+      }
+    }
+
+    // update number of threads allocated for each segment
+    for(Map.Entry<String, HashMap<String, MutablePair<Long, Long>>> e1 : hnToSegmentMap.entrySet()){
+      long totalAllocation = 0;
+      String hn = e1.getKey();
+      for(Map.Entry<String, MutablePair<Long, Long>> e2: e1.getValue().entrySet()){
+        totalAllocation += e2.getValue().lhs;
+      }
+      for(Map.Entry<String, MutablePair<Long, Long>> e2: e1.getValue().entrySet()){
+        String segmentId = e2.getKey();
+        Long allocation = e2.getValue().lhs;
+        Long numThreads = (long)(Math.ceil(((float)e2.getValue().lhs)*numThreadsAtEachHN/totalAllocation));
+        HashMap<String, MutablePair<Long, Long>> temp = new HashMap<>();
+        temp.put(segmentId, new MutablePair<Long, Long>(allocation, numThreads));
+      }
+    }
+  }
+
+  public void printHNToSegmentMap(){
+    log.info("HN to Segment Map");
+    for(Map.Entry<String, HashMap<String, MutablePair<Long, Long>>> e1 : hnToSegmentMap.entrySet()){
+      String hn = e1.getKey();
+      log.info("HN : %s", hn);
+      for(Map.Entry<String, MutablePair<Long, Long>> e2 : e1.getValue().entrySet()){
+        log.info("Segment id %s allocation %d numThreads %d", e2.getKey(), e2.getValue().lhs, e2.getValue().rhs);
+      }
+    }
+  }
+
+  public Long getSegmentNumHnThreadsAllotted(String hn, String segmentId){
+    Map<String, MutablePair<Long, Long>> temp1 = hnToSegmentMap.get(hn);
+    if(temp1 != null){
+      MutablePair<Long, Long> temp2 = temp1.get(segmentId);
+      if (temp2 != null){
+        log.info("Threads allotted hn %s, segmentId %s, threads %d", hn, segmentId, temp2.rhs);
+        return temp2.rhs;
+      }
+    }
+    log.info("Error: no threads allotted hn %s, segmentId %s, threads 1", hn, segmentId);
+    return 1L;
   }
 
   public HttpClient getHttpClient() {

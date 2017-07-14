@@ -100,9 +100,13 @@ public class BrokerResource
 
       // save the routing table
       druidBroker.setRoutingTable(rt);
+
+      // update hn to segment map
+      druidBroker.updateHNToSegmentMap();
+
       // start doing query estimation only if more than 1 segment is present otherwise estimates are too low
       //if(startQueryEstimation == true){
-          druidBroker.startQueryRuntimeEstimation();
+          //druidBroker.startQueryRuntimeEstimation();
       //}
 
       if(rt.keySet().size() > 1){
