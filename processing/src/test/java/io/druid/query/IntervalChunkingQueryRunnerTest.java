@@ -53,7 +53,7 @@ public class IntervalChunkingQueryRunnerTest
     executors = EasyMock.createMock(ExecutorService.class);
     ServiceEmitter emitter = EasyMock.createNiceMock(ServiceEmitter.class);
     decorator = new IntervalChunkingQueryRunnerDecorator(executors,
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER, emitter, null);
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER, emitter);
     baseRunner = EasyMock.createMock(QueryRunner.class);
     toolChest = EasyMock.createNiceMock(QueryToolChest.class);
   }
