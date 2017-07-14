@@ -95,6 +95,9 @@ public class BrokerResource
           );
       }catch(java.io.IOException e){}
 
+      // print comparison
+      druidBroker.compareRoutingTableExpectationVsReality();
+
       // save the routing table
       druidBroker.setRoutingTable(rt);
       // start doing query estimation only if more than 1 segment is present otherwise estimates are too low
