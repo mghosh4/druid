@@ -174,24 +174,20 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
             i++;
         }
 
-        // update the hnQueryTimeAllocation table
-        long newAllocation = hnQueryTimeAllocation.get(chosenServer.getServer().getMetadata().toString()) + queryRuntimeEstimate;
-        hnQueryTimeAllocation.put(chosenServer.getServer().getMetadata().toString(), newAllocation);
-        segmentHNQueryTimeAllocation.put(segment.getIdentifier(), hnQueryTimeAllocation);
-
-        //log.info("Queryable server %s newAllocation %d", chosenServer.getServer().getMetadata().getName(), newAllocation);
-        //log.info("DataSegment interval %s, version %s, partition %d, runtimeEstimate %d",
-        // segment.getInterval(), segment.getVersion(), segment.getShardSpec().getPartitionNum(), queryRuntimeEstimate);
-
-        /*
         if (chosenServer == null) {
             log.error("Error: cannot find a server in routingTable to match");
             return null;
         }
         else {
+            // update the hnQueryTimeAllocation table
+            long newAllocation = hnQueryTimeAllocation.get(chosenServer.getServer().getMetadata().toString()) + queryRuntimeEstimate;
+            hnQueryTimeAllocation.put(chosenServer.getServer().getMetadata().toString(), newAllocation);
+            segmentHNQueryTimeAllocation.put(segment.getIdentifier(), hnQueryTimeAllocation);
             return chosenServer;
         }
-        */
-        return chosenServer;
+
+        //log.info("Queryable server %s newAllocation %d", chosenServer.getServer().getMetadata().getName(), newAllocation);
+        //log.info("DataSegment interval %s, version %s, partition %d, runtimeEstimate %d",
+        // segment.getInterval(), segment.getVersion(), segment.getShardSpec().getPartitionNum(), queryRuntimeEstimate);
     }
 }
