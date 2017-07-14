@@ -13,6 +13,10 @@ class DistributionFactory(object):
 			return Latest()
 		elif distribution == "druid":
 			return Druid()
+		elif distribution == "beta":
+			return Beta()
+		elif distribution == "inverse":
+			return Inverse()
 	
 	@staticmethod
 	def createSizeDistribution(distribution):

@@ -1,6 +1,7 @@
 import numpy
 import matplotlib.pyplot as plt
 from scipy.interpolate import UnivariateSpline
+from datetime import datetime, timedelta
 
 class Uniform(object):
 
@@ -39,12 +40,12 @@ class Zipfian(object):
         return samples
 
 def plotDistribution(data, filename):
-
-    numBins = len(data)/10
-    p, x = numpy.histogram(data, bins=len(data)/10) # bin it into 10 bins
-    x = x[:-1] + (x[1] - x[0])/2   # convert bin edges to centers
-    f = UnivariateSpline(x, p, data=numBins)
-    plt.plot(x, f(x))
+    plt.clf()
+    plt.hist(data, bins=numpy.arange(min(data), max(data)+1))
+    #p, x = numpy.histogram(data) # bin it into 10 bins
+    #x = x[:-1] + (x[1] - x[0])/2   # convert bin edges to centers
+    #f = UnivariateSpline(x, p, data=numBins)
+    #plt.plot(x, p)
     plt.title('Druid distribution')
     # plt.ylabel('Total segment access')
     # plt.xlabel('Time')
@@ -55,21 +56,33 @@ def plotDistribution(data, filename):
 class Druid(Zipfian):
 
     def generateDistribution(self, minSample, maxSample, numSamples, popularityList, logger):
-        latestsample = super(Druid, self).generateDistribution(minSample, maxSample, numSamples, popularityList, logger)
+        # use 9:1 split of old segment vs new segment range
+        numLatestSegmentSamples = numSamples/10
+        numOldSegmentSamples = numSamples - numLatestSegmentSamples 
+        oldsamples = super(Druid, self).generateDistribution(minSample, (maxSample-(timedelta(minutes=1).total_seconds())), numOldSegmentSamples, popularityList, logger)
 
-        datalatest = [maxSample - x + minSample for x in latestsample]
-        plotDistribution(datalatest, 'latest_distribution.png')
-
+        latestsamples = super(Druid, self).generateDistribution(minSample, maxSample, numLatestSegmentSamples, popularityList, logger)
+         
+        allsamples = [(maxSample-(timedelta(minutes=1).total_seconds())) - x + minSample for x in oldsamples] + [maxSample - x + minSample for x in latestsamples]
+        
+        #self.plotDistribution(allsamples, 'druid_distribution.png', 'Druid-Distribution')
+        
         # convert zipfian to druid distribution
-        numBins = len(data)/10
-        chunk1 = data[0:numBins].reverse()
-        datadruid = data[numBins:-1] + chunk1
+        #numBins = 10 
+        #binSize = len(allsamples)/numBins
+        #chunk1 = datalatest[0:binSize+1]
+        #chunk1.reverse()
+        #chunk2 = datalatest[binSize:-1]
+        #datadruid = chunk2 + chunk1
+        #print datalatest[0:50]
+        #print datalatest[-50:-1]
+        #print datadruid[0:50]
+        #print datadruid[-50:-1]
+        #abd
 
-        print len(datalatest), len(datadruid)
+        #self.plotDistribution(datadruid, 'druid_distribution.png', 'Druid-Distribution')
 
-        plotDistribution(datadruid, 'druid_distribution.png')
-
-    #return data
+        return allsamples
 
 
 class DynamicZipfian(object):
@@ -129,3 +142,39 @@ class ScrambledZipfian(Zipfian):
         scrambledzipfiansample = super(ScrambledZipfian, self).generateDistribution(minSample, maxSample, numSamples, popularityList, logger)
         itemcount = maxSample - minSample + 1
         return [minSample + x % itemcount for x in scrambledzipfiansample]
+
+class Beta(object):
+    
+    def generateDistribution(self, minSample, maxSample, numSamples, popularityList, logger):
+        alpha = 4
+        beta = 50
+        return [minSample + round(x * (maxSample - minSample)) for x in numpy.random.beta(alpha, beta, numSamples)]
+
+class LogNormal(object):
+    
+    def generateDistribution(self, minSample, maxSample, numSamples, popularityList, logger):
+        mean = 5
+        var = 1
+        distrib = numpy.random.lognormal(mean, var, numSamples)
+        mindist = min(distrib)
+        maxdist = max(distrib)
+        dstrange = maxdist - mindist
+        smplrange = maxSample - minSample
+        return [minSample + round((x - mindist) * smplrange / dstrange) for x in distrib]
+        
+
+class Inverse(LogNormal):
+    count = 0
+    def generateDistribution(self, minSample, maxSample, numSamples, popularityList, logger):
+        betasample = super(Inverse, self).generateDistribution(minSample, maxSample, numSamples, popularityList, logger)
+        #print betasample
+        #betadistribfilename = 'beta_distribution' + str(self.count) + '.png'
+        #plotDistribution(betasample, betadistribfilename)
+        #self.count = self.count + 1
+        #print maxSample, minSample
+        invbetasample = [maxSample - x + minSample for x in betasample]
+        #print invbetasample
+        #invbetadistribfilename = 'inv_beta_distribution' + str(self.count) + '.png'
+        #plotDistribution(invbetasample, invbetadistribfilename)
+        #self.count = self.count + 1
+        return invbetasample
