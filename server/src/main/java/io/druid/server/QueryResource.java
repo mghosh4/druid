@@ -272,8 +272,8 @@ public class QueryResource
                 contentType
             )
             .header("X-Druid-Query-Id", queryId)
-            //.header("CurrentHNLoad", currentHNLoad)
-            .header("CurrentHNLoadRuntime", currentLoadInRuntime)
+            .header("CurrentHNLoad", currentHNLoad)
+            //.header("CurrentHNLoadRuntime", currentLoadInRuntime)
             .header("CurrentHNLoadTime", sdf.format(new Date()))
             //.header("HNQueryTime", String.valueOf(System.currentTimeMillis() - start))
             .header("HNQuerySegmentTime", query.getAndRemoveSegmentQueryTime(query.getId()));
