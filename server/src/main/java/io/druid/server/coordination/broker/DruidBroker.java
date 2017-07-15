@@ -497,6 +497,9 @@ public class DruidBroker
         temp.put(segmentId, new MutablePair<Long, Long>(allocation, numThreads));
       }
     }
+
+    // print the map
+    printHNToSegmentMap();
   }
 
   public void printHNToSegmentMap(){
