@@ -74,7 +74,7 @@ public class DruidBroker
   private volatile static ConcurrentHashMap<String, ConcurrentHashMap<String, MutablePair<Long, Long>>> segmentHNQueryTimeAllocation = new ConcurrentHashMap<>();
   // map maintains HN to segments mapping and HN routing table (allocation, %age of cpu threads) tuple
   private volatile static HashMap<String, HashMap<String, MutablePair<Long, Long>>> hnToSegmentMap = new HashMap<>();
-  private final long numThreadsAtEachHN = 15;
+  private final long numThreadsAtEachHN = 14; // use 14 instead of 15 because we use ceil in numThread calculation
   private volatile static boolean estimateQueryRuntime = true;
   // These variables are used to ignore the initial estimates as they are not accurate.
   private static int numEstimateValuesToIgnore = 5; // this threshold is not strictly followed due to multi-threading
