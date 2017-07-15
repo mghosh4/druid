@@ -104,7 +104,7 @@ public class ServerManager implements QuerySegmentWalker
   // Map maintains list of queries being processed
   //private volatile ConcurrentHashMap<Query, Long> loadRuntimeEstimateMap = new ConcurrentHashMap<>();
   private volatile long loadRuntimeEstimate = 0;
-  private List<MutablePair<Date, Long>> loadRuntimeEstimateList =
+  private volatile List<MutablePair<Date, Long>> loadRuntimeEstimateList =
           Collections.synchronizedList(new ArrayList<MutablePair<Date, Long>>());
 
   @Inject
@@ -494,25 +494,25 @@ public class ServerManager implements QuerySegmentWalker
       Date now = new Date();
       for (ListIterator<MutablePair<Date, Long>> iterator = loadRuntimeEstimateList.listIterator(); iterator.hasNext();) {
         MutablePair<Date, Long> item = iterator.next();
-        log.info("loadRuntimeEstimateList: Before item is date %s, duration %d, load estimate %d", item.lhs.toString(), item.rhs, loadRuntimeEstimate);
+        //log.info("loadRuntimeEstimateList: Before item is date %s, duration %d, load estimate %d", item.lhs.toString(), item.rhs, loadRuntimeEstimate);
         if(item.rhs != 1) {
           Long elapsedTimeInMillis = now.getTime() - item.lhs.getTime();
           if (elapsedTimeInMillis >= item.rhs) {
-            item.rhs = 1L;
             loadRuntimeEstimate -= (item.rhs-1);
+            item.rhs = 1L;
           }
           else{
             item.rhs -= elapsedTimeInMillis;
             loadRuntimeEstimate -= elapsedTimeInMillis;
           }
           iterator.set(item);
-          log.info("loadRuntimeEstimateList: After item is date %s, duration %d, load estimate %d, elapsedTime %d",
-                  item.lhs.toString(), item.rhs, loadRuntimeEstimate, elapsedTimeInMillis);
+//          log.info("loadRuntimeEstimateList: After item is date %s, duration %d, load estimate %d, elapsedTime %d",
+//                  item.lhs.toString(), item.rhs, loadRuntimeEstimate, elapsedTimeInMillis);
         }
       }
       loadRuntimeEstimateList.add(new MutablePair<Date, Long>(date, timeEstimateInMillis));
-      log.info("loadRuntimeEstimateList: Added item date %s, duration %d, old estimate %d, new estimate %d",
-              date.toString(), timeEstimateInMillis, loadRuntimeEstimate, loadRuntimeEstimate+timeEstimateInMillis);
+//      log.info("loadRuntimeEstimateList: Added item date %s, duration %d, old estimate %d, new estimate %d",
+//              date.toString(), timeEstimateInMillis, loadRuntimeEstimate, loadRuntimeEstimate+timeEstimateInMillis);
       loadRuntimeEstimate += timeEstimateInMillis;
     }
     return loadRuntimeEstimate;
@@ -525,7 +525,7 @@ public class ServerManager implements QuerySegmentWalker
         if (item.lhs.equals(date)) {
           loadRuntimeEstimate -= item.rhs;
           iterator.remove();
-          log.info("loadRuntimeEstimateList: Removed item date %s, duration %d, load estimate %d", item.lhs.toString(), item.rhs, loadRuntimeEstimate);
+          //log.info("loadRuntimeEstimateList: Removed item date %s, duration %d, load estimate %d", item.lhs.toString(), item.rhs, loadRuntimeEstimate);
         }
       }
     }
