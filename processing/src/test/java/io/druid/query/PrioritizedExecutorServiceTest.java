@@ -126,7 +126,7 @@ public class PrioritizedExecutorServiceTest
     final ConcurrentLinkedQueue<Integer> order = new ConcurrentLinkedQueue<Integer>();
 
     exec.submit(
-        new AbstractPrioritizedCallable<Void>(0, "timeseries")
+        new AbstractPrioritizedCallable<Void>(0, "timeseries", 0)
         {
           @Override
           public Void call() throws Exception
@@ -138,7 +138,7 @@ public class PrioritizedExecutorServiceTest
     );
 
     exec.submit(
-        new AbstractPrioritizedCallable<Void>(-1, "timeseries")
+        new AbstractPrioritizedCallable<Void>(-1, "timeseries", 0)
         {
           @Override
           public Void call() throws Exception
@@ -150,7 +150,7 @@ public class PrioritizedExecutorServiceTest
         }
     );
     exec.submit(
-        new AbstractPrioritizedCallable<Void>(0,"timeseries")
+        new AbstractPrioritizedCallable<Void>(0,"timeseries", 0)
         {
           @Override
           public Void call() throws Exception
@@ -162,7 +162,7 @@ public class PrioritizedExecutorServiceTest
         }
     );
     exec.submit(
-        new AbstractPrioritizedCallable<Void>(2, "timeseries")
+        new AbstractPrioritizedCallable<Void>(2, "timeseries", 0)
         {
           @Override
           public Void call() throws Exception
@@ -316,7 +316,7 @@ public class PrioritizedExecutorServiceTest
   )
   {
     final Callable<Boolean> delegate = getCheckingCallable(myOrder, hasRun);
-    return new AbstractPrioritizedCallable<Boolean>(priority, "timeseries")
+    return new AbstractPrioritizedCallable<Boolean>(priority, "timeseries", 0)
     {
       @Override
       public Boolean call() throws Exception

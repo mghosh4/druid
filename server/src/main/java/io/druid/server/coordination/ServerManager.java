@@ -55,6 +55,7 @@ import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.PartitionHolder;
 
+import org.apache.commons.lang3.tuple.Triple;
 import org.joda.time.*;
 
 import javax.annotation.Nullable;
@@ -505,7 +506,7 @@ public class ServerManager implements QuerySegmentWalker
     return result;
   }
 
-  public String currentHNLoad()
+  public String currentQueueLength()
   {
     long finalLoadValue = 0;
     MetricsEmittingExecutorService service = (MetricsEmittingExecutorService)(exec);
@@ -513,6 +514,35 @@ public class ServerManager implements QuerySegmentWalker
     log.info("QSize %d", service.getQueueSize());
     log.info("ActiveTaskCount %d", service.getActiveTaskCount());
     return Long.toString(finalLoadValue);
+  }
+
+  public List<Pair<DateTime, Long>> getActiveTaskRuntimeEstimates()
+  {
+    MetricsEmittingExecutorService service = (MetricsEmittingExecutorService)(exec);
+    List<Triple<DateTime, String, Long>> activeRunList = Lists.newArrayList(service.getActiveRunList());
+
+    List<Pair<DateTime, Long>> activeTaskRuntimeEstimates = new ArrayList<>();
+    for (Triple<DateTime, String, Long> activeTask : activeRunList)
+    {
+      activeTaskRuntimeEstimates.add(new Pair<>(activeTask.getLeft(),
+              estimator.getQueryRuntimeEstimate(activeTask.getMiddle(), activeTask.getRight())));
+    }
+
+    return activeTaskRuntimeEstimates;
+  }
+
+  public List<Long> getQueuedTaskRuntimeEstimates()
+  {
+    MetricsEmittingExecutorService service = (MetricsEmittingExecutorService)(exec);
+    List<Pair<String, Long>> queuedTasks = service.getQueuedTasks();
+
+    List<Long> queuedTaskRuntimeEstimates = new ArrayList<>();
+    for (Pair<String, Long> task :  queuedTasks)
+    {
+      queuedTaskRuntimeEstimates.add(estimator.getQueryRuntimeEstimate(task.lhs, task.rhs));
+    }
+
+    return queuedTaskRuntimeEstimates;
   }
 
   public String currentWaitTime()
@@ -534,43 +564,34 @@ public class ServerManager implements QuerySegmentWalker
         return Long.toString(estimatedLoad);
     }
 
-    List<Pair<DateTime, String>> activeRunList = Lists.newArrayList(service.getActiveRunList());
-    List<String> queuedTasks = service.getQueuedTasks();
-    final DateTime simTime = DateTime.now();
+    List<Pair<DateTime, Long>> activeRunList = getActiveTaskRuntimeEstimates();
+    List<Long> queuedTasks = getQueuedTaskRuntimeEstimates();
+    DateTime simTime = DateTime.now();
 
     while (!queuedTasks.isEmpty())
     {
-      Pair<DateTime, String> minTask = Collections.min(activeRunList, new Comparator<Pair<DateTime, String>>() {
+      Pair<DateTime, Long> taskToFinish = Collections.min(activeRunList, new Comparator<Pair<DateTime, Long>>() {
         @Override
-        public int compare(Pair<DateTime, String> o1, Pair<DateTime, String> o2) {
-          //TODO: Handle wrong estimate or stragglers
-          long o1workleft = estimator.getQueryRuntimeEstimate(o1.rhs);
-          long o1timespent = simTime.getMillis() - o1.lhs.getMillis();
-          if (o1timespent > 0)
-            o1workleft = o1workleft - o1timespent;
-          //means estimate is wrong or the processor is just slow
-          if (o1workleft < 0)
-              o1workleft = 0;
-
-          long o2workleft = estimator.getQueryRuntimeEstimate(o2.rhs);
-          long o2timespent = simTime.getMillis() - o1.lhs.getMillis();
-          if (o2timespent > 0)
-            o2workleft = o2workleft - o2timespent;
-
-          if (o2workleft < 0)
-              o2workleft = 0;
-
-          return o1.lhs.withDurationAdded(o1workleft, 1).compareTo(
-                  o2.lhs.withDurationAdded(o2workleft, 1));
+        public int compare(Pair<DateTime, Long> o1, Pair<DateTime, Long> o2) {
+          return o1.lhs.withDurationAdded(o1.rhs, 1).compareTo(
+                  o2.lhs.withDurationAdded(o2.rhs, 1));
         }
       });
 
-      long incBy = minTask.lhs.getMillis() + estimator.getQueryRuntimeEstimate(minTask.rhs) - simTime.getMillis();
-      simTime.withDurationAdded(incBy, 1);
-      activeRunList.remove(minTask);
+      simTime = taskToFinish.lhs.withDurationAdded(taskToFinish.rhs, 1);
+      activeRunList.remove(taskToFinish);
       activeRunList.add(new Pair<>(simTime, queuedTasks.get(0)));
       queuedTasks.remove(0);
     }
+
+    Pair<DateTime, Long> taskToFinish = Collections.min(activeRunList, new Comparator<Pair<DateTime, Long>>() {
+      @Override
+      public int compare(Pair<DateTime, Long> o1, Pair<DateTime, Long> o2) {
+        return o1.lhs.withDurationAdded(o1.rhs, 1).compareTo(
+                o2.lhs.withDurationAdded(o2.rhs, 1));
+      }
+    });
+    simTime = taskToFinish.lhs.withDurationAdded(taskToFinish.rhs, 1);
 
     lastLoadEstimateTime = DateTime.now().getMillis();
     estimatedLoad = simTime.getMillis();
@@ -634,9 +655,9 @@ public class ServerManager implements QuerySegmentWalker
                 }
 
                 final ReferenceCountingSegment adapter = chunk.getObject();
-                return Arrays.asList(
-                    buildAndDecorateQueryRunner(factory, toolChest, adapter, input, builderFn, cpuTimeAccumulator)
-                );
+                final QueryRunner<T> runner = buildAndDecorateQueryRunner(factory, toolChest, adapter, input, builderFn, cpuTimeAccumulator);
+                runner.durationMap.put(runner, input.getInterval().toDurationMillis());
+                return Arrays.asList(runner);
               }
             }
         );

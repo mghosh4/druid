@@ -165,14 +165,16 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                   {
                     final int priority = BaseQuery.getContextPriority(query, 0);
                     ListenableFuture<Sequence<SegmentAnalysis>> future = queryExecutor.submit(
-                        new AbstractPrioritizedCallable<Sequence<SegmentAnalysis>>(priority, query.getType())
+                        new AbstractPrioritizedCallable<Sequence<SegmentAnalysis>>(priority, query.getType(), input.durationMap.get(input))
                         {
                           @Override
                           public Sequence<SegmentAnalysis> call() throws Exception
                           {
-                            return Sequences.simple(
+                            Sequence<SegmentAnalysis> returnStmt =  Sequences.simple(
                                 Sequences.toList(input.run(query, responseContext), new ArrayList<SegmentAnalysis>())
                             );
+                            input.durationMap.remove(input);
+                            return returnStmt;
                           }
                         }
                     );
