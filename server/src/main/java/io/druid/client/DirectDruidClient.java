@@ -249,8 +249,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 log.info("Out of order server load updates prev=%s, new=%s", sdf.format(server.getCurrentLoadTimeAtServer()), sdf.format(currentHNLoadTime));
               }
               else{
-                //server.setCurrentLoad(Long.parseLong(currentHNLoad));
-                server.setCurrentLoad(Long.parseLong((currentHNLoadRuntime)));
+                server.setCurrentLoad(Long.parseLong(currentHNLoad));
+                //server.setCurrentLoad(Long.parseLong((currentHNLoadRuntime)));
                 server.setCurrentLoadTimeAtServer(currentHNLoadTime);
               }
               //log.info("Current HN [%s] load [%s]", host, currentHNLoad);
