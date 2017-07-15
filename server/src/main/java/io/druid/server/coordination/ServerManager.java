@@ -104,7 +104,7 @@ public class ServerManager implements QuerySegmentWalker
   // Map maintains list of queries being processed
   //private volatile ConcurrentHashMap<Query, Long> loadRuntimeEstimateMap = new ConcurrentHashMap<>();
   private volatile long loadRuntimeEstimate = 0;
-  private volatile List<MutablePair<Date, Long>> loadRuntimeEstimateList =
+  private List<MutablePair<Date, Long>> loadRuntimeEstimateList =
           Collections.synchronizedList(new ArrayList<MutablePair<Date, Long>>());
 
   @Inject
