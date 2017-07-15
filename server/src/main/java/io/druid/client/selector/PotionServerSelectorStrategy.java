@@ -32,7 +32,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class PotionServerSelectorStrategy implements ServerSelectorStrategy
 {
     private static final EmittingLogger log = new EmittingLogger(PotionServerSelectorStrategy.class);
-    private final float parallelismFactor = 1.0F; // 0.20 means 20% of tasks can run in parallel, 1 means full parallelism
+    private final float parallelismFactor = 0.20F; // 0.20 means 20% of tasks can run in parallel, 1 means full parallelism
 
     @JacksonInject
     DruidBroker druidBroker;
