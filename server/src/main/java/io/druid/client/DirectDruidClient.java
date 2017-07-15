@@ -213,7 +213,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 hnQuerySegmentTimeStr = response.headers().get("HNQuerySegmentTime");
               }
 
-              log.info("Stats queryId %s, queryType %s, query duration %d, query node time %d, query time %d, query segment time %s, hn load %s, hn load runtime %s", query.getId(), queryType, queryDurationMillis, (System.currentTimeMillis()-requestStartTime), hnQueryTimeMillis, hnQuerySegmentTimeStr, currentHNLoad, currentHNLoadRuntime);
+//              log.info("Stats queryId %s, queryType %s, query duration %d, query node time %d, query time %d, query segment time %s, hn load %s, hn load runtime %s", query.getId(), queryType, queryDurationMillis, (System.currentTimeMillis()-requestStartTime), hnQueryTimeMillis, hnQuerySegmentTimeStr, currentHNLoad, currentHNLoadRuntime);
 
               // update queryRuntimeEstimateTable
               //druidBroker.setQueryRuntimeEstimate(queryType, queryDurationMillis, hnQueryTimeMillis);
@@ -224,9 +224,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                   //log.info("Setting decayed estimate queryId %s, queryType %s, duration %d, query segment time %d", query.getId(), query.getType(), Long.valueOf(hnQuerySegmentTimes[i]), Long.valueOf(hnQuerySegmentTimes[i + 1]));
                 }
               }
-              else{
-                log.info("Received empty query segment time queryID %s queryType %s hnQuerySegmentTimeStr %s", query.getId(), query.getType(), hnQuerySegmentTimeStr);
-              }
+//              else{
+//                log.info("Received empty query segment time queryID %s queryType %s hnQuerySegmentTimeStr %s", query.getId(), query.getType(), hnQuerySegmentTimeStr);
+//              }
 
               /*
               // calculate the exponential moving average of load over n data samples
@@ -397,7 +397,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       };
 
       //String newurl = url+"{"+String.valueOf(queryRuntimeEstimate)+"}/";
-      log.info("DDC query details type %s, intervals %s, duration millis %d, datasource %s, runtime estimate %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), queryRuntimeEstimate);
+//      log.info("DDC query details type %s, intervals %s, duration millis %d, datasource %s, runtime estimate %d", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), queryRuntimeEstimate);
 
       future = httpClient.go(
           new Request(
@@ -407,8 +407,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
            .setHeader(
                HttpHeaders.Names.CONTENT_TYPE,
                isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
-           )
-           .addHeader("QueryRuntimeEstimate", String.valueOf(queryRuntimeEstimate)),
+           ),
+           //.addHeader("QueryRuntimeEstimate", String.valueOf(queryRuntimeEstimate)),
           responseHandler
       );
 
