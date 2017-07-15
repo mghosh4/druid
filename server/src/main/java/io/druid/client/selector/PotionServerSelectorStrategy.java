@@ -32,6 +32,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class PotionServerSelectorStrategy implements ServerSelectorStrategy
 {
     private static final EmittingLogger log = new EmittingLogger(PotionServerSelectorStrategy.class);
+    private final float parallelismFactor = 1.0F; // 0.20 means 20% of tasks can run in parallel, 1 means full parallelism
 
     @JacksonInject
     DruidBroker druidBroker;
@@ -130,7 +131,10 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
                 Long allocation = hnQueryTimeAllocation.get(hn).lhs;
                 Long numSegmentTasks = hnQueryTimeAllocation.get(hn).rhs;
                 Long numHnThreadsAllottedToSegment = druidBroker.getSegmentNumHnThreadsAllotted(hn, segment.getIdentifier());
-                firstQueryTimeAllocationValue = allocation*((long)Math.ceil((float)numSegmentTasks/(float)numHnThreadsAllottedToSegment));
+                //firstQueryTimeAllocationValue = allocation*((long)Math.ceil((float)numSegmentTasks/(float)numHnThreadsAllottedToSegment));
+                Float parallelAllocation = allocation*parallelismFactor;
+                Float sequentialAllocation = allocation - parallelAllocation;
+                firstQueryTimeAllocationValue = (long)(Math.ceil(parallelAllocation/numHnThreadsAllottedToSegment) + sequentialAllocation);
                 log.info("First Modified allotment hn %s, segment %s, allocation %d, tasks %d, threads %d, modified allocation %d",
                         hn, segment.getIdentifier(), allocation, numSegmentTasks, numHnThreadsAllottedToSegment, firstQueryTimeAllocationValue);
                 //log.info("Ratio comparison hn %s goalRatio 1.0, currentRatio 1.0, deltaRatio 0.0, maxDeltaRatio 0.0, chosenServer %s",
@@ -141,7 +145,10 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
                 Long allocation = hnQueryTimeAllocation.get(hn).lhs;
                 Long numSegmentTasks = hnQueryTimeAllocation.get(hn).rhs;
                 Long numHnThreadsAllottedToSegment = druidBroker.getSegmentNumHnThreadsAllotted(hn, segment.getIdentifier());
-                Long modifiedAllocation = allocation*((long)Math.ceil((float)numSegmentTasks/(float)numHnThreadsAllottedToSegment));
+                //Long modifiedAllocation = allocation*((long)Math.ceil((float)numSegmentTasks/(float)numHnThreadsAllottedToSegment));
+                Float parallelAllocation = allocation*parallelismFactor;
+                Float sequentialAllocation = allocation - parallelAllocation;
+                Long modifiedAllocation = (long)(Math.ceil(parallelAllocation/numHnThreadsAllottedToSegment) + sequentialAllocation);
                 log.info("Modified allotment hn %s, segment %s, allocation %d, tasks %d, threads %d, modified allocation %d",
                         hn, segment.getIdentifier(), allocation, numSegmentTasks, numHnThreadsAllottedToSegment, modifiedAllocation);
                 float currentRatio = (float)modifiedAllocation/(float)firstQueryTimeAllocationValue;
