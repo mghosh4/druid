@@ -206,7 +206,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               String hnQuerySegmentTimeStr = "";
 
               currentHNLoad = response.headers().get("CurrentHNLoad");
-              //currentHNLoadRuntime = response.headers().get("CurrentHNLoadRuntime");
+              currentHNLoadRuntime = response.headers().get("CurrentHNLoadRuntime");
               currentHNLoadTime = sdf.parse(response.headers().get("CurrentHNLoadTime"));
               hnQueryTimeMillis = 0;//Long.valueOf(response.headers().get("HNQueryTime"));
               hnQuerySegmentTimeStr = response.headers().get("HNQuerySegmentTime");
@@ -247,8 +247,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 log.info("Out of order server load updates prev=%s, new=%s", sdf.format(server.getCurrentLoadTimeAtServer()), sdf.format(currentHNLoadTime));
               }
               else{
-                server.setCurrentLoad(Long.parseLong(currentHNLoad));
-                //server.setCurrentLoad(Long.parseLong((currentHNLoadRuntime)));
+                //server.setCurrentLoad(Long.parseLong(currentHNLoad));
+                server.setCurrentLoad(Long.parseLong((currentHNLoadRuntime)));
                 server.setCurrentLoadTimeAtServer(currentHNLoadTime);
               }
               //log.info("Current HN [%s] load [%s]", host, currentHNLoad);

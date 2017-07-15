@@ -158,23 +158,23 @@ public class QueryResource
       final Map<String, Object> responseContext = new MapMaker().makeMap();
 
       long currentLoadInRuntime = 0;
-//      long queryRuntimeEstimate = 0;
-//      String queryRuntimeEstimateStr = req.getHeader("QueryRuntimeEstimate");
-//      log.info("Content type is %s", queryRuntimeEstimateStr);
-//      if(queryRuntimeEstimateStr!=null) {
-//        queryRuntimeEstimate = Long.valueOf(queryRuntimeEstimateStr);
-//        log.info("Got query runtime estimate %d", queryRuntimeEstimate);
-//      }
-//      else{
-//        log.info("Got null query runtime estimate header queryID %s, queryType %s, str %s", query.getId(), query.getType(), queryRuntimeEstimateStr);
-//      }
+      long queryRuntimeEstimate = 0;
+      String queryRuntimeEstimateStr = req.getHeader("QueryRuntimeEstimate");
+      log.info("Content type is %s", queryRuntimeEstimateStr);
+      if(queryRuntimeEstimateStr!=null) {
+        queryRuntimeEstimate = Long.valueOf(queryRuntimeEstimateStr);
+        log.info("Got query runtime estimate %d", queryRuntimeEstimate);
+      }
+      else{
+        log.info("Got null query runtime estimate header queryID %s, queryType %s, str %s", query.getId(), query.getType(), queryRuntimeEstimateStr);
+      }
 
-      //long queryRuntimeEstimate = Long.valueOf(req.getHeader("QueryRuntimeEstimate"));
+      Date queryArriveDate = new Date();
       try {
         ServerManager manager = (ServerManager)texasRanger;
         if (manager != null) {
-          currentLoadInRuntime = 0;
-          //currentLoadInRuntime = manager.updateLoadRuntimeEstimate(queryRuntimeEstimate);
+          //currentLoadInRuntime = 0;
+          currentLoadInRuntime = manager.updateLoadRuntimeEstimate(queryArriveDate, queryRuntimeEstimate);
         }
         else{
           log.info("Server manager null, setting load runtime to 0");
@@ -214,17 +214,17 @@ public class QueryResource
         try{
           ServerManager manager = (ServerManager)texasRanger;
           if (manager != null){
-            currentHNLoad = manager.currentHNLoad();
-            //currentLoadInRuntime = manager.updateLoadRuntimeEstimate(-queryRuntimeEstimate);
+            //currentHNLoad = manager.currentHNLoad();
+            currentLoadInRuntime = manager.removeLoadRuntimeEstimate(queryArriveDate);
             log.info("Current HN load %s, current load runtime %d", currentHNLoad, currentLoadInRuntime);
           }
           else{
-            currentHNLoad = "0";
+            //currentHNLoad = "0";
             currentLoadInRuntime = 0;
             log.info("Server manager NULL, setting loads to 0");
           }
         }catch(ClassCastException cce){
-          currentHNLoad = "0";
+          //currentHNLoad = "0";
           currentLoadInRuntime = 0;
           log.info("Server manager CCE, setting loads to 0");
         }
@@ -272,8 +272,8 @@ public class QueryResource
                 contentType
             )
             .header("X-Druid-Query-Id", queryId)
-            .header("CurrentHNLoad", currentHNLoad)
-            //.header("CurrentHNLoadRuntime", currentLoadInRuntime)
+            //.header("CurrentHNLoad", currentHNLoad)
+            .header("CurrentHNLoadRuntime", currentLoadInRuntime)
             .header("CurrentHNLoadTime", sdf.format(new Date()))
             //.header("HNQueryTime", String.valueOf(System.currentTimeMillis() - start))
             .header("HNQuerySegmentTime", query.getAndRemoveSegmentQueryTime(query.getId()));

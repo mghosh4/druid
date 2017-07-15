@@ -41,24 +41,7 @@ import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Processing;
 import io.druid.guice.annotations.Smile;
-import io.druid.query.BySegmentQueryRunner;
-import io.druid.query.CPUTimeMetricQueryRunner;
-import io.druid.query.DataSource;
-import io.druid.query.FinalizeResultsQueryRunner;
-import io.druid.query.MetricsEmittingExecutorService;
-import io.druid.query.MetricsEmittingQueryRunner;
-import io.druid.query.NoopQueryRunner;
-import io.druid.query.PrioritizedExecutorService;
-import io.druid.query.Query;
-import io.druid.query.QueryRunner;
-import io.druid.query.QueryRunnerFactory;
-import io.druid.query.QueryRunnerFactoryConglomerate;
-import io.druid.query.QuerySegmentWalker;
-import io.druid.query.QueryToolChest;
-import io.druid.query.ReferenceCountingSegmentQueryRunner;
-import io.druid.query.ReportTimelineMissingSegmentQueryRunner;
-import io.druid.query.SegmentDescriptor;
-import io.druid.query.TableDataSource;
+import io.druid.query.*;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
 import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.ReferenceCountingSegment;
@@ -120,7 +103,9 @@ public class ServerManager implements QuerySegmentWalker
 
   // Map maintains list of queries being processed
   //private volatile ConcurrentHashMap<Query, Long> loadRuntimeEstimateMap = new ConcurrentHashMap<>();
-  private volatile AtomicLong loadRuntimeEstimate = new AtomicLong();
+  private volatile long loadRuntimeEstimate = 0;
+  private volatile List<MutablePair<Date, Long>> loadRuntimeEstimateList =
+          Collections.synchronizedList(new ArrayList<MutablePair<Date, Long>>());
 
   @Inject
   public ServerManager(
@@ -503,8 +488,52 @@ public class ServerManager implements QuerySegmentWalker
     return result;
   }
 
-  public long updateLoadRuntimeEstimate(long delta){
-    return loadRuntimeEstimate.addAndGet(delta);
+  public long updateLoadRuntimeEstimate(Date date, Long timeEstimateInMillis){
+
+    synchronized (loadRuntimeEstimateList) {
+      Date now = new Date();
+      for (ListIterator<MutablePair<Date, Long>> iterator = loadRuntimeEstimateList.listIterator(); iterator.hasNext();) {
+        MutablePair<Date, Long> item = iterator.next();
+        log.info("loadRuntimeEstimateList: Before item is date %s, duration %d, load estimate %d", item.lhs.toString(), item.rhs, loadRuntimeEstimate);
+        if(item.rhs != 1) {
+          Long elapsedTimeInMillis = now.getTime() - item.lhs.getTime();
+          if (elapsedTimeInMillis >= item.rhs) {
+            item.rhs = 1L;
+            loadRuntimeEstimate -= (item.rhs-1);
+          }
+          else{
+            item.rhs -= elapsedTimeInMillis;
+            loadRuntimeEstimate -= elapsedTimeInMillis;
+          }
+          iterator.set(item);
+          log.info("loadRuntimeEstimateList: After item is date %s, duration %d, load estimate %d, elapsedTime %d",
+                  item.lhs.toString(), item.rhs, loadRuntimeEstimate, elapsedTimeInMillis);
+        }
+      }
+      loadRuntimeEstimateList.add(new MutablePair<Date, Long>(date, timeEstimateInMillis));
+      log.info("loadRuntimeEstimateList: Added item date %s, duration %d, old estimate %d, new estimate %d",
+              date.toString(), timeEstimateInMillis, loadRuntimeEstimate, loadRuntimeEstimate+timeEstimateInMillis);
+      loadRuntimeEstimate += timeEstimateInMillis;
+    }
+    return loadRuntimeEstimate;
+  }
+
+  public long removeLoadRuntimeEstimate(Date date){
+    synchronized (loadRuntimeEstimateList) {
+      for (ListIterator<MutablePair<Date, Long>> iterator = loadRuntimeEstimateList.listIterator(); iterator.hasNext(); ) {
+        MutablePair<Date, Long> item = iterator.next();
+        if (item.lhs.equals(date)) {
+          loadRuntimeEstimate -= item.rhs;
+          iterator.remove();
+          log.info("loadRuntimeEstimateList: Removed item date %s, duration %d, load estimate %d", item.lhs.toString(), item.rhs, loadRuntimeEstimate);
+        }
+      }
+    }
+    return loadRuntimeEstimate;
+  }
+
+  public long getLoadRuntimeEstimate(){
+    return loadRuntimeEstimate;
   }
 
   public String currentQueryLoad()
