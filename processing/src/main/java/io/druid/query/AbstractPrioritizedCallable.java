@@ -23,11 +23,13 @@ public abstract class AbstractPrioritizedCallable<V> implements PrioritizedCalla
 {
   private final int priority;
   private final String queryType;
+  private final long duration;
 
-  public AbstractPrioritizedCallable(int priority, String queryType)
+  public AbstractPrioritizedCallable(int priority, String queryType, long duration)
   {
     this.priority = priority;
     this.queryType = queryType;
+    this.duration = duration;
   }
 
   @Override
@@ -38,4 +40,7 @@ public abstract class AbstractPrioritizedCallable<V> implements PrioritizedCalla
 
   @Override
   public String getQueryType() { return  queryType; }
+
+  @Override
+  public long getDuration() { return duration; }
 }

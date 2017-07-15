@@ -144,7 +144,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
           if (metricName == "query/segment/time" && adapter != null)
             adapter.updateSegmentQueryTime(timeTaken);
           if (metricName == "query/segment/time" && estimator != null)
-            estimator.setQueryRuntimeEstimate(query.getType(), timeTaken);
+            estimator.setQueryRuntimeEstimate(query.getType(), query.getDuration().getMillis(), timeTaken);
 
           if (creationTime > 0) {
             emitter.emit(builder.build("query/wait/time", startTime - creationTime));
@@ -224,7 +224,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
               if (metricName == "query/segment/time" && adapter != null)
                 adapter.updateSegmentQueryTime(timeTaken);
               if (metricName == "query/segment/time" && estimator != null)
-                estimator.setQueryRuntimeEstimate(query.getType(), timeTaken);
+                estimator.setQueryRuntimeEstimate(query.getType(), query.getDuration().getMillis(), timeTaken);
 
               if (creationTime > 0) {
                 emitter.emit(builder.build("query/wait/time", startTime - creationTime));

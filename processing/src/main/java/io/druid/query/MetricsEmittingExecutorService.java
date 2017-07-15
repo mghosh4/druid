@@ -23,12 +23,12 @@ import com.google.common.util.concurrent.ForwardingListeningExecutorService;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.metamx.common.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import org.joda.time.DateTime;
 
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 
 public class MetricsEmittingExecutorService extends ForwardingListeningExecutorService
@@ -70,7 +70,7 @@ public class MetricsEmittingExecutorService extends ForwardingListeningExecutorS
     delegate.execute(runnable);
   }
 
-  public List<String> getQueuedTasks()
+  public List<Pair<String, Long>> getQueuedTasks()
   {
     if (delegate instanceof PrioritizedExecutorService)
       return ((PrioritizedExecutorService) delegate).getQueuedTasks();
@@ -102,7 +102,7 @@ public class MetricsEmittingExecutorService extends ForwardingListeningExecutorS
     return 0;
   }
 
-  public Iterable<Pair<DateTime, String>> getActiveRunList()
+  public Iterable<Triple<DateTime, String, Long>> getActiveRunList()
   {
     if (delegate instanceof PrioritizedExecutorService)
       return ((PrioritizedExecutorService) delegate).getActiveRunList();

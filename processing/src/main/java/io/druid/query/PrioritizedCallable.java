@@ -25,4 +25,5 @@ public interface PrioritizedCallable<V> extends Callable<V>
 {
   int getPriority();
   String getQueryType();
+  long getDuration();
 }

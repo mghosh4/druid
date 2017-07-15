@@ -1,10 +1,8 @@
 package io.druid.server.coordination;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.util.Charsets;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Iterables;
 import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.HttpClient;
@@ -123,7 +121,7 @@ public class PeriodicLoadUpdate implements Runnable
                     new Request(
                             HttpMethod.POST,
                             new URL(url)
-                    ).setContent(MediaType.TEXT_PLAIN, (serverManager.currentHNLoad()+"_"+sdf.format(new Date())).getBytes()),
+                    ).setContent(MediaType.TEXT_PLAIN, (serverManager.currentQueueLength()+"_"+sdf.format(new Date())).getBytes()),
                     responseHandler
             ).get();
 

@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.Pair;
 import com.metamx.common.lifecycle.Lifecycle;
+import org.apache.commons.lang3.tuple.Triple;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -117,7 +118,8 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
         ? ((PrioritizedRunnable) runnable).getPriority()
         : defaultPriority,
         config.isFifo() ? queuePosition.decrementAndGet() : 0,
-        null
+        null,
+        0
     );
   }
 
@@ -137,6 +139,9 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
         config.isFifo() ? queuePosition.decrementAndGet() : 0,
         callable instanceof PrioritizedCallable
                 ? ((PrioritizedCallable) callable).getQueryType()
+                : null,
+        callable instanceof PrioritizedCallable
+                ? ((PrioritizedCallable) callable).getDuration()
                 : null
 
     );
@@ -208,14 +213,14 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
 
   public int getCorePoolSize() { return threadPoolExecutor.getCorePoolSize(); }
 
-  public Iterable<Pair<DateTime, String>> getActiveRunList() { return threadPoolExecutor.getActiveRunList(); }
+  public Iterable<Triple<DateTime, String, Long>> getActiveRunList() { return threadPoolExecutor.getActiveRunList(); }
 
   public boolean isNewTaskAdded() { return newTaskAdded; }
 
-  public List<String> getQueuedTasks()
+  public List<Pair<String, Long>> getQueuedTasks()
   {
       List<Runnable> queuedTasks = new ArrayList<>(delegateQueue);
-      List<String> queryTypes = new ArrayList<>();
+      List<Pair<String, Long>> queryTypes = new ArrayList<>();
       for (Runnable task: queuedTasks)
       {
           Preconditions.checkArgument(
@@ -223,7 +228,7 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
                   "task does not implement PrioritizedListenableFutureTask"
           );
 
-          queryTypes.add(((PrioritizedListenableFutureTask) task).getQueryType());
+          queryTypes.add(new Pair<>(((PrioritizedListenableFutureTask) task).getQueryType(), ((PrioritizedListenableFutureTask) task).getQueryDuration()));
       }
 
       return queryTypes;
@@ -266,36 +271,40 @@ class PrioritizedListenableFutureTask<V> implements RunnableFuture<V>,
         ListenableFutureTask.create(task, result),
         task.getPriority(),
         position,
-        null
+        null,
+        0
     );
   }
 
-  public static <V> PrioritizedListenableFutureTask<?> create(PrioritizedCallable<V> callable, long position, String queryType)
+  public static <V> PrioritizedListenableFutureTask<?> create(PrioritizedCallable<V> callable, long position, String queryType, long queryDuration)
   {
     return new PrioritizedListenableFutureTask<>(
         ListenableFutureTask.create(callable),
         callable.getPriority(),
         position,
-        queryType
+        queryType,
+        queryDuration
     );
   }
 
-  public static <V> PrioritizedListenableFutureTask<V> create(ListenableFutureTask<V> task, int priority, long position, String queryType)
+  public static <V> PrioritizedListenableFutureTask<V> create(ListenableFutureTask<V> task, int priority, long position, String queryType, long queryDuration)
   {
-    return new PrioritizedListenableFutureTask<>(task, priority, position, queryType);
+    return new PrioritizedListenableFutureTask<>(task, priority, position, queryType, queryDuration);
   }
 
   private final ListenableFutureTask<V> delegate;
   private final int priority;
   private final long insertionPlace;
   private String queryType;
+  private long queryDuration;
 
-  PrioritizedListenableFutureTask(ListenableFutureTask<V> delegate, int priority, long position, String queryType)
+  PrioritizedListenableFutureTask(ListenableFutureTask<V> delegate, int priority, long position, String queryType, long queryDuration)
   {
     this.delegate = delegate;
     this.priority = priority;
     this.insertionPlace = position; // Long.MAX_VALUE will always be "highest"
     this.queryType = queryType;
+    this.queryDuration = queryDuration;
   }
 
   @Override
@@ -353,6 +362,8 @@ class PrioritizedListenableFutureTask<V> implements RunnableFuture<V>,
 
   public String getQueryType() { return queryType; }
 
+  public long getQueryDuration() { return queryDuration; }
+
   @Override
   public int compareTo(PrioritizedListenableFutureTask otherTask)
   {
@@ -361,7 +372,7 @@ class PrioritizedListenableFutureTask<V> implements RunnableFuture<V>,
 }
 
 class MonitoredThreadPoolExecutor extends ThreadPoolExecutor {
-  private final ConcurrentHashMap<Runnable, Pair<DateTime, String>> activeRunList = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<Runnable, Triple<DateTime, String, Long>> activeRunList = new ConcurrentHashMap<>();
 
   public MonitoredThreadPoolExecutor(int corePoolSize,
                                           int maximumPoolSize,
@@ -378,7 +389,9 @@ class MonitoredThreadPoolExecutor extends ThreadPoolExecutor {
               "task does not implement PrioritizedListenableFutureTask"
       );
 
-      activeRunList.put(r, new Pair<>(DateTime.now(), ((PrioritizedListenableFutureTask) r).getQueryType()));
+      activeRunList.put(r, Triple.of(DateTime.now(),
+              ((PrioritizedListenableFutureTask) r).getQueryType(),
+              ((PrioritizedListenableFutureTask) r).getQueryDuration()));
   }
 
   @Override
@@ -386,7 +399,7 @@ class MonitoredThreadPoolExecutor extends ThreadPoolExecutor {
       activeRunList.remove(r);
   }
 
-  public Iterable<Pair<DateTime, String>> getActiveRunList()
+  public Iterable<Triple<DateTime, String, Long>> getActiveRunList()
   {
       return activeRunList.values();
   }

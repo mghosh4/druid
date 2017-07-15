@@ -124,7 +124,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                       final boolean bySegment = BaseQuery.getContextBySegment(query, false);
 
                       final ListenableFuture<Void> future = queryExecutor.submit(
-                          new AbstractPrioritizedCallable<Void>(priority, query.getType())
+                          new AbstractPrioritizedCallable<Void>(priority, query.getType(), input.durationMap.get(input))
                           {
                             @Override
                             public Void call() throws Exception
@@ -139,6 +139,8 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                                 input.run(query, responseContext)
                                      .accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
                               }
+
+                              input.durationMap.remove(input);
 
                               return null;
                             }

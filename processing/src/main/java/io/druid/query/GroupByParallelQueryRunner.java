@@ -105,7 +105,7 @@ public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
                     }
 
                     return exec.submit(
-                        new AbstractPrioritizedCallable<Void>(priority, query.getType())
+                        new AbstractPrioritizedCallable<Void>(priority, query.getType(), input.durationMap.get(input))
                         {
                           @Override
                           public Void call() throws Exception
@@ -118,6 +118,8 @@ public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
                                 input.run(queryParam, responseContext)
                                      .accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
                               }
+
+                              input.durationMap.remove(input);
 
                               return null;
                             }

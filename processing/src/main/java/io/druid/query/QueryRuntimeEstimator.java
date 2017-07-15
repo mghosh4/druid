@@ -25,9 +25,9 @@ public interface QueryRuntimeEstimator
 {
   void startQueryRuntimeEstimation();
 
-  void setQueryRuntimeEstimate(String queryType, long queryTime);
+  void setQueryRuntimeEstimate(String queryType, long queryDurationMillis, long queryTime);
 
-  long getQueryRuntimeEstimate(String queryType);
+  long getQueryRuntimeEstimate(String queryType, long queryDurationMillis);
 
   void clearQueryRuntimeEstimate();
 }

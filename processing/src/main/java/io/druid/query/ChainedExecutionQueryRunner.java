@@ -115,7 +115,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                             }
 
                             return exec.submit(
-                                new AbstractPrioritizedCallable<Iterable<T>>(priority, query.getType())
+                                new AbstractPrioritizedCallable<Iterable<T>>(priority, query.getType(), input.durationMap.get(input))
                                 {
                                   @Override
                                   public Iterable<T> call() throws Exception
@@ -130,6 +130,8 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                       if (retVal == null) {
                                         throw new ISE("Got a null list of results! WTF?!");
                                       }
+
+                                      input.durationMap.remove(input);
 
                                       return retVal;
                                     }

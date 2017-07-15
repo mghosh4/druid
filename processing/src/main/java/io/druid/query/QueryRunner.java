@@ -22,6 +22,7 @@ package io.druid.query;
 import com.metamx.common.guava.Sequence;
 
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  */
@@ -34,4 +35,6 @@ public interface QueryRunner<T>
    * @return
    */
   Sequence<T> run(Query<T> query, Map<String, Object> responseContext);
+
+  ConcurrentHashMap<QueryRunner, Long> durationMap = new ConcurrentHashMap<>();
 }
