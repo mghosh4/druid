@@ -131,7 +131,7 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
                 Long numSegmentTasks = hnQueryTimeAllocation.get(hn).rhs;
                 Long numHnThreadsAllottedToSegment = druidBroker.getSegmentNumHnThreadsAllotted(hn, segment.getIdentifier());
                 firstQueryTimeAllocationValue = allocation*((long)Math.ceil((float)numSegmentTasks/(float)numHnThreadsAllottedToSegment));
-                log.info("First Modified allotment hn %s, segment %s, allocation %d, tasks %d, threads %d, modified allocation",
+                log.info("First Modified allotment hn %s, segment %s, allocation %d, tasks %d, threads %d, modified allocation %d",
                         hn, segment.getIdentifier(), allocation, numSegmentTasks, numHnThreadsAllottedToSegment, firstQueryTimeAllocationValue);
                 //log.info("Ratio comparison hn %s goalRatio 1.0, currentRatio 1.0, deltaRatio 0.0, maxDeltaRatio 0.0, chosenServer %s",
                 // s.getServer().getMetadata().getName(), s.getServer().getMetadata().getName());
@@ -142,7 +142,7 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
                 Long numSegmentTasks = hnQueryTimeAllocation.get(hn).rhs;
                 Long numHnThreadsAllottedToSegment = druidBroker.getSegmentNumHnThreadsAllotted(hn, segment.getIdentifier());
                 Long modifiedAllocation = allocation*((long)Math.ceil((float)numSegmentTasks/(float)numHnThreadsAllottedToSegment));
-                log.info("Modified allotment hn %s, segment %s, allocation %d, tasks %d, threads %d, modified allocation",
+                log.info("Modified allotment hn %s, segment %s, allocation %d, tasks %d, threads %d, modified allocation %d",
                         hn, segment.getIdentifier(), allocation, numSegmentTasks, numHnThreadsAllottedToSegment, modifiedAllocation);
                 float currentRatio = (float)modifiedAllocation/(float)firstQueryTimeAllocationValue;
                 float deltaRatio =  goalRatio - currentRatio;

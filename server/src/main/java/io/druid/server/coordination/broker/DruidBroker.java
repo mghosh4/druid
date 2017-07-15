@@ -486,13 +486,19 @@ public class DruidBroker
     for(Map.Entry<String, HashMap<String, MutablePair<Long, Long>>> e1 : hnToSegmentMap.entrySet()){
       long totalAllocation = 0;
       String hn = e1.getKey();
+      int numSegments = 0;
+      long totalThreads = numThreadsAtEachHN;
       for(Map.Entry<String, MutablePair<Long, Long>> e2: e1.getValue().entrySet()){
         totalAllocation += e2.getValue().lhs;
+        numSegments++;
+      }
+      if(numSegments < 2){
+        totalThreads = numThreadsAtEachHN + 1;
       }
       for(Map.Entry<String, MutablePair<Long, Long>> e2: e1.getValue().entrySet()){
         String segmentId = e2.getKey();
         Long allocation = e2.getValue().lhs;
-        Long numThreads = (long)(Math.ceil(((float)allocation)*numThreadsAtEachHN/totalAllocation));
+        Long numThreads = (long)(Math.ceil(((float)allocation)*totalThreads/totalAllocation));
         HashMap<String, MutablePair<Long, Long>> temp = hnToSegmentMap.get(hn);
         temp.put(segmentId, new MutablePair<Long, Long>(allocation, numThreads));
         hnToSegmentMap.put(hn, temp);
