@@ -136,10 +136,10 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
         }
         finally {
           long timeTaken = System.currentTimeMillis() - startTime;
-//          if(metricName == "query/segment/time"){
-//            query.updateSegmentQueryTime(query.getId(), query.getType(), query.getDuration().getMillis(), timeTaken);
-//            log.info("Updated segment queryID %s, query type %s, querySegment %s, queryIntervals %s, query segment time %d", query.getId(), query.getType(), query.getDuration().getMillis(), query.getIntervals().toString(), timeTaken);
-//          }
+          if(metricName == "query/segment/time"){
+            query.updateSegmentQueryTime(query.getId(), query.getType(), query.getDuration().getMillis(), timeTaken);
+            log.info("Updated segment queryID %s, query type %s, querySegment %s, queryIntervals %s, query segment time %d", query.getId(), query.getType(), query.getDuration().getMillis(), query.getIntervals().toString(), timeTaken);
+          }
 
           emitter.emit(builder.build(metricName, timeTaken));
           if (metricName == "query/segment/time" && adapter != null)
@@ -219,10 +219,10 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
               }
 
               long timeTaken = System.currentTimeMillis() - startTime;
-//              if(metricName == "query/segment/time"){
-//                query.updateSegmentQueryTime(query.getId(), query.getType(), query.getDuration().getMillis(), timeTaken);
-//                log.info("Updated segment queryID %s, query type %s, querySegment %s, queryIntervals %s, query segment time %d", query.getId(), query.getType(), query.getDuration().getMillis(), query.getIntervals().toString(), timeTaken);
-//              }
+              if(metricName == "query/segment/time"){
+                query.updateSegmentQueryTime(query.getId(), query.getType(), query.getDuration().getMillis(), timeTaken);
+                log.info("Updated segment queryID %s, query type %s, querySegment %s, queryIntervals %s, query segment time %d", query.getId(), query.getType(), query.getDuration().getMillis(), query.getIntervals().toString(), timeTaken);
+              }
               
               emitter.emit(builder.build(metricName, timeTaken));
               if (metricName == "query/segment/time" && adapter != null)

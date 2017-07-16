@@ -185,7 +185,7 @@ public class QueryResource
 //
 //      log.info("QR query details type %s, intervals %s, duration millis %d, datasource %s, context %s", query.getType(), query.getIntervals().toString(), query.getDuration().getMillis(), query.getDataSource().getNames().toString(), query.getContext().toString());
 //
-//      query.initSegmentQueryTimeEntry(query.getId());
+      query.initSegmentQueryTimeEntry(query.getId());
 
       final Sequence res = query.run(texasRanger, responseContext);
       final Sequence results;
@@ -274,9 +274,9 @@ public class QueryResource
             .header("X-Druid-Query-Id", queryId)
             .header("CurrentHNLoad", currentHNLoad)
             //.header("CurrentHNLoadRuntime", currentLoadInRuntime)
-            .header("CurrentHNLoadTime", sdf.format(new Date()));
+            .header("CurrentHNLoadTime", sdf.format(new Date()))
             //.header("HNQueryTime", String.valueOf(System.currentTimeMillis() - start))
-            //.header("HNQuerySegmentTime", query.getAndRemoveSegmentQueryTime(query.getId()));
+            .header("HNQuerySegmentTime", query.getAndRemoveSegmentQueryTime(query.getId()));
 
         //Limit the response-context header, see https://github.com/druid-io/druid/issues/2331
         //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()

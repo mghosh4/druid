@@ -100,7 +100,7 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
               serverList.add(s);
               long load = s.getServer().getCurrentLoad();
               long cc = s.getClient().getNumOpenConnections();
-              float weight = load + cc;
+              long weight = load + cc;
               //float weight = load;
 
               // exponentially decay the load value
