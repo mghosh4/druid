@@ -96,7 +96,7 @@ public class BrokerResource
       }catch(java.io.IOException e){}
 
       // print comparison
-      druidBroker.compareRoutingTableExpectationVsReality();
+      //druidBroker.compareRoutingTableExpectationVsReality();
 
       // save the routing table
       druidBroker.setRoutingTable(rt);
@@ -112,8 +112,8 @@ public class BrokerResource
       if(rt.keySet().size() > 1){
           startQueryEstimation = true; // set this field now, but use it the next time
       }
-      druidBroker.printQueryRuntimeEstimateTable();
-      druidBroker.printSegmentHNQueryTimeAllocationTable();
+      //druidBroker.printQueryRuntimeEstimateTable();
+      //druidBroker.printSegmentHNQueryTimeAllocationTable();
       druidBroker.clearSegmentHNQueryTimeAllocationTable();
       log.info("Sent response of POST for routing table");
       return Response.ok().build();
