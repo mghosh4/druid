@@ -114,8 +114,12 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                               throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
                             }
 
+                            long duration = 0;
+                            if (input.durationMap.containsKey(input))
+                                duration = input.durationMap.get(input);
+
                             return exec.submit(
-                                new AbstractPrioritizedCallable<Iterable<T>>(priority, query.getType(), input.durationMap.get(input))
+                                new AbstractPrioritizedCallable<Iterable<T>>(priority, query.getType(), duration)
                                 {
                                   @Override
                                   public Iterable<T> call() throws Exception

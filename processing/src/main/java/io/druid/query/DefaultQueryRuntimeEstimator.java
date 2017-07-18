@@ -3,6 +3,9 @@ package io.druid.query;
 import com.metamx.emitter.EmittingLogger;
 
 import javax.inject.Inject;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -10,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DefaultQueryRuntimeEstimator implements QueryRuntimeEstimator
 {
-    String[] queryTypes = {Query.TIMESERIES, Query.TOPN, Query.GROUP_BY};
+    List<String> queryTypes = new ArrayList<>(Arrays.asList(Query.TIMESERIES, Query.TOPN, Query.GROUP_BY));
     public static long segmentDurationMillis = 600000;  // Code assumes segment size is 1minute. This will create 60 1sec buckets in the map
 
     private static final EmittingLogger log = new EmittingLogger(DefaultQueryRuntimeEstimator.class);
@@ -49,7 +52,13 @@ public class DefaultQueryRuntimeEstimator implements QueryRuntimeEstimator
     @Override
     public void setQueryRuntimeEstimate(String queryType, long queryDurationMillis, long queryTime)
     {
-        long numIgnoredEstimates = ignoredEstimates.get(queryType);
+        if (!queryTypes.contains(queryType))
+            return;
+
+        long numIgnoredEstimates = 0;
+        if (ignoredEstimates.containsKey(queryType))
+            numIgnoredEstimates = ignoredEstimates.get(queryType);
+
         if(numIgnoredEstimates > numEstimateValuesToIgnore) {
             log.info("Setting queryRuntimeEstimate table for queryType %s, queryDuration %d, queryTime %d", queryType, queryDurationMillis, queryTime);
             if (estimateQueryRuntime == true) {
