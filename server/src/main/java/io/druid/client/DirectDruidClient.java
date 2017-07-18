@@ -210,7 +210,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 //currentHNLoadRuntime = response.headers().get("CurrentHNLoadRuntime");
                 currentHNLoadTime = sdf.parse(response.headers().get("CurrentHNLoadTime"));
                 //hnQueryTimeMillis = Long.valueOf(response.headers().get("HNQueryTime"));
-                hnQuerySegmentTimeStr = response.headers().get("HNQuerySegmentTime");
+                //hnQuerySegmentTimeStr = response.headers().get("HNQuerySegmentTime");
               }
 
 //              log.info("Stats queryId %s, queryType %s, query duration %d, query node time %d, query time %d, query segment time %s, hn load %s, hn load runtime %s", query.getId(), queryType, queryDurationMillis, (System.currentTimeMillis()-requestStartTime), hnQueryTimeMillis, hnQuerySegmentTimeStr, currentHNLoad, currentHNLoadRuntime);

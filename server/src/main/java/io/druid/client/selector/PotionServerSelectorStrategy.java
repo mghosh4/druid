@@ -136,8 +136,8 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
 //                Float parallelAllocation = allocation*parallelismFactor;
 //                Float sequentialAllocation = allocation - parallelAllocation;
 //                firstQueryTimeAllocationValue = (long)(Math.ceil(parallelAllocation/numHnThreadsAllottedToSegment) + sequentialAllocation);
-                log.info("First Modified allotment hn %s, segment %s, allocation %d, tasks %d, threads %d, modified allocation %d",
-                        hn, segment.getIdentifier(), allocation, numSegmentTasks, numHnThreadsAllottedToSegment, firstQueryTimeAllocationValue);
+//                log.info("First Modified allotment hn %s, segment %s, allocation %d, tasks %d, threads %d, modified allocation %d",
+//                        hn, segment.getIdentifier(), allocation, numSegmentTasks, numHnThreadsAllottedToSegment, firstQueryTimeAllocationValue);
                 //log.info("Ratio comparison hn %s goalRatio 1.0, currentRatio 1.0, deltaRatio 0.0, maxDeltaRatio 0.0, chosenServer %s",
                 // s.getServer().getMetadata().getName(), s.getServer().getMetadata().getName());
             }
@@ -151,8 +151,8 @@ public class PotionServerSelectorStrategy implements ServerSelectorStrategy
 //                Float sequentialAllocation = allocation - parallelAllocation;
 //                Long modifiedAllocation = (long)(Math.ceil(parallelAllocation/numHnThreadsAllottedToSegment) + sequentialAllocation);
                 Long modifiedAllocation = hnQueryTimeAllocation.get(hn).lhs;
-                log.info("Modified allotment hn %s, segment %s, allocation %d, tasks %d, threads %d, modified allocation %d",
-                        hn, segment.getIdentifier(), allocation, numSegmentTasks, numHnThreadsAllottedToSegment, modifiedAllocation);
+//                log.info("Modified allotment hn %s, segment %s, allocation %d, tasks %d, threads %d, modified allocation %d",
+//                        hn, segment.getIdentifier(), allocation, numSegmentTasks, numHnThreadsAllottedToSegment, modifiedAllocation);
                 //float currentRatio = (float)hnQueryTimeAllocation.get(hn).lhs/(float)firstQueryTimeAllocationValue;
                 float currentRatio = (float)modifiedAllocation/(float)firstQueryTimeAllocationValue;
                 float deltaRatio =  goalRatio - currentRatio;
