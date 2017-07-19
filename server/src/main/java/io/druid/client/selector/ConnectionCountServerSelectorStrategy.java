@@ -20,6 +20,7 @@
 package io.druid.client.selector;
 
 import com.google.common.primitives.Ints;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.timeline.DataSegment;
 
 import java.util.Collections;
@@ -29,6 +30,7 @@ import java.util.Set;
 
 public class ConnectionCountServerSelectorStrategy implements ServerSelectorStrategy
 {
+  private static final EmittingLogger log = new EmittingLogger(ConnectionCountServerSelectorStrategy.class);
   private static final Comparator<QueryableDruidServer> comparator = new Comparator<QueryableDruidServer>()
   {
     @Override
