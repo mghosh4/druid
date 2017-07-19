@@ -33,7 +33,8 @@ import java.util.Set;
     @JsonSubTypes.Type(name = "getafix", value = GetafixServerSelectorStrategy.class),
     @JsonSubTypes.Type(name = "getafixtime", value = GetafixQueryTimeServerSelectorStrategy.class),
     @JsonSubTypes.Type(name = "minimumload", value = MinimumLoadServerSelectorStrategy.class),
-    @JsonSubTypes.Type(name = "potion", value = PotionServerSelectorStrategy.class)
+    @JsonSubTypes.Type(name = "potion", value = PotionServerSelectorStrategy.class),
+    @JsonSubTypes.Type(name = "rml", value = RMLServerSelectorStrategy.class)
 })
 public interface ServerSelectorStrategy
 {

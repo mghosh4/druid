@@ -102,7 +102,7 @@ public class BrokerResource
       druidBroker.setRoutingTable(rt);
 
       // update hn to segment map
-      druidBroker.updateHNToSegmentMap();
+      //druidBroker.updateHNToSegmentMap();
 
       // start doing query estimation only if more than 1 segment is present otherwise estimates are too low
       //if(startQueryEstimation == true){
@@ -114,7 +114,7 @@ public class BrokerResource
       }
       //druidBroker.printQueryRuntimeEstimateTable();
       //druidBroker.printSegmentHNQueryTimeAllocationTable();
-      druidBroker.clearSegmentHNQueryTimeAllocationTable();
+      //druidBroker.clearSegmentHNQueryTimeAllocationTable();
       log.info("Sent response of POST for routing table");
       return Response.ok().build();
   }
