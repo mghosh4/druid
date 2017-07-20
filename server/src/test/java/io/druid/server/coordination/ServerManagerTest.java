@@ -147,7 +147,9 @@ public class ServerManagerTest
         new DefaultObjectMapper(),
         new LocalCacheProvider().get(),
         new CacheConfig(),
-        new QueryManager()
+        new QueryManager(),
+        null,
+        null
     );
 
     loadQueryable("test", "1", new Interval("P1d/2011-04-01"));
