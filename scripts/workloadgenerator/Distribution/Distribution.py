@@ -54,23 +54,32 @@ def plotDistribution(data, filename):
 
 class Druid(Zipfian):
 
+    def plotDistribution(self, data, figfilename, figtitle):
+
+        #numBins = len(data)/10
+        #p, x = numpy.histogram(data, bins=len(data)/10) # bin it into 10 bins
+        #x = x[:-1] + (x[1] - x[0])/2   # convert bin edges to centers
+        #f = UnivariateSpline(x, p, s=numBins)
+        #plt.plot(x, f(x))
+        plt.plot(list(range(0,len(data))), data, 'b,')
+        plt.title(figtitle)
+        # plt.ylabel('Total segment access')
+        # plt.xlabel('Time')
+        # plt.ylim(0, float(1.25*max(y)))
+        # plt.grid(True)
+        plt.savefig(figfilename)
+
     def generateDistribution(self, minSample, maxSample, numSamples, popularityList, logger):
-        latestsample = super(Druid, self).generateDistribution(minSample, maxSample, numSamples, popularityList, logger)
+        # use 9:1 split of old segment vs new segment range
+        numLatestSegmentSamples = numSamples/10
+        numOldSegmentSamples = numSamples - numLatestSegmentSamples
+        oldsamples = super(Druid, self).generateDistribution(minSample, (maxSample-(timedelta(minutes=1).total_seconds())), numOldSegmentSamples, popularityList, logger)
+        latestsamples = super(Druid, self).generateDistribution(minSample, maxSample, numLatestSegmentSamples, popularityList, logger)
+        allsamples = [(maxSample-(timedelta(minutes=1).total_seconds())) - x + minSample for x in oldsamples] + [maxSample - x + minSample for x in latestsamples]
 
-        datalatest = [maxSample - x + minSample for x in latestsample]
-        plotDistribution(datalatest, 'latest_distribution.png')
+        #self.plotDistribution(allsamples, 'druid_distribution.png', 'Druid-Distribution')
 
-        # convert zipfian to druid distribution
-        numBins = len(data)/10
-        chunk1 = data[0:numBins].reverse()
-        datadruid = data[numBins:-1] + chunk1
-
-        print len(datalatest), len(datadruid)
-
-        plotDistribution(datadruid, 'druid_distribution.png')
-
-    #return data
-
+        return allsamples
 
 class DynamicZipfian(object):
 

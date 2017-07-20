@@ -263,7 +263,7 @@ def threadoperation(queryPerSec):
             logger.info("Poisson numQueries = "+str(numQueries))
 
             # sleep initially till the segmentpopularityinterval
-            yield gen.sleep(segmentpopularityinterval*60)
+            yield gen.sleep(60)
 
             queryScheduleIdx = 0
             count = 0

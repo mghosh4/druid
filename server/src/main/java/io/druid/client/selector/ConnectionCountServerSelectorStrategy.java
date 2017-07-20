@@ -20,14 +20,17 @@
 package io.druid.client.selector;
 
 import com.google.common.primitives.Ints;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.timeline.DataSegment;
 
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.Set;
 
 public class ConnectionCountServerSelectorStrategy implements ServerSelectorStrategy
 {
+  private static final EmittingLogger log = new EmittingLogger(ConnectionCountServerSelectorStrategy.class);
   private static final Comparator<QueryableDruidServer> comparator = new Comparator<QueryableDruidServer>()
   {
     @Override
@@ -37,9 +40,23 @@ public class ConnectionCountServerSelectorStrategy implements ServerSelectorStra
     }
   };
 
+//  @Override
+//  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
+//  {
+//    return Collections.min(servers, comparator);
+//  }
+
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
   {
+    for (Iterator<QueryableDruidServer> iterator = servers.iterator(); iterator.hasNext();) {
+      QueryableDruidServer s = iterator.next();
+      // remove the realtime node from the server list if other servers are available
+      if (s.getServer().getMetadata().getType().equals("realtime") && servers.size() > 1) {
+        iterator.remove();
+        //log.info("Removed realtime server from the list load=%d openConnections=%d", s.getServer().getCurrentLoad(), s.getClient().getNumOpenConnections());
+      }
+    }
     return Collections.min(servers, comparator);
   }
 }

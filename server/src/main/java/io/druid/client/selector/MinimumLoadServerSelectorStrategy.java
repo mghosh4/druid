@@ -36,8 +36,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.Date;
 import java.lang.Math;
 
-public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
-{
+public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy {
   private static final EmittingLogger log = new EmittingLogger(MinimumLoadServerSelectorStrategy.class);
 
   @JacksonInject
@@ -49,141 +48,94 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private final StatusResponseHandler responseHandler = new StatusResponseHandler(Charsets.UTF_8);
 
-  private static final Comparator<QueryableDruidServer> comparator = new Comparator<QueryableDruidServer>()
-  {
+  private static final Comparator<QueryableDruidServer> loadcomparator = new Comparator<QueryableDruidServer>() {
     @Override
-    public int compare(QueryableDruidServer left, QueryableDruidServer right)
-    {
-      return Ints.compare(left.getClient().getNumOpenConnections(), right.getClient().getNumOpenConnections());
-    }
-  };
-
-  private static final Comparator<QueryableDruidServer> loadcomparator = new Comparator<QueryableDruidServer>()
-  {
-    @Override
-    public int compare(QueryableDruidServer left, QueryableDruidServer right)
-    {
+    public int compare(QueryableDruidServer left, QueryableDruidServer right) {
       return Longs.compare(left.getServer().getCurrentLoad(), right.getServer().getCurrentLoad());
     }
   };
 
-/*
   @Override
-  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
-  {
-    return Collections.min(servers, comparator);
-  }
-*/
+  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment) {
 
-  // Pick() the minimum loaded server as per a probability distribution
-  @Override
-  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
-  {
-      QueryableDruidServer chosenServer = null;
-      long maxLoading = -1;
-      long minLoading = 1000000;
-      int minLoadingIndex = -1;
-      int counter = 0;
-      List<Long> loading = new ArrayList<Long>();
-      List<QueryableDruidServer> serverList = new ArrayList<QueryableDruidServer>();
-
-      for (Iterator<QueryableDruidServer> iterator = servers.iterator(); iterator.hasNext();) {
-          QueryableDruidServer s = iterator.next();
-          //log.info("OpenConnections %d", s.getClient().getNumOpenConnections());
-          // remove the realtime node from the server list if other servers are available
-          if (s.getServer().getMetadata().getType().equals("realtime") && servers.size() > 1) {
-              iterator.remove();
-              log.info("Removed realtime server from the list load=%d openConnections=%d", s.getServer().getCurrentLoad(), s.getClient().getNumOpenConnections());
-          } else {
-              serverList.add(s);
-              long temp = s.getServer().getCurrentLoad();
-              // exponentially decay the load value
-              /*
-              Date currTime = new Date();
-              long refreshTime = (currTime.getTime() - s.getServer().getCurrentLoadTimeAtClient().getTime());
-              double decayRate = -0.05;
-              double e = 2.7183;
-              temp = (long) (temp * Math.pow(e, decayRate * refreshTime));
-              log.info("Server name %s, Server host %s, Prev load %d, Decayed load %d, refreshTime %d", s.getServer().getMetadata().getName(), s.getServer().getMetadata().getHost(), s.getServer().getCurrentLoad(), temp, refreshTime);
-              */
-              loading.add(temp);
-              // find max loading value
-              if (temp > maxLoading) {
-                  maxLoading = temp;
-              }
-              // find min loading value
-              if (temp < minLoading) {
-                  minLoading = temp;
-                  minLoadingIndex = counter;
-              }
-              counter++;
-              //log.info("Servers %s", s.getServer().getCurrentLoad());
-          }
-      }
-
-      // pick the server based on the probability distribution of loads
-      /*
-      maxLoading++;
-      //log.info("Max loading %d", maxLoading);
-      long prev = 0;
-      for(int i=0; i<loading.size(); i++){
-          long value = maxLoading - loading.get(i) + prev;
-          loading.set(i, value);
-          prev = value;
-          //log.info("Frequency %d: %d", i, value);
-      }
-      // generate a random number from 0 to prev
-      Random rn = new Random();
-      int randNum = rn.nextInt((int)prev - 0 + 1) + 0;
-      //log.info("Random number %d", randNum);
-      // loop through loading list to identify the bucket
-      int i;
-      for(i=0; i<loading.size(); i++){
-          long value = loading.get(i);
-          if(value >= randNum){
-              break;
-          }
-      }
-      //log.info("Selected index %d", i);
-      return serverList.get(i);
-      */
-      log.info("Selected server name %s, host %s, loading %d", serverList.get(minLoadingIndex).getServer().getMetadata().getName(), serverList.get(minLoadingIndex).getServer().getMetadata().getHost(), loading.get(minLoadingIndex));
-      return serverList.get(minLoadingIndex);
-  }
-
-/*
-  // Pick() the minimum loaded server which has few open connections
-  @Override
-  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
-  {
     QueryableDruidServer chosenServer = null;
+    float maxValue = -1;
+    float minValue = 1000000;
+    int minValueIndex = -1;
+    int counter = 0;
+    //List<Long> loading = new ArrayList<Long>();
+    List<QueryableDruidServer> serverList = new ArrayList<QueryableDruidServer>();
 
-    List<QueryableDruidServer> temp = new ArrayList<QueryableDruidServer>();
-    for(QueryableDruidServer s : servers){
-      if(s.getClient().getNumOpenConnections() >= 18){
-        temp.add(s);
+    for (Iterator<QueryableDruidServer> iterator = servers.iterator(); iterator.hasNext(); ) {
+      QueryableDruidServer s = iterator.next();
+      // remove the realtime node from the server list if other servers are available
+      if (s.getServer().getMetadata().getType().equals("realtime") && servers.size() > 1) {
+        iterator.remove();
+        log.info("Removed realtime server from the list load=%d openConnections=%d", s.getServer().getCurrentLoad(), s.getClient().getNumOpenConnections());
+      } else {
+        serverList.add(s);
+        long load = s.getServer().getCurrentLoad();
+        long cc = s.getClient().getNumOpenConnections();
+        long weight = load + cc;
+
+        // exponentially decay the load value
+        /*
+        Date currTime = new Date();
+        long refreshTime = (currTime.getTime() - s.getServer().getCurrentLoadTimeAtClient().getTime());
+        double decayRate = -0.05;
+        double e = 2.7183;
+        temp = (long) (temp * Math.pow(e, decayRate * refreshTime));
+        log.info("Server name %s, Server host %s, Prev load %d, Decayed load %d, refreshTime %d", s.getServer().getMetadata().getName(), s.getServer().getMetadata().getHost(), s.getServer().getCurrentLoad(), temp, refreshTime);
+        */
+
+        //loading.add(temp);
+        // find max loading value
+        if (weight > maxValue) {
+          maxValue = weight;
+        }
+        // find min loading value
+        if (weight < minValue) {
+          minValue = weight;
+          minValueIndex = counter;
+        }
+        counter++;
+        //log.info("Servers %s", s.getServer().getCurrentLoad());
       }
     }
 
-    if(temp.size() < servers.size()){
-      //log.info("Ignoring [%d] servers with 20 open connections out of total [%d] servers", temp.size(), servers.size());
-      for(QueryableDruidServer t : temp){
-        servers.remove(t);
+    // pick the server based on the probability distribution of loads
+    /*
+    maxLoading++;
+    //log.info("Max loading %d", maxLoading);
+    long prev = 0;
+    for(int i=0; i<loading.size(); i++){
+      long value = maxLoading - loading.get(i) + prev;
+      loading.set(i, value);
+      prev = value;
+      //log.info("Frequency %d: %d", i, value);
+    }
+    // generate a random number from 0 to prev
+    Random rn = new Random();
+    int randNum = rn.nextInt((int)prev - 0 + 1) + 0;
+    //log.info("Random number %d", randNum);
+    // loop through loading list to identify the bucket
+    int i;
+    for(i=0; i<loading.size(); i++){
+      long value = loading.get(i);
+      if(value >= randNum){
+        break;
       }
     }
+    //log.info("Selected index %d", i);
+    return serverList.get(i);
+    */
 
-    chosenServer = Collections.min(servers, loadcomparator);
-
-    //log.info("Min loaded HN connections = %d, Max loaded HN connections = %d", chosenServer.getClient().getNumOpenConnections(), Collections.max(servers, loadcomparator).getClient().getNumOpenConnections());
-
-    //String printStr = "";
-    //for (QueryableDruidServer s : servers){
-      //printStr = printStr+", "+s.getServer().getHost().split("\\.")[0]+":"+String.valueOf(s.getServer().getCurrentLoad());
-    //}
-    //log.info("Choosing HN [%s] with min load [%d] out of [%d] HNs, HN loading stats [%s]", chosenServer.getServer().getHost().split("\\.")[0], chosenServer.getServer().getCurrentLoad(), servers.size(),  printStr);
-
-    return chosenServer;
+    if (minValueIndex == -1) {
+      minValueIndex = 0;
+      log.info("Selected default server, no min load server found");
+    }
+    //log.info("Selected server name %s, host %s, loading %d", serverList.get(minLoadingIndex).getServer().getMetadata().getName(), serverList.get(minLoadingIndex).getServer().getMetadata().getHost(), loading.get(minLoadingIndex));
+    // log.info("Selected server name %s, host %s", serverList.get(minValueIndex).getServer().getMetadata().getName(), serverList.get(minValueIndex).getServer().getMetadata().getHost());
+    return serverList.get(minValueIndex);
   }
-*/
 }
-
