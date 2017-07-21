@@ -176,11 +176,18 @@ def plotHnSegmentAccess():
         # plot the individual segment durations
         segplot = segtimeplots[hn]
         segplotsorted = sorted(segplot,key=lambda x: x[1])
+        labeldict = {}
         for item in segplotsorted:
             templist = item[1]
             newarray = np.array(templist)
             xtemp, ytemp = newarray.T
-            plt.plot(xtemp, ytemp, color=colors[int(item[0])], linestyle='-', label='segment-'+str(item[0]), linewidth = '4')
+            newlabel = 'segment-'+str(item[0])
+            for i in range(0,np.shape(xtemp)[1]):
+                if labeldict.has_key(newlabel):
+                    newlabel = '_nolegend_'
+                else:
+                    labeldict[newlabel] = 1
+                plt.plot(xtemp[:,i], ytemp[:,i], color=colors[int(item[0])], linestyle='-', label=newlabel, linewidth = '4')
 
         # plot the segment generation intervals
         yseg = [0, max(y)+2]
@@ -188,7 +195,7 @@ def plotHnSegmentAccess():
             xseg = list([(minQueryStartTime+timedelta(minutes=int(i))-firsttime).total_seconds(), (minQueryStartTime+timedelta(minutes=int(i))-firsttime).total_seconds()])
             plt.plot(xseg, yseg, 'y-', linewidth='0.5')
 
-        plt.legend(loc='upper left', fontsize = 'xx-small')
+        plt.legend(loc='upper left', fontsize = 'xx-small', ncol=4)
         plt.title('HN '+str(hn.split(".")[0])+' segment accesses')
         plt.ylabel('Total segment access time milliseconds (log-e values)', fontsize=10)
         plt.xlabel('Time (secs)', fontsize=10)
