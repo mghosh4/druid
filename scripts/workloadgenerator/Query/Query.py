@@ -5,6 +5,7 @@ class Query(object):
 		self.index = index
 		self.startTime = time
 		self.interval = ""
+		self.qtype = ""
 		self.tx = datetime.now()
 		self.rx = datetime.now()
 
@@ -25,4 +26,9 @@ class Query(object):
 
 	def getExecutionTime(self):
 		return (self.rx-self.tx).total_seconds()*1000
-		
+
+	def getQueryType(self):
+		return self.qtype		
+
+	def setQueryType(self, qtype):
+		self.qtype = qtype
