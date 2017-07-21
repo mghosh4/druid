@@ -140,8 +140,8 @@ def plotHNLoading():
                 else:
                     plt.title('HN-'+str(loop)+" "+hnMap[int(fname.split("-")[1])]+' Loading')
                 plt.ylabel('Loading (HN queue size + active threads)')
-                plt.xlabel('Time (each tick is '+str(float(resolution)/1000)+' secs)')
-                plt.xticks(np.arange(0, max(bx)+90.0, 30), fontsize=10) # arrange ticks on 30secs boundary
+                plt.xlabel('Time (tick resolution is '+str(float(resolution)/1000)+' secs)')
+                plt.xticks(np.arange(0, max(bx)+90.0, 300), fontsize=10) # arrange ticks on 300secs boundary
                 plt.grid(True)
                 outputPlotFile = ''
                 if numHNPerPlot > 1:

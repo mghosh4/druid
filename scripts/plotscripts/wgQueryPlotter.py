@@ -18,37 +18,38 @@ def plotWGQueryTimes():
 		with open(fname) as f:
 			for line in f:
 				l = line.rstrip('\n')
-				if "Query id" in l:
-					if ",time" not in l:
-						date = l.split(" ")[0]+" "+l.split(" ")[1]
-						time = datetime.strptime(date, '%Y-%m-%d %H:%M:%S,%f')
-						data.append(time)
-	data.sort()
-	x = []
-	y = []
-	time = 0
-	count = 0
-	prevtime = datetime.now()
-	cumulativetime = 0;
-	for t in data:
-		if count == 0:
-			time = 0
-		else:
-			time = (t-prevtime).total_seconds()*1000
-		cumulativetime = cumulativetime + time
-		x.append(cumulativetime/1000)
-		y.append(time)
-		prevtime = t
-		count = count + 1
+				if "> POST" in l:
+					date = l.split(" ")[0]+" "+l.split(" ")[1]
+					time = datetime.strptime(date, '%Y-%m-%d %H:%M:%S,%f')
+					data.append(time)
+		data.sort()
+		x = []
+		y = []
+		time = 0
+		count = 0
+		prevtime = datetime.now()
+		cumulativetime = 0;
+		for t in data:
+			if count == 0:
+				time = 0
+			else:
+				time = (t-prevtime).total_seconds()*1000
+			cumulativetime = cumulativetime + time
+			x.append(cumulativetime/1000)
+			y.append(time)
+			prevtime = t
+			count = count + 1
 
-	plt.plot(x, y, label='inter-departure time')
-	plt.legend(loc='upper right', fontsize = 'small')
-	plt.title('Workload generator query inter-departure times')
-	plt.ylabel('Inter-departure time (ms)')
-	plt.xlabel('Time')
-	plt.savefig('workloadgenerator_plot.png')
-	print "Median is "+str(np.median(y))
-	print "Cumulative time is "+str(cumulativetime)
+		plt.plot(x, y, label='inter-departure time')
+		plt.legend(loc='upper right', fontsize = 'small')
+		plt.title(fname.split("/")[-1].split(".")[0]+' query inter-departure times')
+		plt.ylabel('Inter-departure time (ms)')
+		plt.xlabel('Time')
+		plt.savefig(fname.split("/")[-1].split(".")[0]+'.png')
+		plt.clf()
+		print fname.split("/")[-1]+" :"
+		print "  Median is "+str(np.median(y))
+		print "  Cumulative time is "+str(cumulativetime)
 
 def main():
 	plotWGQueryTimes()
