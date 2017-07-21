@@ -149,7 +149,6 @@ public class ServerManagerTest
         new CacheConfig(),
         new QueryManager(),
         null,
-        null,
         null
     );
 

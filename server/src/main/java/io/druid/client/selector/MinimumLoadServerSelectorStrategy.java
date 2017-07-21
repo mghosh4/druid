@@ -36,8 +36,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.Date;
 import java.lang.Math;
 
-public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
-{
+public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy {
   private static final EmittingLogger log = new EmittingLogger(MinimumLoadServerSelectorStrategy.class);
 
   @JacksonInject

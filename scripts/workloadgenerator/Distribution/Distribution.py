@@ -58,32 +58,14 @@ class Druid(Zipfian):
     def generateDistribution(self, minSample, maxSample, numSamples, popularityList, logger):
         # use 9:1 split of old segment vs new segment range
         numLatestSegmentSamples = numSamples/10
-        numOldSegmentSamples = numSamples - numLatestSegmentSamples 
+        numOldSegmentSamples = numSamples - numLatestSegmentSamples
         oldsamples = super(Druid, self).generateDistribution(minSample, (maxSample-(timedelta(minutes=1).total_seconds())), numOldSegmentSamples, popularityList, logger)
-
         latestsamples = super(Druid, self).generateDistribution(minSample, maxSample, numLatestSegmentSamples, popularityList, logger)
-         
         allsamples = [(maxSample-(timedelta(minutes=1).total_seconds())) - x + minSample for x in oldsamples] + [maxSample - x + minSample for x in latestsamples]
-        
-        #self.plotDistribution(allsamples, 'druid_distribution.png', 'Druid-Distribution')
-        
-        # convert zipfian to druid distribution
-        #numBins = 10 
-        #binSize = len(allsamples)/numBins
-        #chunk1 = datalatest[0:binSize+1]
-        #chunk1.reverse()
-        #chunk2 = datalatest[binSize:-1]
-        #datadruid = chunk2 + chunk1
-        #print datalatest[0:50]
-        #print datalatest[-50:-1]
-        #print datadruid[0:50]
-        #print datadruid[-50:-1]
-        #abd
 
-        #self.plotDistribution(datadruid, 'druid_distribution.png', 'Druid-Distribution')
+        #plotDistribution(allsamples, 'druid_distribution.png', 'Druid-Distribution')
 
         return allsamples
-
 
 class DynamicZipfian(object):
 

@@ -192,6 +192,8 @@ public class DruidBroker
   public synchronized void setRoutingTable(Map<String, Map<String, Long>> routingTable)
   {
     this.routingTable = routingTable;
+    //log.info("Received routing table");
+    //printRoutingTable(routingTable);
   }
 
   public HttpClient getHttpClient() {

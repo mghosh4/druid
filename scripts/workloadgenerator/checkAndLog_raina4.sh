@@ -21,5 +21,7 @@ done
 
 echo "Yeah!"
 #run logreader
+cd /proj/DCSQ/raina4/druid/scripts/deployment
+./stop_druid.sh -s config/getafix.conf
 cd /proj/DCSQ/raina4/druid/scripts/logreader
 python StatsGenerator.py getafix.conf

@@ -40,6 +40,12 @@ public class ConnectionCountServerSelectorStrategy implements ServerSelectorStra
     }
   };
 
+//  @Override
+//  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
+//  {
+//    return Collections.min(servers, comparator);
+//  }
+
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
   {
