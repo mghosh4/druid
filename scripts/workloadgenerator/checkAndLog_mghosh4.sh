@@ -20,6 +20,14 @@ do
 done
 
 echo "Yeah!"
+
+#Change the conf file based on experiment
+cd /proj/DCSQ/mghosh4/druid/scripts/deployment
+./stop_druid.sh -s config/getafix_10.conf
+
 #run logreader
 cd /proj/DCSQ/mghosh4/druid/scripts/logreader
 python StatsGenerator.py getafix.conf
+
+#mkdir /proj/DCSQ/mghosh4/analysis/logs/getafix_cml_coldstart_2b5hn_1
+#cp /proj/DCSQ/mghosh4/logs/* /proj/DCSQ/mghosh4/analysis/logs/getafix_cml_coldstart_2b5hn_1/
