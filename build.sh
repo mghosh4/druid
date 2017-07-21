@@ -1,8 +1,10 @@
 #!/bin/bash -e
 
-#rm distribution/target/druid-0.9.0-SNAPSHOT-bin.tar.gz
+sudo rm -rf druid-0.9.0-SNAPSHOT
 
-mvn install -DskipTests
+sudo mvn install -DskipTests
 
-tar -xvf distribution/target/druid-0.9.0-SNAPSHOT-bin.tar.gz -C distribution/target/
+cp distribution/target/druid-0.9.0-SNAPSHOT-bin.tar.gz .
+
+tar -xvf druid-0.9.0-SNAPSHOT-bin.tar.gz
 

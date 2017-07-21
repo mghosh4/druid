@@ -144,9 +144,6 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		//manageReplicas(params, insertList, removeList, stats);
 		manageReplicas(params, routingTable, stats);
 
-        // send the updated routing table to the brokers
-        sendRoutingTableToClients(routingTable);
-
 		// Manage replicas
 		return params.buildFromExisting() 
                 .withReplicationManager(replicatorThrottler)

@@ -187,6 +187,7 @@ public class QueryResource
         try{
           ServerManager manager = (ServerManager)texasRanger;
           if (manager != null){
+            //currentHNLoad = manager.currentQueueLength();
             currentHNLoad = manager.currentWaitTime();
             //log.info("Current HN load [%s]", currentHNLoad);
           }
