@@ -140,73 +140,6 @@ done
 
 
 ############################ SHUTDOWN ##########################################
-
-#shutdown the kafka server
-echo "Shutting down kafka server:"
-counter=0
-for node in ${NEW_KAFKA_NODES//,/ }
-do
-    echo "Shutting down $node ..."
-    COMMAND=''
-    COMMAND=$COMMAND" cd $PATH_TO_KAFKA;"
-    COMMAND=$COMMAND" sudo ./bin/kafka-topics.sh --zookeeper $KAFKA_NODE_HOST:$KAFKA_ZOOKEEPER_PORT --delete --topic $KAFKA_TOPIC;"
-    COMMAND=$COMMAND" sudo ./bin/kafka-server-stop.sh;"
-    COMMAND=$COMMAND" sudo ./bin/zookeeper-server-stop.sh;"
-    #COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
-    #COMMAND=$COMMAND" sudo screen -wipe;"
-    if [ $TYPE_OF_STOP -eq 1 ]
-    then
-        COMMAND=$COMMAND" sudo rm -rf /mnt/kafkalogs;"
-        COMMAND=$COMMAND" sudo rm -rf /tmp/*;"
-    fi
-    echo "kafka server shutdown command is $COMMAND"
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
-        $COMMAND"
-done
-echo""
-
-#shutdown the zookeeper server
-echo "Shutting down zookeeper server:"
-counter=0
-for node in ${NEW_ZOOKEEPER_NODES//,/ }
-do
-    echo "Shutting down $node ..."
-    COMMAND=''
-    COMMAND=$COMMAND" cd $PATH_TO_ZOOKEEPER && sudo bin/zkServer.sh stop;"
-    if [ $TYPE_OF_STOP -eq 1 ]
-    then
-        COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/zookeeper.log;"
-        COMMAND=$COMMAND" sudo rm -rf $LOG_FILE/zookeeper.out;"
-    fi
-    echo "zookeeper server shutdown command is $COMMAND"
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
-       $COMMAND"
-done
-echo""
-
-#shutdown the mysql server
-echo "Shutting down mysql server:"
-counter=0
-for node in ${NEW_MYSQL_NODES//,/ }
-do
-    echo "Shutting down $node ..."
-    COMMAND=''
-    if [ $TYPE_OF_STOP -eq 1 ]
-    then
-        COMMAND=$COMMAND" sudo rm -r -f $LOG_FILE/mysql.log;"
-    fi
-    COMMAND=$COMMAND" sudo service mysql stop;"
-    COMMAND=$COMMAND" sudo service mysql start;"
-    MYSQL="DROP DATABASE druid;"
-    COMMAND=$COMMAND" mysql -u root -e \"$MYSQL\";"
-    COMMAND=$COMMAND" sudo service mysql stop;"
-    #COMMAND=$COMMAND" sudo apt-get -y remove mysql-server;"
-    echo "mysql server shutdown command is $COMMAND"
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
-       $COMMAND"
-done
-echo""
-
 #shutdown the middle manager server
 echo "Shutting down middle manager server:"
 counter=0
@@ -338,3 +271,69 @@ do
         $COMMAND"
 done
 echo ""
+
+#shutdown the kafka server
+echo "Shutting down kafka server:"
+counter=0
+for node in ${NEW_KAFKA_NODES//,/ }
+do
+    echo "Shutting down $node ..."
+    COMMAND=''
+    COMMAND=$COMMAND" cd $PATH_TO_KAFKA;"
+    COMMAND=$COMMAND" sudo ./bin/kafka-topics.sh --zookeeper $KAFKA_NODE_HOST:$KAFKA_ZOOKEEPER_PORT --delete --topic $KAFKA_TOPIC;"
+    COMMAND=$COMMAND" sudo ./bin/kafka-server-stop.sh;"
+    COMMAND=$COMMAND" sudo ./bin/zookeeper-server-stop.sh;"
+    #COMMAND=$COMMAND" sudo pkill -9 \"screen\";"
+    #COMMAND=$COMMAND" sudo screen -wipe;"
+    if [ $TYPE_OF_STOP -eq 1 ]
+    then
+        COMMAND=$COMMAND" sudo rm -rf /mnt/kafkalogs;"
+        COMMAND=$COMMAND" sudo rm -rf /tmp/*;"
+    fi
+    echo "kafka server shutdown command is $COMMAND"
+    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        $COMMAND"
+done
+echo""
+
+#shutdown the zookeeper server
+echo "Shutting down zookeeper server:"
+counter=0
+for node in ${NEW_ZOOKEEPER_NODES//,/ }
+do
+    echo "Shutting down $node ..."
+    COMMAND=''
+    COMMAND=$COMMAND" cd $PATH_TO_ZOOKEEPER && sudo bin/zkServer.sh stop;"
+    if [ $TYPE_OF_STOP -eq 1 ]
+    then
+        COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/zookeeper.log;"
+        COMMAND=$COMMAND" sudo rm -rf $LOG_FILE/zookeeper.out;"
+    fi
+    echo "zookeeper server shutdown command is $COMMAND"
+    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+       $COMMAND"
+done
+echo""
+
+#shutdown the mysql server
+echo "Shutting down mysql server:"
+counter=0
+for node in ${NEW_MYSQL_NODES//,/ }
+do
+    echo "Shutting down $node ..."
+    COMMAND=''
+    if [ $TYPE_OF_STOP -eq 1 ]
+    then
+        COMMAND=$COMMAND" sudo rm -r -f $LOG_FILE/mysql.log;"
+    fi
+    COMMAND=$COMMAND" sudo service mysql stop;"
+    COMMAND=$COMMAND" sudo service mysql start;"
+    MYSQL="DROP DATABASE druid;"
+    COMMAND=$COMMAND" mysql -u root -e \"$MYSQL\";"
+    COMMAND=$COMMAND" sudo service mysql stop;"
+    #COMMAND=$COMMAND" sudo apt-get -y remove mysql-server;"
+    echo "mysql server shutdown command is $COMMAND"
+    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+       $COMMAND"
+done
+echo""
