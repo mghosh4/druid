@@ -50,7 +50,10 @@ public class AsyncQueryRunner<T> implements QueryRunner<T>
   public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
   {
     final int priority = BaseQuery.getContextPriority(query, 0);
-    final ListenableFuture<Sequence<T>> future = executor.submit(new AbstractPrioritizedCallable<Sequence<T>>(priority, query.getType(), baseRunner.durationMap.get(baseRunner))
+    long duration = 0;
+    if (baseRunner.durationMap.containsKey(baseRunner))
+        duration = baseRunner.durationMap.get(baseRunner);
+    final ListenableFuture<Sequence<T>> future = executor.submit(new AbstractPrioritizedCallable<Sequence<T>>(priority, query.getType(), duration)
         {
           @Override
           public Sequence<T> call() throws Exception

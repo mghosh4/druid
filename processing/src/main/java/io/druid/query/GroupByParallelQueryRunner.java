@@ -104,8 +104,12 @@ public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
                       throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
                     }
 
+                    long duration = 0;
+                    if (input.durationMap.containsKey(input))
+                        duration = input.durationMap.get(input);
+
                     return exec.submit(
-                        new AbstractPrioritizedCallable<Void>(priority, query.getType(), input.durationMap.get(input))
+                        new AbstractPrioritizedCallable<Void>(priority, query.getType(), duration)
                         {
                           @Override
                           public Void call() throws Exception

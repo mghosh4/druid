@@ -123,8 +123,12 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                       final int priority = BaseQuery.getContextPriority(query, 0);
                       final boolean bySegment = BaseQuery.getContextBySegment(query, false);
 
+                      long duration = 0;
+                      if (input.durationMap.containsKey(input))
+                        duration = input.durationMap.get(input);
+
                       final ListenableFuture<Void> future = queryExecutor.submit(
-                          new AbstractPrioritizedCallable<Void>(priority, query.getType(), input.durationMap.get(input))
+                          new AbstractPrioritizedCallable<Void>(priority, query.getType(), duration)
                           {
                             @Override
                             public Void call() throws Exception
