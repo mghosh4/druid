@@ -58,7 +58,7 @@ def signal_term_handler(signum, frame):
     traceback.print_stack(frame)
     sys.exit(0)
 
-def applyOperation(query, config, brokerNameUrl, logger, querytype):
+def applyOperation(query, config, brokerNameUrl, logger):
     dbOpsHandler = AsyncDBOpsHandler(config, brokerNameUrl, logger)
     querytype = query.getQueryType()
     if querytype == "timeseries":
