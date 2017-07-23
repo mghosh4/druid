@@ -16,10 +16,11 @@ class ParseConfig:
         self.queryratio = ""
         self.brokernodeurl = ""
         self.brokerendpoint = ""
-        self.opspersecond = 0
+        self.minops = 0
+        self.maxops = 0
         self.logfolder = ""
         self.runtime = 0
-	self.segmentpopularityinterval = 0
+        self.segmentpopularityinterval = 0
         self.isbatch = 0
         self.filename = ""
 
@@ -66,14 +67,16 @@ class ParseConfig:
                     self.brokernodeurl = value
                 elif key == "brokerendpoint":
                     self.brokerendpoint = value
-                elif key == "opspersecond":
-                    self.opspersecond = int(value)
+                elif key == "minops":
+                    self.minops = int(value)
+                elif key == "maxnops":
+                    self.maxops = int(value)
                 elif key == "logfolder":
                     self.logfolder = value
                 elif key == "runtime":
                     self.runtime = int(value)
-		elif key == "segmentpopularityinterval":
-		    self.segmentpopularityinterval = int(value)
+                elif key == "segmentpopularityinterval":
+                    self.segmentpopularityinterval = int(value)
                 elif key == "isbatch":
                     self.isbatch = int(value)
                 elif key == "filename":
@@ -124,8 +127,11 @@ class ParseConfig:
     def getBrokerEndpoint(self):
         return self.brokerendpoint
 
-    def getOpsPerSecond(self):
-        return self.opspersecond
+    def getMinOpsPerSecond(self):
+        return self.minops
+
+    def getMaxOpsPerSecond(self):
+        return self.maxops
 
     def getLogFolder(self):
         return self.logfolder
@@ -134,7 +140,7 @@ class ParseConfig:
         return self.runtime
 
     def getSegmentPopularityInterval(self):
-	return self.segmentpopularityinterval
+        return self.segmentpopularityinterval
 
     def getBatchExperiment(self):
         return self.isbatch > 0
@@ -159,7 +165,8 @@ class ParseConfig:
         print "Query Ratio : " + self.getQueryRatio()
         print "Broker Node Url : " + self.getBrokerNodeUrl()
         print "Broker Endpoint : " + self.getBrokerEndpoint()
-        print "Operations per second : " + self.getOpsPerSecond()
+        print "Min Operations per second : " + self.getMinOpsPerSecond()
+        print "Max Operations per second : " + self.getMaxOpsPerSecond()
         print "Log Folder : " + self.getLogFolder()
         print "Runtime : " + self.getRunTime()
         print "Is Batch Experiment : " + self.getBatchExperiment()

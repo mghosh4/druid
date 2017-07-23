@@ -31,6 +31,7 @@ from AsyncDBOpsHandler import AsyncDBOpsHandler
 from DBOpsHandler import DBOpsHandler
 from QueryGenerator import QueryGenerator
 from DistributionFactory import DistributionFactory
+from Utils import Utils
 
 def getConfigFile(args):
     return args[1]
@@ -159,9 +160,6 @@ def threadoperation(queryPerSec):
             numQueries, querySchedule = genPoissonQuerySchedule(queryPerMilliSecond, numSamples)
             logger.info("Poisson numQueries = "+str(numQueries))
 
-            # sleep initially till the segmentpopularityinterval
-            yield gen.sleep(60)
-
             queryScheduleIdx = 0
             count = 0
             while count < len(newquerylist):
@@ -181,10 +179,9 @@ def threadoperation(queryPerSec):
                             logger.error(type(inst))     # the exception instance
                             logger.error(inst.args)      # arguments stored in .args
                             logger.error(inst)           # __str__ allows args to be printed directly
-                            x, y = inst.args
-                            logger.error('x =', x)
-                            logger.error('y =', y)
                         count = count + 1
+                        if count >= len(newquerylist):
+                            break
                 queryScheduleIdx = queryScheduleIdx + 1
     
         wait_iterator = gen.WaitIterator(*line)
@@ -209,16 +206,23 @@ config = getConfig(configFile)
 
 
 accessdistribution = config.getAccessDistribution()
-accessdistribution = config.getAccessDistribution()
 perioddistribution = config.getPeriodDistribution()
 querytype = config.getQueryType()
 queryratio = list()
 if querytype == "mixture":
     queryratio = [int(n) for n in config.getQueryRatio().split(":")]
+
 logfolder = config.getLogFolder()
-opspersecond = config.getOpsPerSecond()
+
+minopspersecond = config.getMinOpsPerSecond()
+maxopspersecond = config.getMaxOpsPerSecond()
+opspersecond = minopspersecond
+if minopspersecond < maxopspersecond:
+    opspersecond = numpy.random.randint(minopspersecond, maxopspersecond)
+
 runtime = config.getRunTime() # in minutes
 segmentpopularityinterval = config.getSegmentPopularityInterval() # in minutes
+
 isbatch = config.getBatchExperiment()
 filename = config.getFileName()
 brokernameurl = config.getBrokerNodeUrl()
@@ -273,10 +277,10 @@ tb = newquery.time_boundary(datasource=config.getDataSource())
 startdict = tb[0]
 start = startdict['result']['minTime']
 start = datetime.strptime(start, '%Y-%m-%dT%H:%M:%S.%fZ')
-start = utc.localize(start)
+#logger.info('Original {} Round {} Localized {}'.format(start.strftime("%Y-%m-%d %H:%M:%S"), Utils.round_time(start).strftime("%Y-%m-%d %H:%M:%S"), utc.localize(start).strftime("%Y-%m-%d %H:%M:%S")))
+start = Utils.round_time(start) 
 end = startdict['result']['maxTime']
 end = datetime.strptime(end, '%Y-%m-%dT%H:%M:%S.%fZ')
-end = utc.localize(end)
 
 minqueryperiod = 0
 maxqueryperiod = int((end - start).total_seconds())
