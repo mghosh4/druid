@@ -48,38 +48,24 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private final StatusResponseHandler responseHandler = new StatusResponseHandler(Charsets.UTF_8);
 
-  private static final Comparator<QueryableDruidServer> loadcomparator = new Comparator<QueryableDruidServer>()
-  {
+  private static final Comparator<QueryableDruidServer> loadcomparator = new Comparator<QueryableDruidServer>() {
     @Override
-    public int compare(QueryableDruidServer left, QueryableDruidServer right)
-    {
-      return Longs.compare(left.getServer().getCurrentLoad(), right.getServer().getCurrentLoad());
+    public int compare(QueryableDruidServer left, QueryableDruidServer right) {
+      return Longs.compare(left.getServer().getCurrentLoad() + left.getClient().getNumOpenConnections(), right.getServer().getCurrentLoad() + right.getClient().getNumOpenConnections());
     }
   };
 
-  private static final Comparator<QueryableDruidServer> loadncccomparator = new Comparator<QueryableDruidServer>()
-  {
-    @Override
-    public int compare(QueryableDruidServer left, QueryableDruidServer right)
-    {
-      return Longs.compare(left.getServer().getCurrentLoad() + left.getClient().getNumOpenConnections(), 
-                            right.getServer().getCurrentLoad() +  right.getClient().getNumOpenConnections());
-    }
-  };
-
-  // Pick() the minimum loaded server as per a probability distribution
   @Override
-  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
-  {
-      if (servers.size() == 1)
-          return servers.iterator().next();
-
-      List<QueryableDruidServer> serverList = new ArrayList<QueryableDruidServer>();
-      for (QueryableDruidServer server : servers) {
-          if (!server.getServer().getMetadata().getType().equals("realtime")) {
-              serverList.add(server);
-          }
+  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment) {
+    for (Iterator<QueryableDruidServer> iterator = servers.iterator(); iterator.hasNext(); ) {
+      QueryableDruidServer s = iterator.next();
+      if (s.getServer().getMetadata().getType().equals("realtime") && servers.size() > 1) {
+        iterator.remove();
       }
-      return Collections.min(serverList, loadcomparator);
+    }
+
+    QueryableDruidServer chosenServer = Collections.min(servers, loadcomparator);
+    //log.info("Server Chosen [%s]", chosenServer.getServer().getMetadata().getType());
+    return chosenServer;
   }
 }
