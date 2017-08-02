@@ -31,6 +31,7 @@ from AsyncDBOpsHandler import AsyncDBOpsHandler
 from DBOpsHandler import DBOpsHandler
 from QueryGenerator import QueryGenerator
 from DistributionFactory import DistributionFactory
+from Utils import Utils
 
 def getConfigFile(args):
     return args[1]
@@ -60,6 +61,7 @@ def signal_term_handler(signum, frame):
 
 def applyOperation(query, config, brokerNameUrl, logger):
     dbOpsHandler = AsyncDBOpsHandler(config, brokerNameUrl, logger)
+    querytype = query.getQueryType()
     if querytype == "timeseries":
         return dbOpsHandler.timeseries(query)
     elif querytype == "topn":
@@ -70,110 +72,6 @@ def applyOperation(query, config, brokerNameUrl, logger):
         return dbOpsHandler.segmentmetadata(query)
     elif querytype == "timeboundary":
         return dbOpsHandler.timeboundary(query)
-    elif querytype == "mixture":
-        randomNumber = numpy.random.randint(0, 100);
-        qtype = 0
-        for queryweight in sorted(queryratio):
-            if randomNumber <= queryweight:
-                break
-            qtype = qtype + 1
-            randomNumber = randomNumber - queryweight
-
-        if qtype == 2:
-            return dbOpsHandler.timeseries(query)
-        elif qtype == 1:
-            return dbOpsHandler.topn(query)
-        elif qtype == 0:
-            return dbOpsHandler.groupby(query)
-
-# def threadoperation(queryPerSec):
-#     @gen.coroutine
-#     def printresults():
-#         logger.info('{} {} {} {}'.format(start.strftime("%Y-%m-%d %H:%M:%S"), end.strftime("%Y-%m-%d %H:%M:%S"), runtime, queryPerSec))
-#         line = list()
-#         querypermin = queryPerSec * 60
-#         endtime = datetime.now(timezone('UTC')) + timedelta(minutes=runtime)
-#         popularitylist = list()
-#         newquerylist = list()
-#         if filename != "":
-#             newquerylist = QueryGenerator.generateQueriesFromFile(start, end, querypermin * runtime, timeAccessGenerator, periodAccessGenerator, filename)
-#         elif isbatch == True:
-#             newquerylist = QueryGenerator.generateQueries(start, end, querypermin * runtime, timeAccessGenerator, periodAccessGenerator, popularitylist)
-#         if filename != "" or isbatch == True:
-#             count = 0
-#             time = datetime.now(timezone('UTC'))
-#             logger.info("Time: {}".format(time.strftime("%Y-%m-%d %H:%M:%S")))
-#             nextminute = time + timedelta(minutes=1)
-#             for query in newquerylist:
-#                 try:
-#                     line.append(applyOperation(query, config, brokernameurl, logger))
-#                 except Exception as inst:
-#                     logger.error(type(inst))     # the exception instance
-#                     logger.error(inst.args)      # arguments stored in .args
-#                     logger.error(inst)           # __str__ allows args to be printed directly
-#                     x, y = inst.args
-#                     logger.error('x =', x)
-#                     logger.error('y =', y)
-
-#                 count = count + 1
-#                 if count >= querypermin:
-#                     timediff = (nextminute - datetime.now(timezone('UTC'))).total_seconds()
-#                     if timediff > 0:
-#                         yield gen.sleep(timediff)
-#                     count = 0
-#                     time = datetime.now(timezone('UTC'))
-#                     logger.info("Time: {}".format(time.strftime("%Y-%m-%d %H:%M:%S")))
-#                     nextminute = time + timedelta(minutes=1)
-
-#         else:
-#             queryendtime = start
-#             nextminute = start
-#             endtime = start + timedelta(minutes=runtime)
-#             while True:
-#                 #time = datetime.now(timezone('UTC'))
-#                 logger.info("Time: {}".format(nextminute.strftime("%Y-%m-%d %H:%M:%S")))
-#                 querytime = nextminute - timedelta(minutes=5)
-#                 if querytime >= endtime:
-#                     break
-
-#                 elapsedtimeinmins = (querytime - queryendtime).total_seconds() / 60
-#                 if elapsedtimeinmins >= 5:
-#                     queryendtime = querytime
-
-#                 querystarttime = datetime.now(timezone('UTC'))
-#                 if start < queryendtime:
-#                     logger.info("Run.py start queryendtime "+str(start)+", "+str(queryendtime))
-#                     #Query generated every minute. This is to optimize the overhead of query generation and also because segment granularity is minute
-#                     newquerylist = QueryGenerator.generateQueries(start, queryendtime, querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist, logger)
-    
-#                     for query in newquerylist:
-#                         try:
-#                             line.append(applyOperation(query, config, brokernameurl, logger))
-#                         except Exception as inst:
-#                             logger.error(type(inst))     # the exception instance
-#                             logger.error(inst.args)      # arguments stored in .args
-#                             logger.error(inst)           # __str__ allows args to be printed directly
-#                             x, y = inst.args
-#                             logger.error('x =', x)
-#                             logger.error('y =', y)
-
-#                 nextminute = nextminute + timedelta(minutes=1)
-#                 timediff = (datetime.now(timezone('UTC')) - querystarttime).total_seconds()
-#                 if timediff < 60:
-#                     yield gen.sleep(60-timediff)
-    
-#         wait_iterator = gen.WaitIterator(*line)
-#         while not wait_iterator.done():
-#             try:
-#                 result = yield wait_iterator.next()
-#             except Exception as e:
-#                 logger.error("Error {} from {}".format(e, wait_iterator.current_future))
-#             #else:
-#             #    logger.info("Result {} received from {} at {}".format(
-#             #        result, wait_iterator.current_future,
-#             #        wait_iterator.current_index))
-    
-#     IOLoop().run_sync(printresults)
 
 # generates tuples of (num queries, time to sleep) as per poisson distribution
 def genPoissonQuerySchedule(queryPerMilliSecond, numSamples):
@@ -213,20 +111,20 @@ def threadoperation(queryPerSec):
         newquerylist = list()
         
         if filename != "":
-            newquerylist = QueryGenerator.generateQueriesFromFile(start, end, querypermin * runtime, timeAccessGenerator, periodAccessGenerator, filename)
+            newquerylist = QueryGenerator.generateQueriesFromFile(start, end, querypermin * runtime, timeAccessGenerator, periodAccessGenerator, querytype, queryratio, filename)
         elif isbatch == True:
-            newquerylist = QueryGenerator.generateQueries(start, end, querypermin * runtime, timeAccessGenerator, periodAccessGenerator, popularitylist)
+            newquerylist = QueryGenerator.generateQueries(start, end, querypermin * runtime, timeAccessGenerator, periodAccessGenerator, popularitylist, querytype, queryratio, logger)
         else:
             #logger.info("Run.py start queryendtime "+str(start)+", "+str(endtime))
             queryStartInterval = start
             queryEndInterval = start + timedelta(minutes=segmentpopularityinterval)
             for i in range(0, (runtime-segmentpopularityinterval)/segmentpopularityinterval):
                 logger.info("Start generating queries for interval "+str(queryStartInterval)+" - "+str(queryEndInterval))
-                newquerylist.extend(QueryGenerator.generateQueries(queryStartInterval, queryEndInterval, segmentpopularityinterval*querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist, logger))
+                newquerylist.extend(QueryGenerator.generateQueries(queryStartInterval, queryEndInterval, segmentpopularityinterval*querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist, querytype, queryratio, logger))
                 queryEndInterval = queryEndInterval + timedelta(minutes=segmentpopularityinterval)
 
             if(runtime%segmentpopularityinterval != 0):
-                newquerylist.extend(QueryGenerator.generateQueries(queryStartInterval, queryEndInterval, runtime%segmentpopularityinterval*querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist, logger))
+                newquerylist.extend(QueryGenerator.generateQueries(queryStartInterval, queryEndInterval, runtime%segmentpopularityinterval*querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist, querytype, queryratio, logger))
             logger.info("Finished generating queries. num queries generated "+str(len(newquerylist)))    
         
         if filename != "" or isbatch == True:
@@ -262,9 +160,6 @@ def threadoperation(queryPerSec):
             numQueries, querySchedule = genPoissonQuerySchedule(queryPerMilliSecond, numSamples)
             logger.info("Poisson numQueries = "+str(numQueries))
 
-            # sleep initially till the segmentpopularityinterval
-            yield gen.sleep(60)
-
             queryScheduleIdx = 0
             count = 0
             while count < len(newquerylist):
@@ -284,10 +179,9 @@ def threadoperation(queryPerSec):
                             logger.error(type(inst))     # the exception instance
                             logger.error(inst.args)      # arguments stored in .args
                             logger.error(inst)           # __str__ allows args to be printed directly
-                            x, y = inst.args
-                            logger.error('x =', x)
-                            logger.error('y =', y)
                         count = count + 1
+                        if count >= len(newquerylist):
+                            break
                 queryScheduleIdx = queryScheduleIdx + 1
     
         wait_iterator = gen.WaitIterator(*line)
@@ -312,16 +206,23 @@ config = getConfig(configFile)
 
 
 accessdistribution = config.getAccessDistribution()
-accessdistribution = config.getAccessDistribution()
 perioddistribution = config.getPeriodDistribution()
 querytype = config.getQueryType()
 queryratio = list()
 if querytype == "mixture":
     queryratio = [int(n) for n in config.getQueryRatio().split(":")]
+
 logfolder = config.getLogFolder()
-opspersecond = config.getOpsPerSecond()
+
+minopspersecond = config.getMinOpsPerSecond()
+maxopspersecond = config.getMaxOpsPerSecond()
+opspersecond = minopspersecond
+if minopspersecond < maxopspersecond:
+    opspersecond = numpy.random.randint(minopspersecond, maxopspersecond)
+
 runtime = config.getRunTime() # in minutes
 segmentpopularityinterval = config.getSegmentPopularityInterval() # in minutes
+
 isbatch = config.getBatchExperiment()
 filename = config.getFileName()
 brokernameurl = config.getBrokerNodeUrl()
@@ -376,10 +277,10 @@ tb = newquery.time_boundary(datasource=config.getDataSource())
 startdict = tb[0]
 start = startdict['result']['minTime']
 start = datetime.strptime(start, '%Y-%m-%dT%H:%M:%S.%fZ')
-start = utc.localize(start)
+#logger.info('Original {} Round {} Localized {}'.format(start.strftime("%Y-%m-%d %H:%M:%S"), Utils.round_time(start).strftime("%Y-%m-%d %H:%M:%S"), utc.localize(start).strftime("%Y-%m-%d %H:%M:%S")))
+start = Utils.round_time(start) 
 end = startdict['result']['maxTime']
 end = datetime.strptime(end, '%Y-%m-%dT%H:%M:%S.%fZ')
-end = utc.localize(end)
 
 minqueryperiod = 0
 maxqueryperiod = int((end - start).total_seconds())

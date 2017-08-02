@@ -51,91 +51,21 @@ public class MinimumLoadServerSelectorStrategy implements ServerSelectorStrategy
   private static final Comparator<QueryableDruidServer> loadcomparator = new Comparator<QueryableDruidServer>() {
     @Override
     public int compare(QueryableDruidServer left, QueryableDruidServer right) {
-      return Longs.compare(left.getServer().getCurrentLoad(), right.getServer().getCurrentLoad());
+      return Longs.compare(left.getServer().getCurrentLoad() + left.getClient().getNumOpenConnections(), right.getServer().getCurrentLoad() + right.getClient().getNumOpenConnections());
     }
   };
 
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment) {
-
-    QueryableDruidServer chosenServer = null;
-    float maxValue = -1;
-    float minValue = 1000000;
-    int minValueIndex = -1;
-    int counter = 0;
-    //List<Long> loading = new ArrayList<Long>();
-    List<QueryableDruidServer> serverList = new ArrayList<QueryableDruidServer>();
-
     for (Iterator<QueryableDruidServer> iterator = servers.iterator(); iterator.hasNext(); ) {
       QueryableDruidServer s = iterator.next();
-      // remove the realtime node from the server list if other servers are available
       if (s.getServer().getMetadata().getType().equals("realtime") && servers.size() > 1) {
         iterator.remove();
-        log.info("Removed realtime server from the list load=%d openConnections=%d", s.getServer().getCurrentLoad(), s.getClient().getNumOpenConnections());
-      } else {
-        serverList.add(s);
-        long load = s.getServer().getCurrentLoad();
-        long cc = s.getClient().getNumOpenConnections();
-        long weight = load + cc;
-
-        // exponentially decay the load value
-        /*
-        Date currTime = new Date();
-        long refreshTime = (currTime.getTime() - s.getServer().getCurrentLoadTimeAtClient().getTime());
-        double decayRate = -0.05;
-        double e = 2.7183;
-        temp = (long) (temp * Math.pow(e, decayRate * refreshTime));
-        log.info("Server name %s, Server host %s, Prev load %d, Decayed load %d, refreshTime %d", s.getServer().getMetadata().getName(), s.getServer().getMetadata().getHost(), s.getServer().getCurrentLoad(), temp, refreshTime);
-        */
-
-        //loading.add(temp);
-        // find max loading value
-        if (weight > maxValue) {
-          maxValue = weight;
-        }
-        // find min loading value
-        if (weight < minValue) {
-          minValue = weight;
-          minValueIndex = counter;
-        }
-        counter++;
-        //log.info("Servers %s", s.getServer().getCurrentLoad());
       }
     }
 
-    // pick the server based on the probability distribution of loads
-    /*
-    maxLoading++;
-    //log.info("Max loading %d", maxLoading);
-    long prev = 0;
-    for(int i=0; i<loading.size(); i++){
-      long value = maxLoading - loading.get(i) + prev;
-      loading.set(i, value);
-      prev = value;
-      //log.info("Frequency %d: %d", i, value);
-    }
-    // generate a random number from 0 to prev
-    Random rn = new Random();
-    int randNum = rn.nextInt((int)prev - 0 + 1) + 0;
-    //log.info("Random number %d", randNum);
-    // loop through loading list to identify the bucket
-    int i;
-    for(i=0; i<loading.size(); i++){
-      long value = loading.get(i);
-      if(value >= randNum){
-        break;
-      }
-    }
-    //log.info("Selected index %d", i);
-    return serverList.get(i);
-    */
-
-    if (minValueIndex == -1) {
-      minValueIndex = 0;
-      log.info("Selected default server, no min load server found");
-    }
-    //log.info("Selected server name %s, host %s, loading %d", serverList.get(minLoadingIndex).getServer().getMetadata().getName(), serverList.get(minLoadingIndex).getServer().getMetadata().getHost(), loading.get(minLoadingIndex));
-    // log.info("Selected server name %s, host %s", serverList.get(minValueIndex).getServer().getMetadata().getName(), serverList.get(minValueIndex).getServer().getMetadata().getHost());
-    return serverList.get(minValueIndex);
+    QueryableDruidServer chosenServer = Collections.min(servers, loadcomparator);
+    //log.info("Server Chosen [%s]", chosenServer.getServer().getMetadata().getType());
+    return chosenServer;
   }
 }

@@ -10,11 +10,12 @@ import _strptime
 from datetime import datetime, timedelta
 import re
 import math
+import matplotlib
 
 def plotHnSegmentAccess():
-    #matplotlib.colors.cnames
-    colors = ['b', 'g', 'r', 'k', 'c', 'm', 'y']
-    segmentYaxis = [0.5, 1, 1.5, 2, 2.5, 3, 3.5]
+    colordict = matplotlib.colors.cnames
+    colors = [colordict['black'], colordict['firebrick'], colordict['cyan'], colordict['darkgreen'], colordict['blue'], colordict['magenta'], colordict['darkgoldenrod'], colordict['red'], colordict['gray'], colordict['lawngreen'], colordict['gold'], colordict['pink']]
+    segmentYaxis = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0]
     
     # read the historical segment scan files to plot query boundaries
     hnames = glob.glob("historical-*-segment-scan-pending.log")
@@ -175,23 +176,30 @@ def plotHnSegmentAccess():
         # plot the individual segment durations
         segplot = segtimeplots[hn]
         segplotsorted = sorted(segplot,key=lambda x: x[1])
+        labeldict = {}
         for item in segplotsorted:
             templist = item[1]
             newarray = np.array(templist)
             xtemp, ytemp = newarray.T
-            plt.plot(xtemp, ytemp, ''+colors[int(item[0])]+'-', label='segment-'+str(item[0]), linewidth = '10')
+            newlabel = 'segment-'+str(item[0])
+            for i in range(0,np.shape(xtemp)[1]):
+                if labeldict.has_key(newlabel):
+                    newlabel = '_nolegend_'
+                else:
+                    labeldict[newlabel] = 1
+                plt.plot(xtemp[:,i], ytemp[:,i], color=colors[int(item[0])], linestyle='-', label=newlabel, linewidth = '4')
 
         # plot the segment generation intervals
         yseg = [0, max(y)+2]
         for i in range(0,(totalQueryDurationInSecs+1)):
             xseg = list([(minQueryStartTime+timedelta(minutes=int(i))-firsttime).total_seconds(), (minQueryStartTime+timedelta(minutes=int(i))-firsttime).total_seconds()])
-            plt.plot(xseg, yseg, 'y-')
+            plt.plot(xseg, yseg, 'y-', linewidth='0.5')
 
-        plt.legend(loc='upper left', fontsize = 'xx-small')
+        plt.legend(loc='upper left', fontsize = 'xx-small', ncol=4)
         plt.title('HN '+str(hn.split(".")[0])+' segment accesses')
         plt.ylabel('Total segment access time milliseconds (log-e values)', fontsize=10)
         plt.xlabel('Time (secs)', fontsize=10)
-        plt.xticks(np.arange(0, max(x)+90.0, 30), fontsize=9) # arrange ticks on 30secs boundary
+        plt.xticks(np.arange(0, max(x)+90.0, 300), fontsize=9) # arrange ticks on 300secs boundary
         plt.ylim(0, float(1.25*max(y)))
         plt.grid(True) 
         plt.savefig('hn_'+str(hn.split(".")[0])+'_segment_scan.png')
