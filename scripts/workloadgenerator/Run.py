@@ -102,7 +102,7 @@ def genPoissonQuerySchedule(queryPerMilliSecond, numSamples):
 def threadoperation(queryPerSec):
     @gen.coroutine
     def printresults():
-        logger.info('{} {} {} {} {}'.format(start.strftime("%Y-%m-%d %H:%M:%S"), end.strftime("%Y-%m-%d %H:%M:%S"), runtime, queryPerSec, segmentpopularityinterval))
+        logger.info('{} {} {} {}'.format(start.strftime("%Y-%m-%d %H:%M:%S"), end.strftime("%Y-%m-%d %H:%M:%S"), runtime, queryPerSec))
         
         querypermin = queryPerSec * 60
         endtime = datetime.now(timezone('UTC')) + timedelta(minutes=runtime)
@@ -117,14 +117,12 @@ def threadoperation(queryPerSec):
         else:
             #logger.info("Run.py start queryendtime "+str(start)+", "+str(endtime))
             queryStartInterval = start
-            queryEndInterval = start + timedelta(minutes=segmentpopularityinterval)
-            for i in range(0, (runtime-segmentpopularityinterval)/segmentpopularityinterval):
+            queryEndInterval = start + timedelta(minutes=1)
+            for i in range(0, runtime):
                 logger.info("Start generating queries for interval "+str(queryStartInterval)+" - "+str(queryEndInterval))
-                newquerylist.extend(QueryGenerator.generateQueries(queryStartInterval, queryEndInterval, segmentpopularityinterval*querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist, querytype, queryratio, logger))
-                queryEndInterval = queryEndInterval + timedelta(minutes=segmentpopularityinterval)
+                newquerylist.extend(QueryGenerator.generateQueries(queryStartInterval, queryEndInterval, querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist, querytype, queryratio, logger))
+                queryEndInterval = queryEndInterval + timedelta(minutes=1)
 
-            if(runtime%segmentpopularityinterval != 0):
-                newquerylist.extend(QueryGenerator.generateQueries(queryStartInterval, queryEndInterval, runtime%segmentpopularityinterval*querypermin, timeAccessGenerator, periodAccessGenerator, popularitylist, querytype, queryratio, logger))
             logger.info("Finished generating queries. num queries generated "+str(len(newquerylist)))    
         
         if filename != "" or isbatch == True:
@@ -156,7 +154,7 @@ def threadoperation(queryPerSec):
             # frequency of queries per millisecond
             queryPerMilliSecond = float(queryPerSec)/1000;
             # number of samples spaced by 1 millisecond
-            numSamples = (runtime - segmentpopularityinterval)*60*1000
+            numSamples = runtime*60*1000
             numQueries, querySchedule = genPoissonQuerySchedule(queryPerMilliSecond, numSamples)
             logger.info("Poisson numQueries = "+str(numQueries))
 
@@ -285,7 +283,7 @@ end = datetime.strptime(end, '%Y-%m-%dT%H:%M:%S.%fZ')
 minqueryperiod = 0
 maxqueryperiod = int((end - start).total_seconds())
 
-AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient", max_clients=(25), defaults=dict(request_timeout=60))
+AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient", max_clients=(250), defaults=dict(request_timeout=60))
 
 t1 = datetime.now()
 for i in xrange(numthreads): 

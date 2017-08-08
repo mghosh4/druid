@@ -70,17 +70,111 @@ class Druid(Zipfian):
         # plt.grid(True)
         plt.savefig(figfilename)
 
-    def generateDistribution(self, minSample, maxSample, numSamples, popularityList, logger):
-        # use 9:1 split of old segment vs new segment range
-        numLatestSegmentSamples = numSamples/10
-        numOldSegmentSamples = numSamples - numLatestSegmentSamples
-        oldsamples = super(Druid, self).generateDistribution(minSample, (maxSample-(timedelta(minutes=1).total_seconds())), numOldSegmentSamples, popularityList, logger)
-        latestsamples = super(Druid, self).generateDistribution(minSample, maxSample, numLatestSegmentSamples, popularityList, logger)
-        allsamples = [(maxSample-(timedelta(minutes=1).total_seconds())) - x + minSample for x in oldsamples] + [maxSample - x + minSample for x in latestsamples]
+    def genTwoSegmentPopularitySamples(self, minSample, maxSample, numSamples, popularityList, logger):
+        minSegment = minSample
+        maxSegment = maxSample+60
+        range = maxSegment - minSegment
+        # ingestAndRunWorkloadGen.sh has a 2min sleep. By the time this function gets called, 2+ segments should already be ingested
+        popularSegmentSampleList = []
+        risingSegmentSampleList = []
+        fallingSegmentSampleList = []
+
+        if range <= 60:
+            #segment 0 is popular (100% samples)
+            numPopularSegmentSamples = numSamples
+            popularsamples = super(Druid, self).generateDistribution(maxSegment-60, maxSegment, numPopularSegmentSamples, popularityList, logger)
+            popularSegmentSampleList = [maxSegment - x + maxSegment-60 for x in popularsamples]
+        elif range > 60 and range <= 120:
+            # segment 0 is popular (90% samples), 1 is rising (10% samples)
+            numRisingSegmentSamples = numSamples/10
+            numPopularSegmentSamples = numSamples - numRisingSegmentSamples
+
+            popularsamples = super(Druid, self).generateDistribution(maxSegment-2*60, maxSegment-60, numPopularSegmentSamples, popularityList, logger)
+            popularSegmentSampleList = [maxSegment-60 - x + maxSegment-2*60 for x in popularsamples]
+
+            risingsamples = super(Druid, self).generateDistribution(maxSegment-60, maxSegment, numRisingSegmentSamples, popularityList, logger)
+            risingSegmentSampleList = [maxSegment-60 - x + maxSegment for x in risingsamples]
+        else:
+            # if range == 180, segment 0 and 1 is popular (total 90% samples), 2 is rising (10% samples)
+            # if range == 240, segment 0 is falling(10% samples), 1 and 2 is popular(80% samples), 3 is rising (10% samples)
+            numFallingSegmentSamples = 0
+            if range >= 240:
+                numFallingSegmentSamples = numSamples/10
+                fallingsamples = super(Druid, self).generateDistribution(maxSegment-4*60, maxSegment-3*60, numFallingSegmentSamples, popularityList, logger)
+                fallingSegmentSampleList = [maxSegment-3*60 - x + maxSegment-4*60 for x in fallingsamples]
+
+            numRisingSegmentSamples = numSamples/10
+            numPopularSegmentSamples = numSamples - numRisingSegmentSamples - numFallingSegmentSamples
+
+            popularsamples_0 = super(Druid, self).generateDistribution(maxSegment-3*60, maxSegment-2*60, numPopularSegmentSamples/2, popularityList, logger)
+            popularSegmentSampleList_0 = [maxSegment-2*60 - x + maxSegment-3*60 for x in popularsamples_0]
+
+            popularsamples_1 = super(Druid, self).generateDistribution(maxSegment-2*60, maxSegment-60, numPopularSegmentSamples/2, popularityList, logger)
+            popularSegmentSampleList_1 = [maxSegment-60 - x + maxSegment-2*60 for x in popularsamples_1]
+            popularSegmentSampleList = popularSegmentSampleList_0 + popularSegmentSampleList_1
+
+            risingsamples = super(Druid, self).generateDistribution(maxSegment-60, maxSegment, numRisingSegmentSamples, popularityList, logger)
+            risingSegmentSampleList = [maxSegment - x + maxSegment-60 for x in risingsamples]
 
         #self.plotDistribution(allsamples, 'druid_distribution.png', 'Druid-Distribution')
 
-        return allsamples
+        allSamples = fallingSegmentSampleList+popularSegmentSampleList+risingSegmentSampleList
+        numpy.random.shuffle(allSamples)
+        logger.info("Samples for minSample maxSample "+str(minSample)+" "+str(maxSample)+str(allSamples))
+        return allSamples
+
+    def genOneSegmentPopularitySamples(self, minSample, maxSample, numSamples, popularityList, logger):
+        minSegment = minSample
+        maxSegment = maxSample+60
+        range = maxSegment - minSegment
+        # ingestAndRunWorkloadGen.sh has a 2min sleep. By the time this function gets called, 2+ segments should already be ingested
+        popularSegmentSampleList = []
+        risingSegmentSampleList = []
+        fallingSegmentSampleList = []
+
+        if range <= 60:
+            # segment 0 is popular (100% samples)
+            numPopularSegmentSamples = numSamples
+            popularsamples = super(Druid, self).generateDistribution(maxSegment-60, maxSegment, numPopularSegmentSamples, popularityList, logger)
+            popularSegmentSampleList = [maxSegment - x + maxSegment-60 for x in popularsamples]
+        elif range > 60 and range <= 120:
+            # segment 0 is popular (90% samples), 1 is rising (10% samples)
+            numRisingSegmentSamples = numSamples/10
+            numPopularSegmentSamples = numSamples - numRisingSegmentSamples
+            popularsamples = super(Druid, self).generateDistribution(maxSegment-2*60, maxSegment-60, numPopularSegmentSamples, popularityList, logger)
+            popularSegmentSampleList = [maxSegment-60 - x + maxSegment-2*60 for x in popularsamples]
+            risingsamples = super(Druid, self).generateDistribution(maxSegment-60, maxSegment, numRisingSegmentSamples, popularityList, logger)
+            risingSegmentSampleList = [maxSegment-60 - x + maxSegment for x in risingsamples]
+        else:
+            # segment 0 is falling(10% samples), 1 is popular(80% samples), 2 is rising (10% samples)
+            numFallingSegmentSamples = numSamples/10
+            fallingsamples = super(Druid, self).generateDistribution(maxSegment-3*60, maxSegment-2*60, numFallingSegmentSamples, popularityList, logger)
+            fallingSegmentSampleList = [maxSegment-2*60 - x + maxSegment-3*60 for x in fallingsamples]
+
+            numRisingSegmentSamples = numSamples/10
+            numPopularSegmentSamples = numSamples - numRisingSegmentSamples - numFallingSegmentSamples
+
+            popularsamples = super(Druid, self).generateDistribution(maxSegment-2*60, maxSegment-60, numPopularSegmentSamples, popularityList, logger)
+            popularSegmentSampleList = [maxSegment-60 - x + maxSegment-2*60 for x in popularsamples]
+
+            risingsamples = super(Druid, self).generateDistribution(maxSegment-60, maxSegment, numRisingSegmentSamples, popularityList, logger)
+            risingSegmentSampleList = [maxSegment - x + maxSegment-60 for x in risingsamples]
+
+        #self.plotDistribution(allsamples, 'druid_distribution.png', 'Druid-Distribution')
+
+        allSamples = fallingSegmentSampleList+popularSegmentSampleList+risingSegmentSampleList
+        numpy.random.shuffle(allSamples)
+        logger.info("Samples for minSample maxSample "+str(minSample)+" "+str(maxSample)+str(allSamples))
+        return allSamples
+
+    def generateDistribution(self, minSample, maxSample, numSamples, popularityList, logger):
+        numPopularSegments = 1 # code works only for values 1 and 2
+        if numPopularSegments == 1:
+            return self.genOneSegmentPopularitySamples(minSample, maxSample, numSamples, popularityList, logger)
+        elif numPopularSegments == 2:
+            return self.genTwoSegmentPopularitySamples(minSample, maxSample, numSamples, popularityList, logger)
+        else:
+            logger.info("Error: unsupported numPopularSegments "+str(numPopularSegments))
 
 class DynamicZipfian(object):
 
