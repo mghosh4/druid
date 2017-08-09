@@ -338,7 +338,11 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 			}
 		}
 
-		PriorityQueue<Tuple> maxheap = new PriorityQueue<Tuple>(weightedAccessCounts.size(), new Comparator<Tuple>()
+        int capacity = weightedAccessCounts.size();
+        if (capacity == 0)
+            capacity = 1;
+
+		PriorityQueue<Tuple> maxheap = new PriorityQueue<Tuple>(capacity, new Comparator<Tuple>()
 		{
 			public int compare(Tuple o1, Tuple o2){
 				int result = -Long.compare(o1.weight, o2.weight);
