@@ -1,8 +1,10 @@
 package io.druid.server.coordinator.helper;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordinator.*;
 import io.druid.timeline.DataSegment;
 
 import java.util.*;
@@ -11,6 +13,140 @@ import java.util.*;
 public class DruidCoordinatorReplicatorHelper {
 
     private static final EmittingLogger log = new EmittingLogger(DruidCoordinatorReplicatorHelper.class);
+    private static final String assignedCount = "assignedCount";
+    private static final String droppedCount = "droppedCount";
+
+    public static CoordinatorStats assign(
+            final ReplicationThrottler replicationManager,
+            final String tier,
+            final ServerHolder holder,
+            final DataSegment segment)
+    {
+        log.info("Insert Segment [%s] to [%s]", segment.getIdentifier(), holder.getServer().getHost());
+
+        final CoordinatorStats stats = new CoordinatorStats();
+        stats.addToTieredStat(assignedCount, tier, 0);
+
+        replicationManager.registerReplicantCreation(
+                tier, segment.getIdentifier(), holder.getServer().getHost()
+        );
+
+        holder.getPeon().loadSegment(
+                segment,
+                new LoadPeonCallback()
+                {
+                    @Override
+                    public void execute()
+                    {
+                        replicationManager.unregisterReplicantCreation(
+                                tier,
+                                segment.getIdentifier(),
+                                holder.getServer().getHost()
+                        );
+                    }
+                }
+        );
+
+        stats.addToTieredStat(assignedCount, tier, 1);
+
+        return stats;
+    }
+
+    public static CoordinatorStats drop(
+            final ReplicationThrottler replicationManager,
+            final String tier,
+            final ServerHolder holder,
+            final DataSegment segment)
+    {
+        log.info("Remove Segment [%s] from [%s]", segment.getIdentifier(), holder.getServer().getHost());
+        CoordinatorStats stats = new CoordinatorStats();
+
+        //log.info("Removing Segment from [%s] because it has [%d] segments", entry.getValue().getServer().getMetadata().toString(), entry.getKey().intValue());
+        stats.addToTieredStat(droppedCount, tier, 0);
+
+        if (holder.isServingSegment(segment)) {
+            replicationManager.registerReplicantTermination(
+                    tier,
+                    segment.getIdentifier(),
+                    holder.getServer().getHost()
+            );
+        }
+
+        holder.getPeon().dropSegment(
+                segment,
+                new LoadPeonCallback()
+                {
+                    @Override
+                    public void execute()
+                    {
+                        replicationManager.unregisterReplicantTermination(
+                                tier,
+                                segment.getIdentifier(),
+                                holder.getServer().getHost()
+                        );
+                    }
+                }
+        );
+
+        stats.addToTieredStat(droppedCount, tier, 1);
+
+        return stats;
+    }
+
+    public static void loadNewSegments(
+            DruidCoordinatorRuntimeParams params,
+            final HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable,
+            DruidCoordinator coordinator)
+    {
+        List<ServerHolder> serverHolderList = new ArrayList<ServerHolder>();
+        for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier()) {
+            serverHolderList.addAll(serverQueue);
+        }
+
+        if (serverHolderList.size() == 0) {
+            log.makeAlert("Cluster has no servers! Check your cluster configuration!").emit();
+            return;
+        }
+
+        final List<String> tierNameList = Lists.newArrayList(params.getDruidCluster().getTierNames());
+        if (tierNameList.size() == 0) {
+            log.makeAlert("Cluster has multiple tiers! Check your cluster configuration!").emit();
+            return;
+        }
+        final String tier = tierNameList.get(0);
+
+        Set<DataSegment> orderedAvailableDataSegments = coordinator.getOrderedAvailableDataSegments();
+        log.info("latest segment: " + coordinator.getLatestSegment());
+
+        int holderCount = 0;
+        for (DataSegment segment : orderedAvailableDataSegments) {
+            //log.info("segment:" + segment.getIdentifier());
+            if (segment.getIdentifier().equals(coordinator.getLatestSegment())) {
+                break;
+            }
+
+            //Round robin allocate the servers because best fit should have uniformly spread the query load
+            long bootstrapReplicas = numOfBootstrapReplicasToCreate();
+            HashMap<DruidServerMetadata, Long> bootstrapRouting = new HashMap<>();
+            for (long replicaNum = 0; replicaNum < bootstrapReplicas; replicaNum++)
+            {
+                bootstrapRouting.put(serverHolderList.get(holderCount).getServer().getMetadata(), 1L);
+                holderCount = (holderCount + 1) % serverHolderList.size();
+            }
+
+            routingTable.put(segment, bootstrapRouting);
+        }
+
+        if (!orderedAvailableDataSegments.isEmpty()) {
+            //log.info("set latest segment:" + orderedAvailableDataSegments.iterator().next().getIdentifier());
+            coordinator.setLatestSegment(orderedAvailableDataSegments.iterator().next().getIdentifier());
+        }
+    }
+
+    private static long numOfBootstrapReplicasToCreate()
+    {
+        return 1L;
+    }
 
     // 1.1
     public static HashMap<DruidServerMetadata,Integer> metadataToID(HashMap<DruidServerMetadata, Long> nodeCapacities) {

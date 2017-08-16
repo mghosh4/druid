@@ -25,6 +25,9 @@ echo "Yeah!"
 cd /proj/DCSQ/mghosh4/druid/scripts/deployment
 ./stop_druid.sh -s config/getafix_10.conf
 
+mv /proj/DCSQ/mghosh4/logs /proj/DCSQ/mghosh4/lastexplogs
+./start_druid.sh config/getafix_10.conf
+
 #run logreader
 cd /proj/DCSQ/mghosh4/druid/scripts/logreader
 python StatsGenerator.py getafix.conf
