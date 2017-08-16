@@ -164,6 +164,22 @@ do
                 then
                     echo "moving S3 file"
                     COMMAND=$COMMAND" sudo sed -i '26s/.*/druid.extensions.loadList=[\"druid-kafka-eight\", \"druid-s3-extensions\", \"druid-histogram\", \"druid-datasketches\", \"druid-namespace-lookup\", \"mysql-metadata-storage\"]/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+
+                    COMMAND=$COMMAND" sudo sed -i '64s/.*/#druid.storage.type=local/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+                    COMMAND=$COMMAND" sudo sed -i '65s/.*/#druid.storage.storageDirectory=var\/druid\/segments/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+                    COMMAND=$COMMAND" sudo sed -i '72s/.*/druid.storage.type=s3/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+                    COMMAND=$COMMAND" sudo sed -i '73s/.*/druid.storage.bucket=$AWS_BUCKET_NAME/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+                    COMMAND=$COMMAND" sudo sed -i '74s/.*/druid.storage.baseKey=druid\/segments/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+                    COMMAND=$COMMAND" sudo sed -i '75s/.*/druid.s3.accessKey=$AWS_ACCESS_KEY/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+                    COMMAND=$COMMAND" sudo sed -i '76s/.*/druid.s3.secretKey=${AWS_SECRET_KEY//\//\\/}/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+
+                    COMMAND=$COMMAND" sudo sed -i '82s/.*/#druid.indexer.logs.type=file/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+                    COMMAND=$COMMAND" sudo sed -i '83s/.*/#druid.indexer.logs.directory=var\/druid\/indexing-logs/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+
+                    COMMAND=$COMMAND" sudo sed -i '90s/.*/druid.indexer.logs.type=s3/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+                    COMMAND=$COMMAND" sudo sed -i '91s/.*/druid.indexer.logs.s3Bucket=$AWS_BUCKET_NAME/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+                    COMMAND=$COMMAND" sudo sed -i '92s/.*/druid.indexer.logs.s3Prefix=druid\/indexing-logs/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+
                     COMMAND=$COMMAND" sudo mv $PATH_TO_DRUID_BIN/druid-s3-extensions $PATH_TO_DRUID_BIN/extensions;"
                 fi
             elif [ "$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
@@ -396,8 +412,8 @@ do
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$BROKER_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         if [ "$REPLICATION_RULE" == "getafix" ] || [ "$REPLICATION_RULE" == "scarlett" ];
         then
-            #COMMAND=$COMMAND" sudo sed -i '12s@.*@druid.broker.balancer.type=minimumload@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
-            COMMAND=$COMMAND" sudo sed -i '12s@.*@druid.broker.balancer.type=connectionCount@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
+            COMMAND=$COMMAND" sudo sed -i '12s@.*@druid.broker.balancer.type=minimumload@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
+            #COMMAND=$COMMAND" sudo sed -i '12s@.*@druid.broker.balancer.type=connectionCount@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         fi 
         COMMAND=$COMMAND" sudo sed -i '15s@.*@druid.request.logging.dir=$LOG_FILE/broker@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Duser.timezone=UTC -Dlogfilename=broker-$counter -Dfile.encoding=UTF-8 -Djava.io.tmpdir='/mnt' -classpath 'conf/druid/_common:conf/druid/broker:lib/*' io.druid.cli.Main server broker;"
