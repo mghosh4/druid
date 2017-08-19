@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import sys, getopt
 import boto3
-import paramiko, scp
+import subprocess
 
 def list_instances_attributes(attributes):
     response = ec2client.describe_instances()
@@ -20,40 +20,37 @@ def list_instances_attributes(attributes):
 
 def create_instances():
     print("Launching AWS Cluster")
-    response = ec2client.run_instances(
-        BlockDeviceMappings=[
-            {
-                'DeviceName': '/dev/sdf',
-                'Ebs': {
-                    'Encrypted': False,
-                    'DeleteOnTermination': True,
-                    'VolumeSize': 16,
-                    'VolumeType': 'gp2'
+    with open('startcmd.sh') as f:
+        response = ec2client.run_instances(
+            BlockDeviceMappings=[
+                {
+                    'DeviceName': '/dev/sdf',
+                    'Ebs': {
+                        'Encrypted': False,
+                        'DeleteOnTermination': True,
+                        'VolumeSize': 64,
+                        'VolumeType': 'gp2'
+                    },
                 },
-            },
-        ],
-        ImageId='ami-841f46ff',
-        InstanceType='m4.4xlarge',
-        KeyName='druid',
-        MaxCount=1,
-        MinCount=1,
-        SecurityGroupIds=['sg-bf13f1cf',],
-        DisableApiTermination=False,
-        DryRun=False,
-        EbsOptimized=True,
-    )
-    print(response)
+            ],
+            ImageId='ami-841f46ff',
+            InstanceType='m4.4xlarge',
+            KeyName='druid',
+            MaxCount=10,
+            MinCount=1,
+            SecurityGroupIds=['sg-bf13f1cf',],
+            DisableApiTermination=False,
+            DryRun=False,
+            EbsOptimized=True,
+            UserData=f.read()
+        )
+        print(response)
 
 def setup_instances():
     print("Setting up instances")
-    for hostname in list_instances_attributes(['PublicDnsName',])['PublicDnsName']:
-        print("Running startup script for instance " + hostname)
-        sshclient = paramiko.SSHClient()
-        sshclient.load_system_host_keys()
-        sshclient.connect(hostname, username="ubuntu", key_filename="druid.pem")
-        scpclient = scp.SCPClient(sshclient.get_transport())
-        scpclient.put('startcmd.sh', 'startcmd.sh')
-        stdin, stdout, stderr = sshclient.exec_command('sh startcmd.sh > starcmdlog.log')
+    hostnames = ','.join(list_instances_attributes(['PublicDnsName',])['PublicDnsName'])
+    command = "bash setup.sh {0}".format(hostnames)
+    subprocess.call(command, shell=True)
 
 def terminate_instances(instancelist):
     response = ec2client.terminate_instances(InstanceIds=instancelist)
@@ -61,19 +58,21 @@ def terminate_instances(instancelist):
 
 def main(argv):
    try:
-      opts, args = getopt.getopt(argv,"clt",["--create", "--list", "--terminate"])
+      opts, args = getopt.getopt(argv,"clst",["--create", "--list", "--setup", "--terminate"])
    except getopt.GetoptError:
-      print 'awscluster.py -c|--create -l|--list -t|--terminate'
+      print 'awscluster.py -c|--create -l|--list -s|--setup -t|--terminate'
       sys.exit(2)
    for opt, arg in opts:
       if opt == '-h':
-         print 'awscluster.py -c|--create -l|--list -t|--terminate'
+         print 'awscluster.py -c|--create -l|--list -s|--setup -t|--terminate'
          sys.exit()
       elif opt in ("-c", "--create"):
          create_instances()
+      elif opt in ("-s", "--setup"):
          setup_instances()
       elif opt in ("-l", "--list"):
-         print(list_instances_attributes(['InstanceId',])['InstanceId'])
+         print(list_instances_attributes(['PublicDnsName',])['PublicDnsName'])
+         print(list_instances_attributes(['PrivateDnsName',])['PrivateDnsName'])
       elif opt in ("-t", "--terminate"):
          instancelist = list_instances_attributes(['InstanceId',])['InstanceId']
          print(instancelist)
