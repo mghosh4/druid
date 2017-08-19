@@ -68,8 +68,8 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 	private final StatusResponseHandler responseHandler = new StatusResponseHandler(Charsets.UTF_8);
 	private final HttpClient httpClient;
     	private final ReplicationThrottler replicatorThrottler;
-
 	private static final long MIN_THRESHOLD = 5;
+        private static int bestFitReplicationRound = 0;
 
 	public DruidCoordinatorBestFitSegmentReplicator(
 			DruidCoordinator coordinator)
@@ -390,6 +390,14 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 			log.info("calculateBestFitReplication: Result Mapping:");
 			for(int i=0;i<hungarianMap.length;i++)
 				log.info("Original [%s] New [%s]", i, hungarianMap[i]);
+
+                        int start = bestFitReplicationRound%historicalNodeCount;
+                        int[] roundRobinMap = new int[historicalNodeCount];
+                        for(int i=0; i<historicalNodeCount; i++){
+                                roundRobinMap[i] = (start+i)%historicalNodeCount;
+                        }
+                        bestFitReplicationRound++;
+                        log.info("Round robin map is %s", Arrays.toString(roundRobinMap));
 
 			//6. replace all modified variable based on map
 			HashMap<DataSegment, HashMap<DruidServerMetadata,Long>> tempTable;
