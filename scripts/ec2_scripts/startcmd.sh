@@ -1,24 +1,29 @@
-#!/bin/sh
+#!/bin/bash
 
-sudo mkfs -t ext4 /dev/xvdf
-sudo mkdir /druid
-sudo mount /dev/xvdf /newvolume/
+echo "Setting up the harddisk"
+mkfs -t ext4 /dev/xvdf
+mkdir /druid
+mount /dev/xvdf /druid/
+sudo chown ubuntu:ubuntu /druid
 
-sudo apt-get update
-sudo dpkg --configure -a
-# Some useful utilities
-sudo apt-get install -y openjdk-7-jre
-sudo apt-get install -y openjdk-7-jdk
-sudo apt-get install -y curl
-sudo apt-get install -y screen
-sudo apt-get install -y wget
-sudo apt-get install -y vim
-sudo apt-get install -y gnuplot
-sudo apt-get install -y python-numpy
-sudo apt-get install -y maven
-sudo apt-get install -y python-pip
-sudo apt-get install -y python-pandas
-sudo apt-get install -y libcurl4-openssl-dev
-sudo pip install pydruid pytz tornado pycurl
+echo "Setting up passwordless ssh"
+echo 'alias ssh="ssh -i ~/druid.pem"' >> /home/ubuntu/.bash_aliases
 
-bash -c "export DEBIAN_FRONTEND=noninteractive; sudo -E apt-get -q -y install mysql-server"
+echo "Installing packages"
+apt-get update
+apt-get install -y openjdk-7-jre
+apt-get install -y openjdk-7-jdk
+apt-get install -y curl
+apt-get install -y screen
+apt-get install -y wget
+apt-get install -y vim
+apt-get install -y pdsh
+apt-get install -y gnuplot
+apt-get install -y python-numpy
+apt-get install -y maven
+apt-get install -y python-pip
+apt-get install -y python-pandas
+apt-get install -y libcurl4-openssl-dev
+pip install pydruid pytz tornado pycurl
+
+bash -c "export DEBIAN_FRONTEND=noninteractive; apt-get -q -y install mysql-server"
