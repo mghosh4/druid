@@ -89,11 +89,14 @@ def setup_instances():
 def upload_artifacts():
     print("Uploading artifacts")
     hostnames = list_instances_attributes(['PublicDnsName',])['PublicDnsName']
-    for hostname in hostnames:
+    for i, hostname in enumerate(hostnames):
+        if i == 0:
+            command = "scp {1} ../../distribution/target/druid-0.9.0-SNAPSHOT-bin.tar.gz ubuntu@{0}:/proj/DCSQ/getafix/druid/".format(hostname, SSH_OPTS)
+            subprocess.call(command, shell=True)
         command = "scp {1} setup.sh ubuntu@{0}:~/".format(hostname, SSH_OPTS)
         subprocess.call(command, shell=True)
-        # command = "scp {1} ../../distribution/target/druid-0.9.0-SNAPSHOT-bin.tar.gz ubuntu@{0}:/proj/".format(hostname, SSH_OPTS)
-        # subprocess.call(command, shell=True)
+        command = "scp {1} druid.pem ubuntu@{0}:~/".format(hostname, SSH_OPTS)
+        subprocess.call(command, shell=True)
 
 def terminate_instances(instancelist):
     response = ec2client.terminate_instances(InstanceIds=instancelist)
