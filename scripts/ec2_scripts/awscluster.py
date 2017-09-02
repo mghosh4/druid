@@ -5,9 +5,15 @@ import subprocess
 import time
 
 SSH_OPTS = "-i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+EXPERIMENT = "default"
 
 def list_instances_attributes(attributes):
-    response = ec2client.describe_instances()
+    response = ec2client.describe_instances(Filters=[
+        {
+            "Name": "tag-value",
+            "Values": [EXPERIMENT]
+        }
+    ])
     instancelist = dict()
     for attribute in attributes:
         instancelist[attribute] = list()
@@ -25,7 +31,7 @@ def create_efs():
     print("Creating EFS")
     subnetId = 'subnet-0ed4d457'
     response = efsclient.create_file_system(
-        CreationToken='druidnfs',
+        CreationToken=EXPERIMENT,
         PerformanceMode='generalPurpose',
         Encrypted=False
     )
@@ -49,7 +55,7 @@ def create_efs():
 
 def create_instances():
     print("Launching EC2 Cluster")
-    response = efsclient.describe_file_systems(CreationToken='druidnfs')
+    response = efsclient.describe_file_systems(CreationToken=EXPERIMENT)
     fileSystemId = response['FileSystems'][0]['FileSystemId']
     response = efsclient.describe_mount_targets(FileSystemId=fileSystemId)
     efsIP = response['MountTargets'][0]['IpAddress']
@@ -76,6 +82,15 @@ def create_instances():
             DisableApiTermination=False,
             DryRun=False,
             EbsOptimized=True,
+            TagSpecifications=[{
+                'ResourceType': 'instance',
+                'Tags': [
+                    {
+                        'Key': 'experiment',
+                        'Value': EXPERIMENT
+                    },
+                ]
+            }],
             UserData=f.read().format(efsIP=efsIP)
         )
 
@@ -103,7 +118,7 @@ def terminate_instances(instancelist):
     print(response)
 
 def delete_efs():
-    response = efsclient.describe_file_systems(CreationToken='druidnfs')
+    response = efsclient.describe_file_systems(CreationToken=EXPERIMENT)
     fileSystemId = response['FileSystems'][0]['FileSystemId']
     response = efsclient.describe_mount_targets(FileSystemId=fileSystemId)
     mountTargetId = response['MountTargets'][0]['MountTargetId']
@@ -124,11 +139,14 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv,"cleustdn",["create", "efs" "list", "upload", "setup", "terminate", "delete-efs", "node"])
     except getopt.GetoptError:
-        print 'awscluster.py -e|--efs -c|--create -l|--list -u|--upload -s|--setup -t|--terminate -d|--delete-efs'
+        print 'awscluster.py -e|--efs -c|--create -l|--list -u|--upload -s|--setup -t|--terminate -d|--delete-efs <experiment namespace>'
         sys.exit(2)
+
+    global EXPERIMENT
+    EXPERIMENT = argv[1]
     for opt, arg in opts:
         if opt == '-h':
-            print 'awscluster.py -e|--efs -c|--create -l|--list -u|--upload -s|--setup -t|--terminate -d|--delete-efs'
+            print 'awscluster.py -e|--efs -c|--create -l|--list -u|--upload -s|--setup -t|--terminate -d|--delete-efs <experiment namespace>'
             sys.exit()
         elif opt in ("-e", "--efs"):
             create_efs()
@@ -148,7 +166,7 @@ def main(argv):
         elif opt in ("-d", "--delete-efs"):
             delete_efs()
         elif opt in ("-n", "--node"):
-            print getNode(int(argv[1]))
+            print getNode(int(argv[2]))
 
 ec2client = boto3.client('ec2')
 efsclient = boto3.client('efs')
