@@ -21,7 +21,7 @@ do
 	if (( $flag==0 )); then
 		break
 	fi
-	sleep 5m
+	sleep 15
 done
 
 

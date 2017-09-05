@@ -457,7 +457,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 							Long cca = this.CCAMap.get(targetSegment);
 							nodeVolumes.put(pair.getKey(), (double) (pair.getValue() - cca / (double) count));
 							count--;
-							//log.info("remove segment [%s] from node [%s]", targetSegment.getIdentifier(), pair.getKey().getHost());
+							log.info("remove segment [%s] from node [%s]", targetSegment.getIdentifier(), pair.getKey().getHost());
 							if (count <= repFactor)
 								break;
 						}
@@ -560,7 +560,7 @@ public class DruidCoordinatorScarlettSegmentReplicator implements DruidCoordinat
 			{
 				if (!routingTable.containsKey(segment) || !routingTable.get(segment).keySet().contains(server))
 				{
-					//log.info("Server [%s] drop segment [%s]", server.getHost(), segment.getIdentifier());
+					log.info("Server [%s] drop segment [%s]", server.getHost(), segment.getIdentifier());
 					CoordinatorStats dropStats = DruidCoordinatorReplicatorHelper.drop(
 							replicatorThrottler,
 							tier,
