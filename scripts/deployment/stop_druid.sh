@@ -156,7 +156,7 @@ do
     COMMAND=$COMMAND" sudo pkill -9 \"python\";"
     echo "middle manager server shutdown command is $COMMAND"
     let counter=counter+1
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+    ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 done
 echo""
@@ -177,7 +177,7 @@ do
     COMMAND=$COMMAND" sudo pkill -9 \"python\";"
     echo "overlord server shutdown command is $COMMAND"
     let counter=counter+1
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+    ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 done
 echo""
@@ -200,7 +200,7 @@ do
     COMMAND=$COMMAND" sudo pkill -9 \"python\";"
     echo "Broker server shutdown command is $COMMAND"
     let counter=counter+1
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+    ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 done
 echo""
@@ -222,7 +222,7 @@ do
     fi
     echo "Realtime server shutdown command is $COMMAND"
     let counter=counter+1
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+    ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 
 done
@@ -245,7 +245,7 @@ do
     COMMAND=$COMMAND" sudo pkill -9 \"python\";"
     echo "Config server shutdown command is $COMMAND"
     let counter=counter+1;
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+    ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
         $COMMAND"
 done
 echo ""
@@ -267,7 +267,7 @@ do
     COMMAND=$COMMAND" sudo pkill -9 \"python\";"
     echo "Historical server shutdown command is $COMMAND"
     let counter=counter+1
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+    ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
         $COMMAND"
 done
 echo ""
@@ -291,7 +291,7 @@ do
         COMMAND=$COMMAND" sudo rm -rf /tmp/*;"
     fi
     echo "kafka server shutdown command is $COMMAND"
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+    ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
         $COMMAND"
 done
 echo""
@@ -310,7 +310,7 @@ do
         COMMAND=$COMMAND" sudo rm -rf $LOG_FILE/zookeeper.out;"
     fi
     echo "zookeeper server shutdown command is $COMMAND"
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+    ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 done
 echo""
@@ -333,7 +333,7 @@ do
     COMMAND=$COMMAND" sudo service mysql stop;"
     #COMMAND=$COMMAND" sudo apt-get -y remove mysql-server;"
     echo "mysql server shutdown command is $COMMAND"
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+    ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 done
 echo""

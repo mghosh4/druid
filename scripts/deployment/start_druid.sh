@@ -1,5 +1,5 @@
 #!/bin/bash
- 
+#set -x 
 ############################## PRE PROCESSING ################################
 #check and process arguments
 REQUIRED_NUMBER_OF_ARGUMENTS=1
@@ -149,7 +149,7 @@ do
                 fi
             elif [ "$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
             then
-                if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_DRUID_BIN/extensions/druid-s3-extensions ]")
+                if (ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_DRUID_BIN/extensions/druid-s3-extensions ]")
                 then
                     echo "moving S3 file"
                     COMMAND=$COMMAND" sudo sed -i '26s/.*/druid.extensions.loadList=[\"druid-kafka-eight\", \"druid-histogram\", \"druid-datasketches\", \"druid-namespace-lookup\", \"mysql-metadata-storage\"]/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
@@ -184,7 +184,7 @@ do
                 fi
             elif [ "$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
             then
-                if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_DRUID_BIN/druid-s3-extensions ]")
+                if (ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_DRUID_BIN/druid-s3-extensions ]")
                 then
                     echo "moving S3 file"
                     COMMAND=$COMMAND" sudo sed -i '26s/.*/druid.extensions.loadList=[\"druid-kafka-eight\", \"druid-s3-extensions\", \"druid-histogram\", \"druid-datasketches\", \"druid-namespace-lookup\", \"mysql-metadata-storage\"]/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
@@ -204,7 +204,7 @@ do
         echo "zookeeper node startup command is $COMMAND"
 
     #ssh to node and run command
-        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
 echo ""
@@ -214,42 +214,42 @@ MYSQL=$MYSQL" CREATE DATABASE druid DEFAULT CHARACTER SET utf8;"
 
         for node in ${OVERLORD_NODE_HOST//,/ }
         do
-            MYSQL=$MYSQL" GRANT ALL ON druid.* TO 'druid'@'$node' IDENTIFIED BY 'diurd';"
+            MYSQL=$MYSQL" GRANT ALL ON druid.* TO 'druid'@'%' IDENTIFIED BY 'diurd';"
         done
 
         for node in ${REALTIME_NODE_HOST//,/ }
         do
-            MYSQL=$MYSQL" GRANT ALL ON druid.* TO 'druid'@'$node' IDENTIFIED BY 'diurd';"
+            MYSQL=$MYSQL" GRANT ALL ON druid.* TO 'druid'@'%' IDENTIFIED BY 'diurd';"
         done
 
         for node in ${BROKER_NODE_HOST//,/ }
         do
-            MYSQL=$MYSQL" GRANT ALL ON druid.* TO 'druid'@'$node' IDENTIFIED BY 'diurd';"
+            MYSQL=$MYSQL" GRANT ALL ON druid.* TO 'druid'@'%' IDENTIFIED BY 'diurd';"
         done
 
         for node in ${HISTORICAL_NODE_HOST//,/ }
         do
-            MYSQL=$MYSQL" GRANT ALL ON druid.* TO 'druid'@'$node' IDENTIFIED BY 'diurd';"
+            MYSQL=$MYSQL" GRANT ALL ON druid.* TO 'druid'@'%' IDENTIFIED BY 'diurd';"
         done
 
         for node in ${COORDINATOR_NODE_HOST//,/ }
         do
-            MYSQL=$MYSQL" GRANT ALL ON druid.* TO 'druid'@'$node' IDENTIFIED BY 'diurd';"
+            MYSQL=$MYSQL" GRANT ALL ON druid.* TO 'druid'@'%' IDENTIFIED BY 'diurd';"
         done
 
         for node in ${MIDDLE_MANAGER_NODE_HOST//,/ }
         do
-            MYSQL=$MYSQL" GRANT ALL ON druid.* TO 'druid'@'$node' IDENTIFIED BY 'diurd';"
+            MYSQL=$MYSQL" GRANT ALL ON druid.* TO 'druid'@'%' IDENTIFIED BY 'diurd';"
         done
 
         for node in ${ZOOKEEPER_NODE_HOST//,/ }
         do
-            MYSQL=$MYSQL" GRANT ALL ON druid.* TO 'druid'@'$node' IDENTIFIED BY 'diurd';"
+            MYSQL=$MYSQL" GRANT ALL ON druid.* TO 'druid'@'%' IDENTIFIED BY 'diurd';"
         done
 
         for node in ${KAFKA_NODE_HOST//,/ }
         do
-            MYSQL=$MYSQL" GRANT ALL ON druid.* TO 'druid'@'$node' IDENTIFIED BY 'diurd';"
+            MYSQL=$MYSQL" GRANT ALL ON druid.* TO 'druid'@'%' IDENTIFIED BY 'diurd';"
         done
 
 #start mysql FQDN
@@ -272,7 +272,7 @@ do
             fi
         elif [ "$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
         then
-            if (ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -f $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz ]")
+            if (ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -f $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz ]")
             then
                 echo "untar mysql file"
                 COMMAND=$COMMAND" sudo tar -xvf $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz $PATH_TO_DRUID_BIN/extensions;"
@@ -298,7 +298,7 @@ do
         echo "mysql node startup command is $COMMAND"
 
     #ssh to node and run command
-        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
 echo ""
@@ -320,7 +320,7 @@ do
 
         let counter=counter+1
     #ssh to node and run command
-        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
 echo ""
@@ -341,7 +341,7 @@ do
 
         let counter=counter+1
     #ssh to node and run command
-        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
 echo ""
@@ -364,7 +364,7 @@ do
 
         let counter=counter+1
     #ssh to node and run command
-        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
 echo ""
@@ -390,7 +390,7 @@ do
         let counter=counter+1
         sleep 1
     #ssh to node and run command
-        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
 echo ""
@@ -422,7 +422,7 @@ do
         let counter=counter+1
 	sleep 1
     #ssh to node and run command
-        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
 echo ""
@@ -457,7 +457,7 @@ do
         echo "kafka node startup command is $COMMAND"
 
     #ssh to node and run command
-        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
 echo ""
@@ -480,7 +480,7 @@ do
 
         let counter=counter+1
     #ssh to node and run command
-        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
 echo ""
