@@ -97,19 +97,30 @@ def create_instances():
 def setup_instances():
     print("Setting up instances")
     hostnames = list_instances_attributes(['PublicDnsName',])['PublicDnsName']
+    private_ips = list_instances_attributes(['PrivateIpAddress',])['PrivateIpAddress']
+    private_ips.sort()
+
+    ip_alias_lst = []
+    for i, private_ip in enumerate(private_ips):
+        ip_alias_lst.append("{private_ip} node-{i} node-{i}-lan node-{i}-big-lan".format(private_ip=private_ip, i=i+1))
+    ip_alias = "\n".join(ip_alias_lst)
+    to_prepend = "sudo bash -c 'echo \\\"{0}\\\" >> /etc/hosts'".format(ip_alias)
+
     for hostname in hostnames:
-        command = "ssh {1} ubuntu@{0} 'bash setup.sh'".format(hostname, SSH_OPTS)
+        # command = "ssh {1} ubuntu@{0} 'bash setup.sh'".format(hostname, SSH_OPTS)
+        command = "ssh {1} ubuntu@{0} \"{ip_alias}\"".format(hostname, SSH_OPTS, ip_alias=to_prepend)
         subprocess.call(command, shell=True)
 
 def upload_artifacts():
     print("Uploading artifacts")
     hostnames = list_instances_attributes(['PublicDnsName',])['PublicDnsName']
     for i, hostname in enumerate(hostnames):
-        if i == 0:
-            command = "scp {1} ../../distribution/target/druid-0.9.0-SNAPSHOT-bin.tar.gz ubuntu@{0}:/proj/DCSQ/getafix/druid/".format(hostname, SSH_OPTS)
-            subprocess.call(command, shell=True)
-        command = "scp {1} setup.sh ubuntu@{0}:~/".format(hostname, SSH_OPTS)
-        subprocess.call(command, shell=True)
+        # if i == 0:
+        #     # command = "scp {1} ../../distribution/target/druid-0.9.0-SNAPSHOT-bin.tar.gz ubuntu@{0}:/proj/DCSQ/getafix/druid/".format(hostname, SSH_OPTS)
+        #     command = "scp {1} -r ../../../druid/ ubuntu@{0}:/proj/DCSQ/getafix/druid/".format(hostname, SSH_OPTS)
+        #     subprocess.call(command, shell=True)
+        # command = "scp {1} setup.sh ubuntu@{0}:~/".format(hostname, SSH_OPTS)
+        # subprocess.call(command, shell=True)
         command = "scp {1} druid.pem ubuntu@{0}:~/".format(hostname, SSH_OPTS)
         subprocess.call(command, shell=True)
 
@@ -130,10 +141,12 @@ def delete_efs():
 
 def getNode(idx):
     hostnames = list_instances_attributes(['PublicDnsName',])['PublicDnsName']
-    hostnames.sort()
-    if idx <= 0 or idx > len(hostnames):
+    private_ips = list_instances_attributes(['PrivateIpAddress',])['PrivateIpAddress']
+
+    sorted_hostname_ip_pairs = sorted(zip(hostnames, private_ips), key=lambda x: x[1])
+    if idx <= 0 or idx > len(sorted_hostname_ip_pairs):
         return None
-    return hostnames[idx - 1]
+    return sorted_hostname_ip_pairs[idx - 1][0]
 
 def main(argv):
     try:

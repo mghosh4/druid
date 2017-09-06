@@ -11,8 +11,8 @@ echo 'alias ssh="ssh -i ~/druid.pem"' >> /home/ubuntu/.bash_aliases
 
 echo "Installing packages"
 apt-get update
-apt-get install -y openjdk-8-jre
-apt-get install -y openjdk-8-jdk
+apt-get install -y openjdk-7-jre
+apt-get install -y openjdk-7-jdk
 apt-get install -y curl
 apt-get install -y screen
 apt-get install -y wget
@@ -25,6 +25,7 @@ apt-get install -y python-pip
 apt-get install -y python-pandas
 apt-get install -y libcurl4-openssl-dev
 apt-get install -y nfs-common
+apt-get install -y git
 pip install pydruid pytz tornado pycurl
 
 bash -c "export DEBIAN_FRONTEND=noninteractive; apt-get -q -y install mysql-server"
