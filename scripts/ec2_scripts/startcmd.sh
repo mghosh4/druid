@@ -32,15 +32,21 @@ bash -c "export DEBIAN_FRONTEND=noninteractive; apt-get -q -y install mysql-serv
 
 # NFS
 mkdir /proj
+mkdir /dependencies
+
 mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 {efsIP}:/ /proj
+mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 {dependenciesEfsIP}:/ /dependencies
 
 PATH_TO_DRUID=/proj/DCSQ/getafix/druid
-PATH_TO_DEPS=/proj/DCSQ/getafix/dependencies
 PATH_TO_TARFILES=/proj/DCSQ/getafix/tarfiles
+PATH_TO_DEPS=/proj/DCSQ/getafix/dependencies
 
 mkdir -p $PATH_TO_DRUID
-mkdir -p $PATH_TO_DEPS
 mkdir -p $PATH_TO_TARFILES
 
+ln -s /dependencies $PATH_TO_DEPS
+
 chown -R ubuntu:ubuntu /proj
+chown -R ubuntu:ubuntu /dependencies
 chmod go+rw /proj
+chmod go+rw /dependencies

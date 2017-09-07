@@ -60,6 +60,11 @@ def create_instances():
     response = efsclient.describe_mount_targets(FileSystemId=fileSystemId)
     efsIP = response['MountTargets'][0]['IpAddress']
 
+    response = efsclient.describe_file_systems(CreationToken="dependencies")
+    fileSystemId = response['FileSystems'][0]['FileSystemId']
+    response = efsclient.describe_mount_targets(FileSystemId=fileSystemId)
+    dependenciesEfsIP = response['MountTargets'][0]['IpAddress']
+
     with open('startcmd.sh') as f:
         response = ec2client.run_instances(
             BlockDeviceMappings=[
@@ -91,7 +96,7 @@ def create_instances():
                     },
                 ]
             }],
-            UserData=f.read().format(efsIP=efsIP)
+            UserData=f.read().format(efsIP=efsIP, dependenciesEfsIP=dependenciesEfsIP)
         )
 
 def setup_instances():
