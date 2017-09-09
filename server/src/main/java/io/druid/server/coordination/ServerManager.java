@@ -106,7 +106,7 @@ public class ServerManager implements QuerySegmentWalker
   private long estimatedLoad;
   private long lastLoadEstimateTime;
 
-  private final String loadingPath = "/proj/DCSQ/mghosh4/druid/estimation/";
+  private final String loadingPath = "/proj/DCSQ/getafix/druid/estimation/";
   private final String[] fullpaths = {loadingPath+"groupby.cdf", loadingPath+"timeseries.cdf", loadingPath+"topn.cdf"};
 
   private final HashMap<String, ArrayList<Double>> percentileCollection = new HashMap<String, ArrayList<Double>>();

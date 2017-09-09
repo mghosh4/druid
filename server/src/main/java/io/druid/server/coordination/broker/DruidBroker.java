@@ -19,7 +19,6 @@
 
 package io.druid.server.coordination.broker;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.common.lifecycle.LifecycleStart;
@@ -35,22 +34,17 @@ import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Self;
 import io.druid.query.Query;
 import io.druid.server.DruidNode;
-import io.druid.server.coordination.DruidServerMetadata;
-import io.druid.server.coordination.broker.tasks.PeriodicPollHistoricalLoad;
-import io.druid.server.coordination.broker.tasks.PeriodicPollRoutingTable;
-import io.druid.timeline.DataSegment;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 @ManageLifecycle
 public class DruidBroker
@@ -68,7 +62,7 @@ public class DruidBroker
   private static final EmittingLogger log = new EmittingLogger(DruidBroker.class);
 
   //QueryTime distribution data structures
-  String loadingPath = "/proj/DCSQ/mghosh4/druid/estimation/";
+  String loadingPath = "/proj/DCSQ/getafix/druid/estimation/";
   String[] fullpaths = {loadingPath+"groupby.cdf", loadingPath+"timeseries.cdf", loadingPath+"topn.cdf"};
 
   HashMap<String, ArrayList<Double>> percentileCollection = new HashMap<String, ArrayList<Double>>();
