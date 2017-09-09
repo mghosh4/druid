@@ -484,3 +484,7 @@ do
             $COMMAND"
 done
 echo ""
+
+sleep 10
+echo "Chowning log folders:"
+sudo chown -R ubuntu:ubuntu /proj/DCSQ/getafix/logs
