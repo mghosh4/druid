@@ -21,7 +21,7 @@ done
 
 echo "Yeah!"
 #run logreader
-cd /proj/DCSQ/getafix/druid/scripts/deployment
-./stop_druid_aws.sh -s config/getafix.aws.conf
+# cd /proj/DCSQ/getafix/druid/scripts/deployment
+# ./stop_druid_aws.sh -s config/getafix.aws.conf
 cd /proj/DCSQ/getafix/druid/scripts/logreader
 python StatsGenerator.py getafix.aws.conf
