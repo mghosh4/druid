@@ -116,6 +116,28 @@ def setup_instances():
         command = "ssh {1} ubuntu@{0} \"{ip_alias}\"".format(hostname, SSH_OPTS, ip_alias=to_prepend)
         subprocess.call(command, shell=True)
 
+def wakeup_instances():
+    print("Waking up instances")
+    response = efsclient.describe_file_systems(CreationToken=EXPERIMENT)
+    fileSystemId = response['FileSystems'][0]['FileSystemId']
+    response = efsclient.describe_mount_targets(FileSystemId=fileSystemId)
+    efsIP = response['MountTargets'][0]['IpAddress']
+
+    response = efsclient.describe_file_systems(CreationToken="dependencies")
+    fileSystemId = response['FileSystems'][0]['FileSystemId']
+    response = efsclient.describe_mount_targets(FileSystemId=fileSystemId)
+    dependenciesEfsIP = response['MountTargets'][0]['IpAddress']
+
+    mnt_efs = "sudo bash -c 'mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 {fsIP}:/ {mnt_dir}'".format(fsIP=efsIP, mnt_dir="/proj")
+    mnt_depfs = "sudo bash -c 'mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 {fsIP}:/ {mnt_dir}'".format(fsIP=dependenciesEfsIP, mnt_dir="/dependencies")
+
+    hostnames = list_instances_attributes(['PublicDnsName',])['PublicDnsName']
+    for hostname in hostnames:
+        command = "ssh {1} ubuntu@{0} \"{mnt_cmd}\"".format(hostname, SSH_OPTS, mnt_cmd=mnt_efs)
+        subprocess.call(command, shell=True)
+        command = "ssh {1} ubuntu@{0} \"{mnt_cmd}\"".format(hostname, SSH_OPTS, mnt_cmd=mnt_depfs)
+        subprocess.call(command, shell=True)
+
 def upload_artifacts():
     print("Uploading artifacts")
     hostnames = list_instances_attributes(['PublicDnsName',])['PublicDnsName']
@@ -155,16 +177,16 @@ def getNode(idx):
 
 def main(argv):
     try:
-        opts, args = getopt.getopt(argv,"cleustdn",["create", "efs" "list", "upload", "setup", "terminate", "delete-efs", "node"])
+        opts, args = getopt.getopt(argv,"cleustdnw",["create", "efs" "list", "upload", "setup", "terminate", "delete-efs", "node", "wake"])
     except getopt.GetoptError:
-        print 'awscluster.py -e|--efs -c|--create -l|--list -u|--upload -s|--setup -t|--terminate -d|--delete-efs <experiment namespace>'
+        print 'awscluster.py -e|--efs -c|--create -l|--list -u|--upload -s|--setup -t|--terminate -d|--delete-efs -w|--wake <experiment namespace>'
         sys.exit(2)
 
     global EXPERIMENT
     EXPERIMENT = argv[1]
     for opt, arg in opts:
         if opt == '-h':
-            print 'awscluster.py -e|--efs -c|--create -l|--list -u|--upload -s|--setup -t|--terminate -d|--delete-efs <experiment namespace>'
+            print 'awscluster.py -e|--efs -c|--create -l|--list -u|--upload -s|--setup -t|--terminate -d|--delete-efs -w|--wake <experiment namespace>'
             sys.exit()
         elif opt in ("-e", "--efs"):
             create_efs()
@@ -183,6 +205,8 @@ def main(argv):
             terminate_instances(instancelist)
         elif opt in ("-d", "--delete-efs"):
             delete_efs()
+        elif opt in ("-w", "--wake"):
+            wakeup_instances()
         elif opt in ("-n", "--node"):
             print getNode(int(argv[2]))
 
