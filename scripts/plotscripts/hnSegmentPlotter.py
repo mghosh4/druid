@@ -62,9 +62,11 @@ def plotHnSegmentAccess():
         for line in f:
             l = line.rstrip('\n')
             lsplit = l.split(" ")
-            date = lsplit[0]+" "+lsplit[1]    
-            time = datetime.strptime(date, '%Y-%m-%d %H:%M:%S,%f')
-
+            date = lsplit[0]+" "+lsplit[1]
+            try:    
+              time = datetime.strptime(date, '%Y-%m-%d %H:%M:%S,%f')
+            except:
+              print "Timestamp error "+time.isoformat()
             if time > lasttime:
                 break;
 
