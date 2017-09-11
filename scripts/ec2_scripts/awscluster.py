@@ -109,11 +109,16 @@ def setup_instances():
     for i, private_ip in enumerate(private_ips):
         ip_alias_lst.append("{private_ip} node-{i} node-{i}-lan node-{i}-big-lan".format(private_ip=private_ip, i=i+1))
     ip_alias = "\n".join(ip_alias_lst)
-    to_prepend = "sudo bash -c 'echo \\\"{0}\\\" >> /etc/hosts'".format(ip_alias)
+    mod_etc_hosts = "sudo bash -c 'echo \\\"{0}\\\" >> /etc/hosts'".format(ip_alias)
 
-    for hostname in hostnames:
+    private_ips = list_instances_attributes(['PrivateIpAddress',])['PrivateIpAddress']
+    sorted_hostname_ip_pairs = sorted(zip(hostnames, private_ips), key=lambda x: x[1])
+
+    for i, hostname_ip_pair in enumerate(sorted_hostname_ip_pairs):
         # command = "ssh {1} ubuntu@{0} 'bash setup.sh'".format(hostname, SSH_OPTS)
-        command = "ssh {1} ubuntu@{0} \"{ip_alias}\"".format(hostname, SSH_OPTS, ip_alias=to_prepend)
+        command = "ssh {1} ubuntu@{0} \"{ip_alias}\"".format(hostname_ip_pair[0], SSH_OPTS, ip_alias=mod_etc_hosts)
+        subprocess.call(command, shell=True)
+        command = "ssh {1} ubuntu@{0} \"sudo bash -c 'hostnamectl set-hostname node-{i}'\"".format(hostname_ip_pair[0], SSH_OPTS, i=i+1)
         subprocess.call(command, shell=True)
 
 def wakeup_instances():
@@ -131,11 +136,15 @@ def wakeup_instances():
     mnt_efs = "sudo bash -c 'mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 {fsIP}:/ {mnt_dir}'".format(fsIP=efsIP, mnt_dir="/proj")
     mnt_depfs = "sudo bash -c 'mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 {fsIP}:/ {mnt_dir}'".format(fsIP=dependenciesEfsIP, mnt_dir="/dependencies")
 
+    mnt_ebs = "sudo bash -c 'mkfs -t ext4 /dev/xvdf && mount /dev/xvdf /druid/ && chown ubuntu:ubuntu /druid'"
+
     hostnames = list_instances_attributes(['PublicDnsName',])['PublicDnsName']
     for hostname in hostnames:
         command = "ssh {1} ubuntu@{0} \"{mnt_cmd}\"".format(hostname, SSH_OPTS, mnt_cmd=mnt_efs)
         subprocess.call(command, shell=True)
         command = "ssh {1} ubuntu@{0} \"{mnt_cmd}\"".format(hostname, SSH_OPTS, mnt_cmd=mnt_depfs)
+        subprocess.call(command, shell=True)
+        command = "ssh {1} ubuntu@{0} \"{mnt_cmd}\"".format(hostname, SSH_OPTS, mnt_cmd=mnt_ebs)
         subprocess.call(command, shell=True)
 
 def upload_artifacts():
