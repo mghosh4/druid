@@ -1,5 +1,5 @@
 #!/bin/bash
-#set -x 
+#set -x
 ############################## PRE PROCESSING ################################
 #check and process arguments
 REQUIRED_NUMBER_OF_ARGUMENTS=1
@@ -10,10 +10,10 @@ then
 fi
 
 CONFIG_FILE=$1
- 
+
 echo "Config file is $CONFIG_FILE"
 echo ""
- 
+
 #get the configuration parameters
 source $CONFIG_FILE
 
@@ -25,7 +25,7 @@ source $CONFIG_FILE
 NEW_REALTIME_NODE=''
 for node in ${REALTIME_NODE//,/ }
 do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
+    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
     then
         NEW_REALTIME_NODE=$NEW_REALTIME_NODE$node,
     else
@@ -37,7 +37,7 @@ done
 NEW_BROKER_NODES=''
 for node in ${BROKER_NODE//,/ }
 do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
+    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
     then
         NEW_BROKER_NODES=$NEW_BROKER_NODES$node,
     else
@@ -49,7 +49,7 @@ done
 NEW_HISTORICAL_NODES=''
 for node in ${HISTORICAL_NODES//,/ }
 do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
+    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
     then
         NEW_HISTORICAL_NODES=$NEW_HISTORICAL_NODES$node,
     else
@@ -61,7 +61,7 @@ done
 NEW_COORDINATOR_NODES=''
 for node in ${COORDINATOR_NODE//,/ }
 do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
+    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
     then
         NEW_COORDINATOR_NODES=$NEW_COORDINATOR_NODES$node,
     else
@@ -73,7 +73,7 @@ done
 NEW_ZOOKEEPER_NODES=''
 for node in ${ZOOKEEPER_NODE//,/ }
 do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
+    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
     then
         NEW_ZOOKEEPER_NODES=$NEW_ZOOKEEPER_NODES$node,
     else
@@ -85,7 +85,7 @@ done
 NEW_MYSQL_NODES=''
 for node in ${MYSQL_NODE//,/ }
 do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
+    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
     then
         NEW_MYSQL_NODES=$NEW_MYSQL_NODES$node,
     else
@@ -97,7 +97,7 @@ done
 NEW_OVERLORD_NODES=''
 for node in ${OVERLORD_NODE//,/ }
 do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
+    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
     then
         NEW_OVERLORD_NODES=$NEW_OVERLORD_NODES$node,
     else
@@ -109,7 +109,7 @@ done
 NEW_MIDDLE_MANAGER_NODES=''
 for node in ${MIDDLE_MANAGER_NODE//,/ }
 do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
+    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
     then
         NEW_MIDDLE_MANAGER_NODES=$NEW_MIDDLE_MANAGER_NODES$node,
     else
@@ -121,7 +121,7 @@ done
 NEW_KAFKA_NODES=''
 for node in ${KAFKA_NODE//,/ }
 do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
+    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
     then
         NEW_KAFKA_NODES=$NEW_KAFKA_NODES$node,
     else
@@ -149,7 +149,7 @@ do
                 fi
             elif [ "$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
             then
-                if (ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_DRUID_BIN/extensions/druid-s3-extensions ]")
+                if (ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_DRUID_BIN/extensions/druid-s3-extensions ]")
                 then
                     echo "moving S3 file"
                     COMMAND=$COMMAND" sudo sed -i '26s/.*/druid.extensions.loadList=[\"druid-kafka-eight\", \"druid-histogram\", \"druid-datasketches\", \"druid-namespace-lookup\", \"mysql-metadata-storage\"]/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
@@ -184,7 +184,7 @@ do
                 fi
             elif [ "$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
             then
-                if (ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_DRUID_BIN/druid-s3-extensions ]")
+                if (ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -d $PATH_TO_DRUID_BIN/druid-s3-extensions ]")
                 then
                     echo "moving S3 file"
                     COMMAND=$COMMAND" sudo sed -i '26s/.*/druid.extensions.loadList=[\"druid-kafka-eight\", \"druid-s3-extensions\", \"druid-histogram\", \"druid-datasketches\", \"druid-namespace-lookup\", \"mysql-metadata-storage\"]/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
@@ -204,7 +204,7 @@ do
         echo "zookeeper node startup command is $COMMAND"
 
     #ssh to node and run command
-        ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
 echo ""
@@ -272,7 +272,7 @@ do
             fi
         elif [ "$IP" == "FALSE" -a "$FQDN" == "FALSE" ]
         then
-            if (ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -f $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz ]")
+            if (ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "[ -f $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz ]")
             then
                 echo "untar mysql file"
                 COMMAND=$COMMAND" sudo tar -xvf $PATH_TO_SOURCE/distribution/target/mysql-metadata-storage-bin.tar.gz $PATH_TO_DRUID_BIN/extensions;"
@@ -286,7 +286,7 @@ do
         COMMAND=$COMMAND" sudo sed -i '43s/.*/#druid.metadata.storage.type=derby/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '44s@.*@#druid.metadata.storage.connector.connectURI=jdbc:derby://metadata.store.ip:1527/var/druid/metadata.db;create=true@' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '45s/.*/#druid.metadata.storage.connector.host=metadata.store.ip/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
-        COMMAND=$COMMAND" sudo sed -i '46s/.*/#druid.metadata.storage.connector.port=1527/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"        
+        COMMAND=$COMMAND" sudo sed -i '46s/.*/#druid.metadata.storage.connector.port=1527/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '49s/.*/druid.metadata.storage.type=mysql/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '50s@.*@druid.metadata.storage.connector.connectURI=jdbc:mysql://$MYSQL_NODE_HOST:$MYSQL_NODE_PORT/druid@' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '51s/.*/druid.metadata.storage.connector.user=druid/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
@@ -298,7 +298,7 @@ do
         echo "mysql node startup command is $COMMAND"
 
     #ssh to node and run command
-        ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
 echo ""
@@ -320,7 +320,7 @@ do
 
         let counter=counter+1
     #ssh to node and run command
-        ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
 echo ""
@@ -334,14 +334,14 @@ do
         echo "Setting up $node ..."
         COMMAND=''
 
-        COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$MIDDLE_MANAGER_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/middleManager/runtime.properties;"     
+        COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$MIDDLE_MANAGER_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/middleManager/runtime.properties;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -Duser.timezone=UTC -Dlogfilename=middlemanager-$counter -Dfile.encoding=UTF-8 -Djava.io.tmpdir='/mnt' -classpath 'conf/druid/_common:conf/druid/middleManager:lib/*' io.druid.cli.Main server middleManager;"
 
         echo "middle manager node startup command is $COMMAND"
 
         let counter=counter+1
     #ssh to node and run command
-        ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
 echo ""
@@ -357,14 +357,14 @@ do
         COMMAND=''
         COMMAND=$COMMAND" sudo cat $PATH_TO_SOURCE/scripts/deployment/coordinator.properties > $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '3s@.*@druid.replication.policy=$REPLICATION_RULE@' $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"
-        COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$COORDINATOR_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"   
-        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Dlogfilename=coordinator-$counter -Djava.io.tmpdir='/mnt' -classpath 'conf/druid/_common:conf/druid/coordinator:lib/*' io.druid.cli.Main server coordinator;"  
+        COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$COORDINATOR_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/coordinator/runtime.properties;"
+        COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Dlogfilename=coordinator-$counter -Djava.io.tmpdir='/mnt' -classpath 'conf/druid/_common:conf/druid/coordinator:lib/*' io.druid.cli.Main server coordinator;"
 
         echo "Coordinator node startup command is $COMMAND"
 
         let counter=counter+1
     #ssh to node and run command
-        ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
 echo ""
@@ -381,8 +381,8 @@ do
         #COMMAND=$COMMAND" sudo rm -rf $PATH_TO_DRUID_BIN/conf/druid/historical;"
         #COMMAND=$COMMAND" mkdir $PATH_TO_DRUID_BIN/conf/druid/historical;"
         COMMAND=$COMMAND" sudo cat $PATH_TO_SOURCE/scripts/deployment/historical.properties > $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"
-        COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$HISTORICAL_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"      
-        #COMMAND=$COMMAND" sudo sed -i '18s@.*@druid.request.logging.dir=$LOG_FILE/historical-$counter@' $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"      
+        COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$HISTORICAL_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"
+        #COMMAND=$COMMAND" sudo sed -i '18s@.*@druid.request.logging.dir=$LOG_FILE/historical-$counter@' $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"
 
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Dlogfilename=historical-$counter -Djava.io.tmpdir='/mnt' -classpath 'conf/druid/_common:conf/druid/historical:lib/*' io.druid.cli.Main server historical;"
 
@@ -390,7 +390,7 @@ do
         let counter=counter+1
         sleep 1
     #ssh to node and run command
-        ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
 echo ""
@@ -414,7 +414,7 @@ do
         then
             COMMAND=$COMMAND" sudo sed -i '12s@.*@druid.broker.balancer.type=minimumload@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
             #COMMAND=$COMMAND" sudo sed -i '12s@.*@druid.broker.balancer.type=connectionCount@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
-        fi 
+        fi
         COMMAND=$COMMAND" sudo sed -i '15s@.*@druid.request.logging.dir=$LOG_FILE/broker@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Duser.timezone=UTC -Dlogfilename=broker-$counter -Dfile.encoding=UTF-8 -Djava.io.tmpdir='/mnt' -classpath 'conf/druid/_common:conf/druid/broker:lib/*' io.druid.cli.Main server broker;"
 
@@ -422,7 +422,7 @@ do
         let counter=counter+1
 	sleep 1
     #ssh to node and run command
-        ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
 echo ""
@@ -457,7 +457,7 @@ do
         echo "kafka node startup command is $COMMAND"
 
     #ssh to node and run command
-        ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
 echo ""
@@ -480,7 +480,11 @@ do
 
         let counter=counter+1
     #ssh to node and run command
-        ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+        ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
             $COMMAND"
 done
 echo ""
+
+sleep 10
+echo "Chowning log folders:"
+sudo chown -R ubuntu:ubuntu /proj/DCSQ/getafix/logs

@@ -34,7 +34,7 @@ source $CONFIG_FILE
 NEW_REALTIME_NODE=''
 for node in ${REALTIME_NODE//,/ }
 do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
+    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
     then
         NEW_REALTIME_NODE=$NEW_REALTIME_NODE$node,
     else
@@ -46,7 +46,7 @@ done
 NEW_BROKER_NODES=''
 for node in ${BROKER_NODE//,/ }
 do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
+    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
     then
         NEW_BROKER_NODES=$NEW_BROKER_NODES$node,
     else
@@ -58,7 +58,7 @@ done
 NEW_HISTORICAL_NODES=''
 for node in ${HISTORICAL_NODES//,/ }
 do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
+    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
     then
         NEW_HISTORICAL_NODES=$NEW_HISTORICAL_NODES$node,
     else
@@ -70,7 +70,7 @@ done
 NEW_COORDINATOR_NODES=''
 for node in ${COORDINATOR_NODE//,/ }
 do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
+    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
     then
         NEW_COORDINATOR_NODES=$NEW_COORDINATOR_NODES$node,
     else
@@ -82,7 +82,7 @@ done
 NEW_ZOOKEEPER_NODES=''
 for node in ${ZOOKEEPER_NODE//,/ }
 do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
+    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
     then
         NEW_ZOOKEEPER_NODES=$NEW_ZOOKEEPER_NODES$node,
     else
@@ -94,7 +94,7 @@ done
 NEW_MYSQL_NODES=''
 for node in ${MYSQL_NODE//,/ }
 do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
+    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
     then
         NEW_MYSQL_NODES=$NEW_MYSQL_NODES$node,
     else
@@ -106,7 +106,7 @@ done
 NEW_OVERLORD_NODES=''
 for node in ${OVERLORD_NODE//,/ }
 do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
+    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
     then
         NEW_OVERLORD_NODES=$NEW_OVERLORD_NODES$node,
     else
@@ -118,7 +118,7 @@ done
 NEW_MIDDLE_MANAGER_NODES=''
 for node in ${MIDDLE_MANAGER_NODE//,/ }
 do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
+    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
     then
         NEW_MIDDLE_MANAGER_NODES=$NEW_MIDDLE_MANAGER_NODES$node,
     else
@@ -130,7 +130,7 @@ done
 NEW_KAFKA_NODES=''
 for node in ${KAFKA_NODE//,/ }
 do
-    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ] 
+    if [ "$IP" == "TRUE" -o "$FQDN" == "TRUE" ]
     then
         NEW_KAFKA_NODES=$NEW_KAFKA_NODES$node,
     else
@@ -156,7 +156,7 @@ do
     COMMAND=$COMMAND" sudo pkill -9 \"python\";"
     echo "middle manager server shutdown command is $COMMAND"
     let counter=counter+1
-    ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+    ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 done
 echo""
@@ -177,7 +177,7 @@ do
     COMMAND=$COMMAND" sudo pkill -9 \"python\";"
     echo "overlord server shutdown command is $COMMAND"
     let counter=counter+1
-    ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+    ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 done
 echo""
@@ -194,13 +194,13 @@ do
         COMMAND=$COMMAND"sudo rm -r -f $LOG_FILE/broker-$counter.log;"
         COMMAND=$COMMAND" sudo rm -r -f /mnt/*;"
         COMMAND=$COMMAND" sudo rm -r -f $LOG_FILE/broker;"
-        COMMAND=$COMMAND" sudo rm -rf $LOG_FILE/workloadgenerator-${node}.log;" 
+        COMMAND=$COMMAND" sudo rm -rf $LOG_FILE/workloadgenerator-${node}.log;"
     fi
     COMMAND=$COMMAND" sudo pkill -9 \"java\";"
     COMMAND=$COMMAND" sudo pkill -9 \"python\";"
     echo "Broker server shutdown command is $COMMAND"
     let counter=counter+1
-    ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+    ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 done
 echo""
@@ -222,7 +222,7 @@ do
     fi
     echo "Realtime server shutdown command is $COMMAND"
     let counter=counter+1
-    ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+    ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 
 done
@@ -245,7 +245,7 @@ do
     COMMAND=$COMMAND" sudo pkill -9 \"python\";"
     echo "Config server shutdown command is $COMMAND"
     let counter=counter+1;
-    ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+    ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
         $COMMAND"
 done
 echo ""
@@ -267,7 +267,7 @@ do
     COMMAND=$COMMAND" sudo pkill -9 \"python\";"
     echo "Historical server shutdown command is $COMMAND"
     let counter=counter+1
-    ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+    ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
         $COMMAND"
 done
 echo ""
@@ -291,7 +291,7 @@ do
         COMMAND=$COMMAND" sudo rm -rf /tmp/*;"
     fi
     echo "kafka server shutdown command is $COMMAND"
-    ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+    ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
         $COMMAND"
 done
 echo""
@@ -310,7 +310,7 @@ do
         COMMAND=$COMMAND" sudo rm -rf $LOG_FILE/zookeeper.out;"
     fi
     echo "zookeeper server shutdown command is $COMMAND"
-    ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+    ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 done
 echo""
@@ -333,7 +333,7 @@ do
     COMMAND=$COMMAND" sudo service mysql stop;"
     #COMMAND=$COMMAND" sudo apt-get -y remove mysql-server;"
     echo "mysql server shutdown command is $COMMAND"
-    ssh -i druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
+    ssh -i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $node "
        $COMMAND"
 done
 echo""
