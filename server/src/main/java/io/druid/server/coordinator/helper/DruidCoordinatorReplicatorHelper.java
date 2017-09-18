@@ -2,7 +2,13 @@ package io.druid.server.coordinator.helper;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
+import com.metamx.common.Pair;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.client.ImmutableDruidServer;
+import io.druid.client.selector.QueryableDruidServer;
+import io.druid.query.MutablePair;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordinator.*;
 import io.druid.timeline.DataSegment;
@@ -270,6 +276,20 @@ public class DruidCoordinatorReplicatorHelper {
         }
     }
 
+    public static void printRoutingTable(final HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable){
+        int numSegments = 0;
+        int numSegmentReplicas = 0;
+        for(Map.Entry<DataSegment, HashMap<DruidServerMetadata, Long>> entry : routingTable.entrySet()){
+            log.info("Segment [%s]:", entry.getKey().getIdentifier());
+            numSegments++;
+            for(Map.Entry<DruidServerMetadata, Long> e: entry.getValue().entrySet()){
+                log.info("HN [%s]: [%s]", e.getKey().getHost(), e.getValue());
+                numSegmentReplicas++;
+            }
+        }
+        log.info("Replication factor=%f, num segments=%d, num replicas=%d", (float)numSegmentReplicas/(float)numSegments, numSegments, numSegmentReplicas);
+    }
+
     public static int[] hungarianMatching(double[][] m){
         HungarianAlgorithm h = new HungarianAlgorithm(m);
         return h.execute();
@@ -291,6 +311,461 @@ public class DruidCoordinatorReplicatorHelper {
 
     }
 
+    private static final Comparator<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>> allocCompAscending =
+            new Comparator<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>>() {
+        @Override
+        public int compare(MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long> left, MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long> right) {
+            return Longs.compare(left.rhs, right.rhs);
+        }
+    };
+
+    private static final Comparator<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>> allocCompDescending =
+            new Comparator<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>>() {
+        @Override
+        public int compare(MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long> left, MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long> right) {
+            return Longs.compare(left.rhs, right.rhs)*(-1);
+        }
+    };
+
+    private static int buildHnSegmentMaps(HashMap<DruidServerMetadata, Integer> hnSegmentCountMap,
+                                       HashMap<DruidServerMetadata, Long> hnAllocMap,
+                                       HashMap<DruidServerMetadata, HashMap<DataSegment,Long>> hnToSegMap,
+                                       HashMap<DataSegment, HashMap<DruidServerMetadata,Long>> routingTable){
+        int numSegmentReplicas = 0;
+        int numHns = 0;
+
+        for(Map.Entry<DataSegment, HashMap<DruidServerMetadata, Long>> e1 : routingTable.entrySet()) {
+            for (Map.Entry<DruidServerMetadata, Long> e2 : e1.getValue().entrySet()) {
+                HashMap<DataSegment, Long> temp = null;
+                if (hnToSegMap.get(e2.getKey()) == null) {
+                    temp = new HashMap<>();
+                    numHns++;
+                } else {
+                    temp = hnToSegMap.get(e2.getKey());
+                }
+                temp.put(e1.getKey(), e2.getValue());
+                hnToSegMap.put(e2.getKey(), temp);
+
+                if (hnSegmentCountMap.get(e2.getKey()) == null) {
+                    hnSegmentCountMap.put(e2.getKey(), 1);
+                } else {
+                    Integer numSegments = hnSegmentCountMap.get(e2.getKey());
+                    numSegments++;
+                    hnSegmentCountMap.put(e2.getKey(), numSegments);
+                }
+                numSegmentReplicas++;
+
+                if (hnAllocMap.get(e2.getKey()) == null) {
+                    hnAllocMap.put(e2.getKey(), e2.getValue());
+                } else {
+                    Long alloc = hnAllocMap.get(e2.getKey());
+                    alloc += e2.getValue();
+                    hnAllocMap.put(e2.getKey(), alloc);
+                }
+            }
+        }
+        return numSegmentReplicas;
+    }
+
+//    private static void createUnderOverLists(List<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>> under,
+//                                             List<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>> over,
+//                                             HashMap<DruidServerMetadata, Integer> hnSegmentCountMap,
+//                                             HashMap<DruidServerMetadata, HashMap<DataSegment,Long>> hnToSegMap,
+//                                             int numSegmentsPerHnGoal){
+//        for(Map.Entry<DruidServerMetadata, Integer> e1 : hnSegmentCountMap.entrySet()){
+//            if (e1.getValue() < numSegmentsPerHnGoal){
+//                // get the full allocation of this hn
+//                Long allocation = 0L;
+//                for(Map.Entry<DataSegment, Long> e2 : hnToSegMap.get(e1.getKey()).entrySet()) {
+//                    allocation += e2.getValue();
+//                }
+//
+//                MutablePair<DataSegment, DruidServerMetadata> p1 = new MutablePair<>(null, e1.getKey());
+//                MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long> p2 = new MutablePair<>(p1, allocation);
+//                under.add(p2);
+//
+////                for(Map.Entry<DataSegment, Long> e2 : hnToSegMap.get(e1.getKey()).entrySet()) {
+////                    MutablePair<DataSegment, DruidServerMetadata> p1 = new MutablePair<>(e2.getKey(), e1.getKey());
+////                    MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long> p2 = new MutablePair<>(p1, e2.getValue());
+////                    under.add(p2);
+////                }
+//            }
+//            else if(e1.getValue() > numSegmentsPerHnGoal){
+//                List<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>> temp =
+//                        new ArrayList<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>>();
+//                for(Map.Entry<DataSegment, Long> e2 : hnToSegMap.get(e1.getKey()).entrySet()) {
+//                    MutablePair<DataSegment, DruidServerMetadata> p1 = new MutablePair<>(e2.getKey(), e1.getKey());
+//                    MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long> p2 = new MutablePair<>(p1, e2.getValue());
+//                    temp.add(p2);
+//                }
+//                Collections.sort(temp, allocCompAscending);
+//                for(int i=0; i<(temp.size()-numSegmentsPerHnGoal)-1; i++){
+//                    over.add(temp.get(i));
+//                }
+//            }
+//        }
+//    }
+
+    private static void createUnderOverLists(List<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>> under,
+                                             List<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>> over,
+                                             HashMap<DruidServerMetadata, Integer> hnSegmentCountMap,
+                                             HashMap<DruidServerMetadata, HashMap<DataSegment,Long>> hnToSegMap,
+                                             int numSegmentsPerHnGoal){
+
+        for(Map.Entry<DruidServerMetadata, Integer> e1 : hnSegmentCountMap.entrySet()){
+            if(e1.getValue() > numSegmentsPerHnGoal){
+                List<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>> temp =
+                        new ArrayList<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>>();
+                for(Map.Entry<DataSegment, Long> e2 : hnToSegMap.get(e1.getKey()).entrySet()) {
+                    MutablePair<DataSegment, DruidServerMetadata> p1 = new MutablePair<>(e2.getKey(), e1.getKey());
+                    MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long> p2 = new MutablePair<>(p1, e2.getValue());
+                    temp.add(p2);
+                }
+                Collections.sort(temp, allocCompAscending);
+                for(int i=0; i<(temp.size()-numSegmentsPerHnGoal)-1; i++){
+                    over.add(temp.get(i));
+                }
+            }
+            else {
+                // get the full allocation of this hn
+                Long allocation = 0L;
+                for(Map.Entry<DataSegment, Long> e2 : hnToSegMap.get(e1.getKey()).entrySet()) {
+                    allocation += e2.getValue();
+                }
+                MutablePair<DataSegment, DruidServerMetadata> p1 = new MutablePair<>(null, e1.getKey());
+                MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long> p2 = new MutablePair<>(p1, allocation);
+                under.add(p2);
+            }
+        }
+    }
+
+    private static final Comparator<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>>> segmentComparator =
+            new Comparator<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>>>()
+    {
+        @Override
+        public int compare(MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>> left,
+                           MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>> right)
+        {
+            return Ints.compare(left.rhs.lhs.intValue(), right.rhs.lhs.intValue());
+        }
+    };
+
+    private static final Comparator<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>>> allocComparator =
+            new Comparator<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>>>()
+    {
+        @Override
+        public int compare(MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>> left,
+                           MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>> right)
+        {
+            return Ints.compare(left.rhs.rhs.intValue(), right.rhs.rhs.intValue());
+        }
+    };
+
+    public static HashMap<DataSegment,HashMap<DruidServerMetadata,Long>> balanceRoutingTableSegments(
+            HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable){
+        int numSegmentReplicas = 0;
+        int numHns = 0;
+        int numSegmentsPerHnGoal = 0;
+
+        // map of hn to number of segment it is storing
+        HashMap<DruidServerMetadata, Integer> hnSegmentCountMap = new HashMap<DruidServerMetadata, Integer>();
+        // map of hn to total cpu allocation done on that hn
+        HashMap<DruidServerMetadata, Long> hnAllocMap = new HashMap<DruidServerMetadata, Long>();
+        // map of hn to the segments it is storing alongwith allocation
+        HashMap<DruidServerMetadata, HashMap<DataSegment,Long>> hnToSegMap = new HashMap<DruidServerMetadata, HashMap<DataSegment, Long>>();
+        // balanced routing table
+        HashMap<DataSegment, HashMap<DruidServerMetadata,Long>> balancedRoutingTable =
+                new HashMap<DataSegment, HashMap<DruidServerMetadata, Long>>(routingTable);
+
+        numSegmentReplicas = buildHnSegmentMaps(hnSegmentCountMap, hnAllocMap, hnToSegMap, routingTable);
+        numHns = hnAllocMap.keySet().size();
+        numSegmentsPerHnGoal = Math.round((float)numSegmentReplicas/(float)numHns);
+
+        log.info("SBAL: numSegmentReplicas %d, numHns %d, numSegmentsPerHnGoal %d", numSegmentReplicas, numHns, numSegmentsPerHnGoal);
+        log.info("SBAL: hnToSegMap %s", hnToSegMap.toString());
+        //log.info("SBAL: hnAllocMap %s", hnAllocMap.toString());
+        log.info("SBAL: hnSegmentCountMap %s", hnSegmentCountMap.toString());
+
+        while(true) {
+
+            List<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>>> balancedList =
+                    new ArrayList<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>>>();
+
+            for (Map.Entry<DruidServerMetadata, Integer> e1 : hnSegmentCountMap.entrySet()) {
+                // segment value and its corresponding allocation gets updated later in the code. Allocation value is
+                // initialized with the total allocation of the HN.
+                MutablePair<DataSegment, DruidServerMetadata> p1 = new MutablePair<>(null, e1.getKey());
+                MutablePair<Long, Long> p2 = new MutablePair<>(hnSegmentCountMap.get(e1.getKey()).longValue(), hnAllocMap.get((e1.getKey())));
+                MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>> p3 = new MutablePair<>(p1, p2);
+                balancedList.add(p3);
+            }
+
+            MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>> maxHn = null;
+            MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>> minHn = null;
+
+            maxHn = Collections.max(balancedList, segmentComparator);
+            balancedList.remove(maxHn);
+
+            boolean breakFlag = true;
+
+            while(balancedList.size() > 0) {
+                minHn = Collections.min(balancedList, segmentComparator);
+                log.info("Testing Max hn %s numseg %d alloc %d, Min hn %s numseg %d alloc %d", maxHn.lhs.rhs.getHost(),
+                        maxHn.rhs.lhs, maxHn.rhs.rhs, minHn.lhs.rhs.getHost(), minHn.rhs.lhs, minHn.rhs.rhs);
+
+                Long currAlloc = hnAllocMap.get(minHn.lhs.rhs);
+                float allocRatio = (float)maxHn.rhs.rhs/(float)currAlloc;
+                //log.info("allocratio = %f", allocRatio);
+//                if(allocRatio > 0.14){
+//                    log.info("Skipping segment move hn alloc %s, segment alloc %s, ratio %f",currAlloc.toString(),
+//                            maxHn.rhs.toString(), allocRatio);
+//                    balancedList.remove(minHn);
+//                    continue;
+//                }
+                breakFlag = false;
+                break;
+            }
+
+            if (breakFlag == true){
+                break;
+            }
+
+            if (maxHn.rhs.lhs - minHn.rhs.lhs <= 1) {
+                break;
+            }
+            // maxHn is chosen. Now choose the segment with lowest allocation on this hn and update maxHn
+            HashMap<DataSegment, Long> maxHnSegs = hnToSegMap.get(maxHn.lhs.rhs);
+            Long minSegAllocValue = Long.MAX_VALUE;
+            DataSegment minAllocSeg = null;
+            for (Map.Entry<DataSegment, Long> e1 : maxHnSegs.entrySet()) {
+                if(e1.getValue() < minSegAllocValue){
+                    minSegAllocValue = e1.getValue();
+                    minAllocSeg = e1.getKey();
+                }
+            }
+            maxHn.lhs.lhs = minAllocSeg;
+            maxHn.rhs.rhs = minSegAllocValue;
+
+            log.info("Found Max hn %s numseg %d alloc %d, Min hn %s numseg %d alloc %d", maxHn.lhs.rhs.getHost(),
+                    maxHn.rhs.lhs, maxHn.rhs.rhs, minHn.lhs.rhs.getHost(), minHn.rhs.lhs, minHn.rhs.rhs);
+
+            log.info("Moving segment %s %s %s ===>>> %s %s", maxHn.lhs.lhs.getInterval().toString(), maxHn.lhs.rhs.getHost(),
+                    maxHn.rhs.lhs.toString(), minHn.lhs.rhs.getHost(), minHn.rhs.lhs.toString());
+
+            // remove the moving segment from the old hn in the routing table
+            HashMap<DruidServerMetadata, Long> temp = balancedRoutingTable.get(maxHn.lhs.lhs);
+            temp.remove(maxHn.lhs.rhs);
+            if(temp.isEmpty()){
+                balancedRoutingTable.remove(maxHn.lhs.rhs);
+            }
+            else{
+                balancedRoutingTable.put(maxHn.lhs.lhs, temp);
+            }
+
+            // change the moving segment's allocation in the hnAllocMap
+            Long alloc = hnAllocMap.get(maxHn.lhs.rhs);
+            alloc -= maxHn.rhs.rhs;
+            hnAllocMap.put(maxHn.lhs.rhs, alloc);
+
+            // add the moving segment to the new hn in the routing table
+            temp = balancedRoutingTable.get(maxHn.lhs.lhs);
+            if(temp.containsKey(minHn.lhs.rhs)){
+                Long newAlloc = temp.get(minHn.lhs.rhs) + maxHn.rhs.rhs;
+                temp.put(minHn.lhs.rhs, newAlloc);
+            }
+            else{
+                temp.put(minHn.lhs.rhs, maxHn.rhs.rhs);
+            }
+            balancedRoutingTable.put(maxHn.lhs.lhs, temp);
+
+            // update hnToSegMap
+            //log.info("hnToSegMap before %s ", hnToSegMap.toString());
+            HashMap<DataSegment, Long> maxHnMap = hnToSegMap.get(maxHn.lhs.rhs);
+            DataSegment maxHnSegment = maxHn.lhs.lhs;
+            //Long maxHnSegmentAlloc = maxHnMap.remove(maxHnSegment);
+            //log.info("maxhnmap before %s", maxHnMap.toString());
+            maxHnMap.remove(maxHnSegment);
+            //log.info("maxhnmap after %s", maxHnMap.toString());
+            if(maxHnMap.isEmpty()){
+                hnToSegMap.remove(maxHn.lhs.rhs);
+            }
+            else{
+                hnToSegMap.put(maxHn.lhs.rhs, maxHnMap);
+            }
+            //log.info("hnToSegMap after %s ", hnToSegMap.toString());
+
+            HashMap<DataSegment, Long> minHnMap = hnToSegMap.get(minHn.lhs.rhs);
+            if (minHnMap == null){
+                minHnMap = new HashMap<DataSegment, Long>();
+                minHnMap.put(maxHnSegment, maxHn.rhs.rhs);
+            }
+            else{
+                Long currAlloc = minHnMap.get(maxHnSegment);
+                if (currAlloc == null){
+                    currAlloc = maxHn.rhs.rhs;
+                }
+                else {
+                    currAlloc += maxHn.rhs.rhs;
+                }
+                minHnMap.put(maxHnSegment, currAlloc);
+            }
+            hnToSegMap.put(minHn.lhs.rhs, minHnMap);
+
+
+            // change the new hn's allocation in the hnAllocMap
+            alloc = hnAllocMap.get(minHn.lhs.rhs);
+            if(alloc!=null){
+                alloc += maxHn.rhs.rhs;
+                hnAllocMap.put(minHn.lhs.rhs, alloc);
+            }
+            else{
+                hnAllocMap.put(maxHn.lhs.rhs, maxHn.rhs.rhs);
+            }
+
+            Integer numSegments = hnSegmentCountMap.get(maxHn.lhs.rhs);
+            numSegments--;
+            hnSegmentCountMap.put(maxHn.lhs.rhs, numSegments);
+
+            numSegments = hnSegmentCountMap.get(minHn.lhs.rhs);
+            numSegments++;
+            hnSegmentCountMap.put(minHn.lhs.rhs, numSegments);
+            //printRoutingTable(balancedRoutingTable);
+        }
+        return balancedRoutingTable;
+    }
+
+/*
+    public static HashMap<DataSegment,HashMap<DruidServerMetadata,Long>> balanceRoutingTableSegments(HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable){
+        int numSegmentReplicas = 0;
+        int numHns = 0;
+        int numSegmentsPerHnGoal = 0;
+
+        // map of hn to number of segment it is storing
+        HashMap<DruidServerMetadata, Integer> hnSegmentCountMap = new HashMap<DruidServerMetadata, Integer>();
+        // map of hn to total cpu allocation done on that hn
+        HashMap<DruidServerMetadata, Long> hnAllocMap = new HashMap<DruidServerMetadata, Long>();
+        // map of hn to the segments it is storing alongwith allocation
+        HashMap<DruidServerMetadata, HashMap<DataSegment,Long>> hnToSegMap = new HashMap<DruidServerMetadata, HashMap<DataSegment, Long>>();
+        // balanced routing table
+        HashMap<DataSegment, HashMap<DruidServerMetadata,Long>> balancedRoutingTable =
+                new HashMap<DataSegment, HashMap<DruidServerMetadata, Long>>(routingTable);
+
+        numSegmentReplicas = buildHnSegmentMaps(hnSegmentCountMap, hnAllocMap, hnToSegMap, routingTable);
+        numHns = hnAllocMap.keySet().size();
+        numSegmentsPerHnGoal = Math.round((float)numSegmentReplicas/(float)numHns);
+
+        log.info("SBAL: numSegmentReplicas %d, numHns %d, numSegmentsPerHnGoal %d", numSegmentReplicas, numHns, numSegmentsPerHnGoal);
+        log.info("SBAL: hnToSegMap %s", hnToSegMap.toString());
+        //log.info("SBAL: hnAllocMap %s", hnAllocMap.toString());
+        log.info("SBAL: hnSegmentCountMap %s", hnSegmentCountMap.toString());
+
+        List<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>> under =
+                new ArrayList<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>>();
+        List<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>> over =
+                new ArrayList<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>>();
+
+        createUnderOverLists(under, over, hnSegmentCountMap, hnToSegMap, numSegmentsPerHnGoal);
+
+        log.info("SBAL: under list %s", under.toString());
+        log.info("SBAL: over list %s", over.toString());
+
+        // if routing table is already balanced, return
+        if(under.size() == 0){
+            return balancedRoutingTable;
+        }
+
+        //Collections.sort(under, allocCompDescending);
+        //log.info("SBAL: under sorted list %s", under.toString());
+
+        Collections.sort(over, allocCompAscending);
+        //log.info("SBAL: over sorted list %s", over.toString());
+
+        int overListSize = over.size();
+        for(int i=0; i<overListSize; i++){
+            // segment that needs to be moved
+            MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long> beforeMove = over.get(i);
+
+            // pick a new hn for the moving segment which has the least number of segments
+            MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long> afterMove = null;
+            int minSegmentCount = Integer.MAX_VALUE;
+            Collections.shuffle(under);
+            for(int j=0; j<under.size(); j++){
+                if(hnSegmentCountMap.get(under.get(i).lhs.rhs) < minSegmentCount){
+                    // check if the moving segment is too big (i.e. >10% of the hn allotment), then ignore this segment
+                    // move since it can cause performance imbalance
+                    Long currAlloc = hnAllocMap.get(under.get(i).lhs.rhs);
+                    if(currAlloc != null){
+                        float allocRatio = (float)beforeMove.rhs/(float)currAlloc;
+                        log.info("allocratio = %f", allocRatio);
+//                        if(allocRatio > 0.14){
+//                            log.info("Skipping segment move hn alloc %s, segment alloc %s, ratio %f",currAlloc.toString(),
+//                                    beforeMove.rhs.toString(), allocRatio);
+//                            continue;
+//                        }
+                    }
+                    afterMove = under.get(i);
+                    minSegmentCount = hnSegmentCountMap.get(afterMove.lhs.rhs);
+                }
+            }
+            if(afterMove==null){
+                continue;
+            }
+            log.info("Moving segment %s %s %s ===>>> %s %s %s", beforeMove.lhs.lhs.getInterval().toString(), beforeMove.lhs.rhs.getHost(),
+                    beforeMove.rhs.toString(), afterMove.lhs.lhs.getInterval().toString(), afterMove.lhs.rhs.getHost(),
+                    afterMove.rhs.toString());
+
+            // remove the moving segment from the old hn in the routing table
+            HashMap<DruidServerMetadata, Long> temp = balancedRoutingTable.get(beforeMove.lhs.lhs);
+            temp.remove(beforeMove.lhs.rhs);
+            if(temp.isEmpty()){
+                balancedRoutingTable.remove(beforeMove.lhs.rhs);
+            }
+            else{
+                balancedRoutingTable.put(beforeMove.lhs.lhs, temp);
+            }
+
+            // change the moving segment's allocation in the hnAllocMap
+            Long alloc = hnAllocMap.get(beforeMove.lhs.rhs);
+            alloc -= beforeMove.rhs;
+            hnAllocMap.put(beforeMove.lhs.rhs, alloc);
+
+            // add the moving segment to the new hn in the routing table
+            temp = balancedRoutingTable.get(beforeMove.lhs.lhs);
+            if(temp.containsKey(afterMove.lhs.rhs)){
+                Long newAlloc = temp.get(afterMove.lhs.rhs) + beforeMove.rhs;
+                temp.put(afterMove.lhs.rhs, newAlloc);
+            }
+            else{
+                temp.put(afterMove.lhs.rhs, beforeMove.rhs);
+            }
+            balancedRoutingTable.put(beforeMove.lhs.lhs, temp);
+
+            // change the new hn's allocation in the hnAllocMap
+            alloc = hnAllocMap.get(afterMove.lhs.rhs);
+            if(alloc!=null){
+                alloc += beforeMove.rhs;
+                hnAllocMap.put(afterMove.lhs.rhs, alloc);
+            }
+            else{
+                hnAllocMap.put(afterMove.lhs.rhs, beforeMove.rhs);
+            }
+
+            Integer numSegments = hnSegmentCountMap.get(beforeMove.lhs.rhs);
+            numSegments--;
+            hnSegmentCountMap.put(beforeMove.lhs.rhs, numSegments);
+
+//            if(numSegments>=numSegmentsPerHnGoal){
+//                under.remove(beforeMove);
+//            }
+            numSegments = hnSegmentCountMap.get(afterMove.lhs.rhs);
+            numSegments++;
+            hnSegmentCountMap.put(afterMove.lhs.rhs, numSegments);
+            //printRoutingTable(balancedRoutingTable);
+        }
+
+        return balancedRoutingTable;
+    }
+*/
 
 
     	/* Copyright (c) 2012 Kevin L. Stern

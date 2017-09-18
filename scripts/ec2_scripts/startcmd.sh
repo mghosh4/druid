@@ -4,7 +4,7 @@ echo "Setting up the harddisk"
 mkfs -t ext4 /dev/xvdf
 mkdir /druid
 mount /dev/xvdf /druid/
-chown ubuntu:ubuntu /druid
+chown -R ubuntu:ubuntu /druid
 
 echo "Setting up passwordless ssh"
 echo 'alias ssh="ssh -i ~/druid.pem"' >> /home/ubuntu/.bash_aliases

@@ -6,6 +6,7 @@ import time
 
 SSH_OPTS = "-i ~/druid.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
 EXPERIMENT = "default"
+S3_BUCKET_NAME_TEMPLATE = "uiuc.dprg.s3.{exp}"
 
 def list_instances_attributes(attributes):
     response = ec2client.describe_instances(Filters=[
@@ -53,6 +54,11 @@ def create_efs():
         # SecurityGroups=['sg-bf13f1cf']
     )
 
+def create_s3():
+    print("Creating S3")
+    response = s3client.create_bucket(Bucket=S3_BUCKET_NAME_TEMPLATE.format(exp=EXPERIMENT))
+    location = response['Location']
+
 def create_instances():
     print("Launching EC2 Cluster")
     response = efsclient.describe_file_systems(CreationToken=EXPERIMENT)
@@ -81,7 +87,7 @@ def create_instances():
             ImageId='ami-841f46ff',
             InstanceType='m4.4xlarge',
             KeyName='druid',
-            MaxCount=21,
+            MaxCount=22,
             MinCount=1,
             SecurityGroupIds=['sg-bf13f1cf',],
             DisableApiTermination=False,
@@ -136,7 +142,7 @@ def wakeup_instances():
     mnt_efs = "sudo bash -c 'mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 {fsIP}:/ {mnt_dir}'".format(fsIP=efsIP, mnt_dir="/proj")
     mnt_depfs = "sudo bash -c 'mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 {fsIP}:/ {mnt_dir}'".format(fsIP=dependenciesEfsIP, mnt_dir="/dependencies")
 
-    mnt_ebs = "sudo bash -c 'mkfs -t ext4 /dev/xvdf && mount /dev/xvdf /druid/ && chown ubuntu:ubuntu /druid'"
+    mnt_ebs = "sudo bash -c 'mkfs -t ext4 /dev/xvdf && mount /dev/xvdf /druid/ && chown -R ubuntu:ubuntu /druid'"
 
     hostnames = list_instances_attributes(['PublicDnsName',])['PublicDnsName']
     for hostname in hostnames:
@@ -186,16 +192,16 @@ def getNode(idx):
 
 def main(argv):
     try:
-        opts, args = getopt.getopt(argv,"cleustdnw",["create", "efs" "list", "upload", "setup", "terminate", "delete-efs", "node", "wake"])
+        opts, args = getopt.getopt(argv,"cleustdnwg",["create", "efs" "list", "upload", "setup", "s3", "terminate", "delete-efs", "node", "wake"])
     except getopt.GetoptError:
-        print 'awscluster.py -e|--efs -c|--create -l|--list -u|--upload -s|--setup -t|--terminate -d|--delete-efs -w|--wake <experiment namespace>'
+        print 'awscluster.py -e|--efs -c|--create -l|--list -u|--upload -s|--setup -g|--s3 -t|--terminate -d|--delete-efs -w|--wake <experiment namespace>'
         sys.exit(2)
 
     global EXPERIMENT
     EXPERIMENT = argv[1]
     for opt, arg in opts:
         if opt == '-h':
-            print 'awscluster.py -e|--efs -c|--create -l|--list -u|--upload -s|--setup -t|--terminate -d|--delete-efs -w|--wake <experiment namespace>'
+            print 'awscluster.py -e|--efs -c|--create -l|--list -u|--upload -s|--setup -g|--s3 -t|--terminate -d|--delete-efs -w|--wake <experiment namespace>'
             sys.exit()
         elif opt in ("-e", "--efs"):
             create_efs()
@@ -203,6 +209,8 @@ def main(argv):
             create_instances()
         elif opt in ("-s", "--setup"):
             setup_instances()
+        elif opt in ("-g", "--s3"):
+            create_s3()
         elif opt in ("-u", "--upload"):
             upload_artifacts()
         elif opt in ("-l", "--list"):
@@ -221,5 +229,6 @@ def main(argv):
 
 ec2client = boto3.client('ec2')
 efsclient = boto3.client('efs')
+s3client = boto3.client('s3')
 if __name__ == "__main__":
     main(sys.argv[1:])

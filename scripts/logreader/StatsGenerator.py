@@ -68,7 +68,10 @@ if "historical" in resultmetrics:
     stats = [sum, numpy.mean, max, min]
     headerStr = "Time\tTotal\tMean\tMax\tMin\n"
     aggValues = dict()
-    for metric in historicalmetrics:
+    for metric in ["segment/count","segment/used"]:
+        if metric not in historicalmetrics:
+            continue
+
         aggValues[metric] = resultmetrics["historical"].getAggregateStats(metric, stats)
        
         if "/" in metric:
@@ -81,7 +84,10 @@ if "historical" in resultmetrics:
     
     stats = [numpy.median, Utils.percentile75, Utils.percentile90, Utils.percentile95, Utils.percentile99, numpy.mean]
     headerStr = "Median\t75th Percentile\t90th Percentile\t95th Percentile\t99th Percentile\tMean\n"
-    for metric in historicalmetrics:
+    for metric in ["segment/count","segment/used"]:
+        if metric not in historicalmetrics:
+            continue
+
         overallStats = aggValues[metric][sum]
         if "/" in metric:
             newmetrics = metric.replace("/", "-")
@@ -97,6 +103,31 @@ if "historical" in resultmetrics:
             metricstats[stat] = stat(overallStats.values())
     
         Utils.writeOverallMetricStats(statfile, metricstats, stats, headerStr)
+
+    #Query Runtime
+    stats = [numpy.median, Utils.percentile75, Utils.percentile90, Utils.percentile95, Utils.percentile99, numpy.mean]
+    headerStr = "Median\t75th Percentile\t90th Percentile\t95th Percentile\t99th Percentile\tMean\n"
+    for metric in ["query/time","query/segment/time"]:
+        if metric not in historicalmetrics:
+            continue
+
+        overallStats = resultmetrics["historical"].getOverallStats(metric, stats)
+        if "/" in metric:
+            newmetrics = metric.replace("/", "-")
+        else:
+            newmetrics = metric
+
+        filename = resultfolder + "/historical" + "-" + newmetrics + ".log"
+        Utils.writeOverallMetricStats(filename, overallStats, stats, headerStr)
+
+        overallStats = resultmetrics["historical"].getOverallMetric(metric)
+        if "/" in metric:
+            newmetrics = metric.replace("/", "-")
+        else:
+            newmetrics = metric
+
+        filename = resultfolder + "/historical" + "-" + newmetrics + ".cdf"
+        Utils.writeCDF(filename, overallStats)
 
 # write the HN node to hostname map to hn-to-hostname-map.log
 mapfile = resultfolder + "/historical-to-hostname-map.log"

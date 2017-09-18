@@ -483,8 +483,9 @@ public class ServerManager implements QuerySegmentWalker
         {
           for (ReferenceCountingSegment segment : partition.payloads()) {
             long accessTime = segment.getAndClearSegmentQueryTime();
-            if (accessTime > 0)
+            //if (accessTime > 0)
               segmentAccessTimeMap.put(segment.getIdentifier(), accessTime);
+              //log.info("Sending access counts to broker segment %s time %d", segment.getIdentifier(), accessTime);
           }
         }
       }

@@ -245,6 +245,9 @@ curllogger = logging.getLogger('tornado.curl_httpclient')
 curllogger.setLevel(logging.DEBUG)
 curllogger.propagate = False
 
+if not os.path.exists(os.path.dirname(logfilename)):
+    os.makedirs(os.path.dirname(logfilename))
+
 fh = logging.FileHandler(logfilename, 'w')
 fh.setLevel(logging.DEBUG)
 

@@ -16,12 +16,16 @@ do
 	if (( $flag==0 )); then
 		break
 	fi
-	sleep 3m
+	sleep 15
 done
 
 echo "Yeah!"
-#run logreader
+
+#Change the conf file based on experiment
 cd /proj/DCSQ/raina4/druid/scripts/deployment
 ./stop_druid.sh -s config/getafix.conf
+
+#run logreader
 cd /proj/DCSQ/raina4/druid/scripts/logreader
 python StatsGenerator.py getafix.conf
+

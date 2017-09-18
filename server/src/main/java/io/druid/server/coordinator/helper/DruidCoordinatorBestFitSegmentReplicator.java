@@ -22,6 +22,7 @@ package io.druid.server.coordinator.helper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.util.Charsets;
+import com.google.api.client.util.Data;
 import com.google.common.base.Throwables;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
@@ -59,40 +60,40 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinatorHelper
-{
+public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinatorHelper {
 	private final DruidCoordinator coordinator;
 
 	private static final EmittingLogger log = new EmittingLogger(DruidCoordinatorBestFitSegmentReplicator.class);
 	private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 	private final StatusResponseHandler responseHandler = new StatusResponseHandler(Charsets.UTF_8);
 	private final HttpClient httpClient;
-    	private final ReplicationThrottler replicatorThrottler;
+	private final ReplicationThrottler replicatorThrottler;
 	private static final long MIN_THRESHOLD = 5;
-        private static int bestFitReplicationRound = 0;
+	private static int bestFitReplicationRound = 0;
 
 	public DruidCoordinatorBestFitSegmentReplicator(
-			DruidCoordinator coordinator)
-	{
+					DruidCoordinator coordinator) {
 		this.coordinator = coordinator;
 		this.httpClient = coordinator.httpClient;
-        this.replicatorThrottler = new ReplicationThrottler(
-            coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
-            coordinator.getDynamicConfigs().getReplicantLifetime()
-        );
-                
+		this.replicatorThrottler = new ReplicationThrottler(
+						coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
+						coordinator.getDynamicConfigs().getReplicantLifetime()
+		);
+
 	}
 
 	@Override
-	public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
-	{
+	public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params) {
 		//log.info("Starting replication. Getting Segment Popularity");
-        replicatorThrottler.updateParams(
-            coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
-            coordinator.getDynamicConfigs().getReplicantLifetime()
-        );
+		replicatorThrottler.updateParams(
+						coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
+						coordinator.getDynamicConfigs().getReplicantLifetime()
+		);
 
 		final CoordinatorStats stats = new CoordinatorStats();
+
+		// print cluster configuration
+		//printClusterConfig(params);
 
 		// Acquire Query Workload in the last window
 		Multiset<DataSegment> segments = HashMultiset.create();
@@ -116,129 +117,120 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		manageReplicas(params, routingTable, stats);
 
 		return params.buildFromExisting()
-                	.withReplicationManager(replicatorThrottler)
-				.withCoordinatorStats(stats)
-				.build();
+						.withReplicationManager(replicatorThrottler)
+						.withCoordinatorStats(stats)
+						.build();
 	}
 
-	private List<URI> getHistoricalURLs(DruidCoordinatorRuntimeParams params)
-	{
+	private List<URI> getHistoricalURLs(DruidCoordinatorRuntimeParams params) {
 		List<ImmutableDruidServer> historicals = new ArrayList<ImmutableDruidServer>();
-		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier()){
-            for (ServerHolder holder : serverQueue){
-			    historicals.add(holder.getServer());
-            }
+		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier()) {
+			for (ServerHolder holder : serverQueue) {
+				historicals.add(holder.getServer());
+			}
 		}
-		
+
 		List<URI> uris = new ArrayList<URI>(historicals.size());
-		for (ImmutableDruidServer historical : historicals)
-		{
+		for (ImmutableDruidServer historical : historicals) {
 			// Should use threads to fetch in parallel from all brokers
 			URI uri = null;
 			try {
 				uri = new URI(
-					    "http",
-						null,
-						historical.getHost().split(":")[0],
-						Integer.parseInt(historical.getHost().split(":")[1]),
-						"/druid/historical/v1/totalAccessTime",
-						null,
-						null);
+								"http",
+								null,
+								historical.getHost().split(":")[0],
+								Integer.parseInt(historical.getHost().split(":")[1]),
+								"/druid/historical/v1/totalAccessTime",
+								null,
+								null);
 			} catch (URISyntaxException e) {
-                log.warn("URI did not get created [%s]", historical.getHost());
+				log.warn("URI did not get created [%s]", historical.getHost());
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 
 			//log.info("URI [%s]", uri.toString());
-			
+
 			uris.add(uri);
 		}
 
 		//log.info("Number of Historical Servers [%d]", historicals.size());
 
 		return uris;
-  	}
+	}
 
-	private void calculateSegmentCounts(DruidCoordinatorRuntimeParams params, Multiset<DataSegment> segmentCounts)
-	{
+	private void calculateSegmentCounts(DruidCoordinatorRuntimeParams params, Multiset<DataSegment> segmentCounts) {
 		List<URI> urls = getHistoricalURLs(params);
 
 		ExecutorService pool = Executors.newFixedThreadPool(urls.size());
 		List<Future<Map<String, Integer>>> futures = new ArrayList<Future<Map<String, Integer>>>();
-			
-		for (final URI url: urls)
-		{
-			futures.add(pool.submit(new Callable<Map<String, Integer>> (){
-				@Override
-				public Map<String, Integer> call()
-				{
-					Map<String, Integer> totalAccessMap = Maps.newHashMap();
-				    try {
-				    	StatusResponseHolder response = httpClient.go(
-				            new Request(
-				                HttpMethod.GET,
-				                new URL(url.toString())
-				            ),
-				            responseHandler
-				        ).get();
 
-				        if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-				          throw new ISE(
-				              "Error while querying[%s] status[%s] content[%s]",
-				              url.toString(),
-				              response.getStatus(),
-				              response.getContent()
-				          );
-				        }
-				        
-				        //log.info("Response Length [%d]", response.getContent().length());
-				        
-				        totalAccessMap = jsonMapper.readValue(
-				            response.getContent(), new TypeReference<Map<String, Integer>>()
-				            {
-				            }
-				        );
-				      }
-				      catch (Exception e) {
-				    	e.printStackTrace();
-				        throw Throwables.propagate(e);
-				      }
-				    
-				    for (Map.Entry<String, Integer> entry : totalAccessMap.entrySet())
-				    {
-				        log.info("Segment Received [%s] with value [%d] from [%s]", entry.getKey(), entry.getValue(), url.getHost());
-				    }
-				    
-				    return totalAccessMap;
+		for (final URI url : urls) {
+			futures.add(pool.submit(new Callable<Map<String, Integer>>() {
+				@Override
+				public Map<String, Integer> call() {
+					Map<String, Integer> totalAccessMap = Maps.newHashMap();
+					try {
+						StatusResponseHolder response = httpClient.go(
+										new Request(
+														HttpMethod.GET,
+														new URL(url.toString())
+										),
+										responseHandler
+						).get();
+
+						if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+							throw new ISE(
+											"Error while querying[%s] status[%s] content[%s]",
+											url.toString(),
+											response.getStatus(),
+											response.getContent()
+							);
+						}
+
+						//log.info("Response Length [%d]", response.getContent().length());
+
+						totalAccessMap = jsonMapper.readValue(
+										response.getContent(), new TypeReference<Map<String, Integer>>() {
+										}
+						);
+					} catch (Exception e) {
+						e.printStackTrace();
+						throw Throwables.propagate(e);
+					}
+
+					for (Map.Entry<String, Integer> entry : totalAccessMap.entrySet()) {
+						log.info("Segment Received [%s] with value [%d] from [%s]", entry.getKey(), entry.getValue(), url.getHost());
+					}
+
+					return totalAccessMap;
 				}
 			}));
 		}
-		
+
+
+
 		HashMap<ImmutableDruidServer, ServerHolder> serverHolderMap = new HashMap<ImmutableDruidServer, ServerHolder>();
-		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier()){
-            for (ServerHolder holder : serverQueue){
-			    serverHolderMap.put(holder.getServer(), holder);
-            }
+		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier()) {
+			for (ServerHolder holder : serverQueue) {
+				serverHolderMap.put(holder.getServer(), holder);
+			}
 		}
-		
+
 		if (serverHolderMap.size() == 0) {
 			log.makeAlert("Cluster has no servers! Check your cluster configuration!").emit();
 			return;
 		}
-		
-		Map<String, DataSegment> datasegments = Maps.newHashMap();		
-		for (ImmutableDruidServer server : serverHolderMap.keySet())
-		{
-			for (DataSegment segment : server.getSegments().values())
-			{
+
+		Map<String, DataSegment> datasegments = Maps.newHashMap();
+		for (ImmutableDruidServer server : serverHolderMap.keySet()) {
+			for (DataSegment segment : server.getSegments().values()) {
 				datasegments.put(segment.getIdentifier(), segment);
 			}
 		}
-		
+
 		Map<String, Integer> segments = Maps.newHashMap();
-		for (Future<Map<String, Integer>> future: futures)
-		{
+		for (Future<Map<String, Integer>> future : futures) {
 			try {
 				segments = future.get();
 			} catch (InterruptedException e) {
@@ -248,22 +240,18 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			
-			for (Map.Entry<String, Integer> entry : segments.entrySet())
-			{
+
+			for (Map.Entry<String, Integer> entry : segments.entrySet()) {
 				DataSegment segment = datasegments.get(entry.getKey());
-				if (segmentCounts.contains(segment))
-				{
+				if (segmentCounts.contains(segment)) {
 					int currentCount = segmentCounts.count(segment);
 					segmentCounts.setCount(segment, currentCount + entry.getValue());
-				}
-				else
+				} else
 					segmentCounts.add(segment, entry.getValue());
 			}
 		}
-		
-		for (Entry<DataSegment> entry : segmentCounts.entrySet())
-		{
+
+		for (Entry<DataSegment> entry : segmentCounts.entrySet()) {
 			if (entry != null)
 				log.info("Segment Received [%s] Count [%d]", entry.getElement().getIdentifier(), entry.getCount());
 		}
@@ -271,54 +259,58 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 
 
 	private void calculateWeightedAccessCounts(
-			DruidCoordinatorRuntimeParams params,
-			Multiset<DataSegment> segments,
-			HashMap<DataSegment, Long> weightedAccessCounts)
-	{
+					DruidCoordinatorRuntimeParams params,
+					Multiset<DataSegment> segments,
+					HashMap<DataSegment, Long> weightedAccessCounts) {
+		float alpha = 0.5F;
 		//log.info("Calculating Weighted Access Counts for Segments");
 
 		// Handle those segments which are in Coordinator's map but not in segments collected from query
-		for (Map.Entry<DataSegment, Long> entry : weightedAccessCounts.entrySet())
-			if (segments.contains(entry.getKey()) == false)
-				weightedAccessCounts.put(entry.getKey(), (long)Math.ceil(0.5 * entry.getValue()));
+		if (alpha > 0) {
+			for (Map.Entry<DataSegment, Long> entry : weightedAccessCounts.entrySet())
+				if (segments.contains(entry.getKey()) == false)
+					weightedAccessCounts.put(entry.getKey(), (long) Math.ceil(alpha * entry.getValue()));
+		}
 
-		for (Entry<DataSegment> entry : segments.entrySet())
-		{
+		for (Entry<DataSegment> entry : segments.entrySet()) {
 			DataSegment segment = entry.getElement();
 			int segmentCount = entry.getCount();
 
 			if (weightedAccessCounts.containsKey(segment) == false)
-				weightedAccessCounts.put(segment, (long)segmentCount);
-			else
-			{
+				weightedAccessCounts.put(segment, (long) segmentCount);
+			else {
 				double popularity = weightedAccessCounts.get(segment).doubleValue();
-				weightedAccessCounts.put(segment, (long)Math.ceil(segmentCount + 0.5 * popularity));
+				weightedAccessCounts.put(segment, (long) Math.ceil(segmentCount + alpha * popularity));
 			}
 		}
-		
-		// Remove segments with counts less than a threshold from weightedAccessCounts. Also add it to removeList
-        Iterator it = weightedAccessCounts.entrySet().iterator();
-		while (it.hasNext())
-		{
-            Map.Entry<DataSegment, Long> entry = (Map.Entry<DataSegment, Long>)it.next();
-			//log.info("Segment Received [%s] Count [%f]", entry.getKey().getIdentifier(), entry.getValue().doubleValue());
 
-			if (entry.getValue() < MIN_THRESHOLD)
-			{
-				it.remove();
-			}
-		}
+//		log.info("Weighted access count map");
+//		for (Map.Entry<DataSegment, Long> entry : weightedAccessCounts.entrySet()){
+//			log.info("Segment %s value %d", entry.getKey().getIdentifier(), entry.getValue());
+//		}
+
+		// Remove segments with counts less than a threshold from weightedAccessCounts. Also add it to removeList
+//		Iterator it = weightedAccessCounts.entrySet().iterator();
+//		while (it.hasNext())
+//		{
+//            Map.Entry<DataSegment, Long> entry = (Map.Entry<DataSegment, Long>)it.next();
+//			//log.info("Segment Received [%s] Count [%f]", entry.getKey().getIdentifier(), entry.getValue().doubleValue());
+//
+//			if (entry.getValue() < MIN_THRESHOLD)
+//			{
+//				it.remove();
+//			}
+//		}
 	}
 
 	private void calculateBestFitReplication(
-			DruidCoordinatorRuntimeParams params,
-			HashMap<DataSegment, Long> weightedAccessCounts,
-			HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable)
-	{
+					DruidCoordinatorRuntimeParams params,
+					HashMap<DataSegment, Long> weightedAccessCounts,
+					HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable) {
 		log.info("Calculating Best Fit Replication for Segments");
 		int historicalNodeCount = 0;
 		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
-			historicalNodeCount += serverQueue.size(); 
+			historicalNodeCount += serverQueue.size();
 
 		double totalWeightCount = 0;
 		for (long number : weightedAccessCounts.values())
@@ -327,31 +319,27 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		log.info("Total Weight Count [%f]", totalWeightCount);
 
 		//Can try with a higher value than average load
-		long averageLoad = (long) Math.ceil((double)totalWeightCount / historicalNodeCount);
+		long averageLoad = (long) Math.ceil((double) totalWeightCount / historicalNodeCount);
 
 		HashMap<DruidServerMetadata, Long> nodeCapacities = new HashMap<DruidServerMetadata, Long>();
-		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
-		{
-			for (ServerHolder holder : serverQueue)
-			{
+		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier()) {
+			for (ServerHolder holder : serverQueue) {
 				nodeCapacities.put(holder.getServer().getMetadata(), averageLoad);
 			}
 		}
 
-        int capacity = weightedAccessCounts.size();
-        if (capacity == 0)
-            capacity = 1;
+		int capacity = weightedAccessCounts.size();
+		if (capacity == 0)
+			capacity = 1;
 
-		PriorityQueue<Tuple> maxheap = new PriorityQueue<Tuple>(capacity, new Comparator<Tuple>()
-		{
-			public int compare(Tuple o1, Tuple o2){
+		PriorityQueue<Tuple> maxheap = new PriorityQueue<Tuple>(capacity, new Comparator<Tuple>() {
+			public int compare(Tuple o1, Tuple o2) {
 				int result = -Long.compare(o1.weight, o2.weight);
 				return result;
 			}
 		});
-		
-		for(Map.Entry<DataSegment, Long> entry : weightedAccessCounts.entrySet())
-		{
+
+		for (Map.Entry<DataSegment, Long> entry : weightedAccessCounts.entrySet()) {
 			maxheap.add(new Tuple(entry.getKey(), entry.getValue()));
 		}
 
@@ -363,56 +351,63 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		//2. construct before map
 		log.info("Construct Before Map");
 		//TODO: This is not a good way of constructing the before map. We should cluster state instead of using routingTable.
-		HashMap< Integer, HashMap<DataSegment, Integer>>  beforeMap = DruidCoordinatorReplicatorHelper.constructReverseMap(coordinator.getRoutingTable(), metadataToIDMap);
+		HashMap<Integer, HashMap<DataSegment, Integer>> beforeMap = DruidCoordinatorReplicatorHelper.constructReverseMap(coordinator.getRoutingTable(), metadataToIDMap);
 
-		while (maxheap.peek() != null)
-		{
+		while (maxheap.peek() != null) {
 			Tuple candidate = maxheap.poll();
 			//log.info("Chosen Segment [%s] [%f]", candidate.segment.getIdentifier(), candidate.weight);
-			
+
 			long valleft = bestFit(candidate, nodeCapacities, routingTable);
-			if (valleft > 0)
-			{
+			if (valleft > 0) {
 				maxheap.add(new Tuple(candidate.segment, valleft));
 			}
 		}
 
 		//3. construct after map
 		log.info("Construct After Map");
-		HashMap< Integer, HashMap<DataSegment, Integer>> afterMap = DruidCoordinatorReplicatorHelper.constructReverseMap(routingTable, metadataToIDMap);
+		HashMap<Integer, HashMap<DataSegment, Integer>> afterMap = DruidCoordinatorReplicatorHelper.constructReverseMap(routingTable, metadataToIDMap);
 
-		if(beforeMap.size()>0 && afterMap.size()>0 && beforeMap.size()==afterMap.size()) {
+		if (beforeMap.size() > 0 && afterMap.size() > 0 && beforeMap.size() == afterMap.size()) {
 			//4. build costMatrix
 			double[][] costMatrix = DruidCoordinatorReplicatorHelper.buildCostMatrix(beforeMap, afterMap);
 
 			//5. Hungarian Matching
 			int[] hungarianMap = DruidCoordinatorReplicatorHelper.hungarianMatching(costMatrix);
 			log.info("calculateBestFitReplication: Result Mapping:");
-			for(int i=0;i<hungarianMap.length;i++)
+			for (int i = 0; i < hungarianMap.length; i++)
 				log.info("Original [%s] New [%s]", i, hungarianMap[i]);
 
-                        int start = bestFitReplicationRound%historicalNodeCount;
-                        int[] roundRobinMap = new int[historicalNodeCount];
-                        for(int i=0; i<historicalNodeCount; i++){
-                                roundRobinMap[i] = (start+i)%historicalNodeCount;
-                        }
-                        bestFitReplicationRound++;
-                        log.info("Round robin map is %s", Arrays.toString(roundRobinMap));
+			int start = bestFitReplicationRound % historicalNodeCount;
+			int[] roundRobinMap = new int[historicalNodeCount];
+			for (int i = 0; i < historicalNodeCount; i++) {
+				roundRobinMap[i] = (start + i) % historicalNodeCount;
+			}
+			bestFitReplicationRound++;
+			log.info("Round robin map is %s", Arrays.toString(roundRobinMap));
 
 			//6. replace all modified variable based on map
-			HashMap<DataSegment, HashMap<DruidServerMetadata,Long>> tempTable;
-			tempTable = DruidCoordinatorReplicatorHelper.rebuildRouting(routingTable, hungarianMap, metadataToIDMap, IDToMetadataMap);
+			HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> matchedTable;
+			matchedTable = DruidCoordinatorReplicatorHelper.rebuildRouting(routingTable, hungarianMap, metadataToIDMap, IDToMetadataMap);
 			//routingTable.clear();
-			//routingTable.putAll(tempTable);
+			//routingTable.putAll(matchedTable);
+
+			//7. balance the segments to reduce memory spikes
+//			log.info("RTUB");
+//			DruidCoordinatorReplicatorHelper.printRoutingTable(routingTable);
+//			HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> segmentBalancedTable;
+//			segmentBalancedTable = DruidCoordinatorReplicatorHelper.balanceRoutingTableSegments(routingTable);
+//			routingTable.clear();
+//			routingTable.putAll(segmentBalancedTable);
+			log.info("RTAB");
+			DruidCoordinatorReplicatorHelper.printRoutingTable(routingTable);
 		}
 	}
 
 	private long bestFit(
-			Tuple candidate,
-			HashMap<DruidServerMetadata, Long> nodeCapacities,
-			HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable)
-	{
-        //log.info("Segment [%s] Weight [%d]", candidate.segment.getIdentifier(), candidate.weight);
+					Tuple candidate,
+					HashMap<DruidServerMetadata, Long> nodeCapacities,
+					HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable) {
+		//log.info("Segment [%s] Weight [%d]", candidate.segment.getIdentifier(), candidate.weight);
 		long val = candidate.weight;
 		if (!routingTable.containsKey(candidate.segment))
 			routingTable.put(candidate.segment, new HashMap<DruidServerMetadata, Long>());
@@ -423,77 +418,88 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		DruidServerMetadata minspillServer = null;
 		boolean fits = false;
 		long empty = 0;
-		for (Map.Entry<DruidServerMetadata, Long> entry : nodeCapacities.entrySet())
-		{
-            //log.info("Server [%s] Capacity [%d]", entry.getKey().getHost(), entry.getValue());
+		for (Map.Entry<DruidServerMetadata, Long> entry : nodeCapacities.entrySet()) {
+			//log.info("Server [%s] Capacity [%d]", entry.getKey().getHost(), entry.getValue());
 			long capacity = entry.getValue();
-            if (capacity == 0)
-                continue;
+			if (capacity == 0)
+				continue;
 
-			if(val <= capacity)
-			{
+			if (val <= capacity) {
 				fits = true;
 				long leftafterfill = capacity - val;
-				if (leftafterfill < mincapleftafterfill)
-				{
+				if (leftafterfill < mincapleftafterfill) {
 					mincapleftafterfill = leftafterfill;
 					minfitServer = entry.getKey();
-                    //log.info("Server [%s] fits segment [%s]", minfitServer.getHost(), candidate.segment.getIdentifier());
+					//log.info("Server [%s] fits segment [%s]", minfitServer.getHost(), candidate.segment.getIdentifier());
 				}
-			}
-			else
-			{
+			} else {
 				long leftafterfill = val - capacity;
-				if(leftafterfill < minvalleftafterfill)
-				{
+				if (leftafterfill < minvalleftafterfill) {
 					minvalleftafterfill = leftafterfill;
 					minspillServer = entry.getKey();
-                    //log.info("Server [%s] spills segment [%s]", minspillServer.getHost(), candidate.segment.getIdentifier());
+					//log.info("Server [%s] spills segment [%s]", minspillServer.getHost(), candidate.segment.getIdentifier());
 				}
 			}
 		}
 
-		if (fits == true)
-		{
+		if (fits == true) {
 			routingTable.get(candidate.segment).put(minfitServer, val);
 			nodeCapacities.put(minfitServer, mincapleftafterfill);
 			return 0;
-		}
-		else
-		{
+		} else {
 			routingTable.get(candidate.segment).put(minspillServer, val - minvalleftafterfill);
 			nodeCapacities.put(minspillServer, empty);
 			return minvalleftafterfill;
 		}
 	}
-	
-	private void manageReplicas(
-			DruidCoordinatorRuntimeParams params,
-			HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable,
-			CoordinatorStats stats)
-	{
-		//log.info("Managing Replicas by inserting and removing replicas for relevant data segments");
+
+	private void printClusterConfig(DruidCoordinatorRuntimeParams params) {
 
 		HashMap<ImmutableDruidServer, ServerHolder> serverHolderMap = new HashMap<ImmutableDruidServer, ServerHolder>();
-		HashMap<DruidServerMetadata, ServerHolder> serverMetaDataMap = new HashMap<DruidServerMetadata, ServerHolder>();
-		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier()){
-            for (ServerHolder holder : serverQueue){
-			    serverHolderMap.put(holder.getServer(), holder);
-			    serverMetaDataMap.put(holder.getServer().getMetadata(), holder);
-            }
+		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier()) {
+			for (ServerHolder holder : serverQueue) {
+				serverHolderMap.put(holder.getServer(), holder);
+			}
 		}
-		
+
 		if (serverHolderMap.size() == 0) {
 			log.makeAlert("Cluster has no servers! Check your cluster configuration!").emit();
 			return;
 		}
-		
-		HashMap<DataSegment, List<DruidServerMetadata>> currentTable = new HashMap<DataSegment, List<DruidServerMetadata>>();		
-		for (ImmutableDruidServer server : serverHolderMap.keySet())
-		{
-			for (DataSegment segment : server.getSegments().values())
-			{
-                log.info("Server [%s] has segment [%s]", server.getHost(), segment.getIdentifier());
+
+		HashMap<DataSegment, List<DruidServerMetadata>> currentTable = new HashMap<DataSegment, List<DruidServerMetadata>>();
+		log.info("Cluster configuration");
+		for (ImmutableDruidServer server : serverHolderMap.keySet()) {
+			for (DataSegment segment : server.getSegments().values()) {
+				log.info("Server [%s] has segment [%s]", server.getHost(), segment.getIdentifier());
+			}
+		}
+	}
+
+	private void manageReplicas(
+					DruidCoordinatorRuntimeParams params,
+					HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable,
+					CoordinatorStats stats) {
+		//log.info("Managing Replicas by inserting and removing replicas for relevant data segments");
+
+		HashMap<ImmutableDruidServer, ServerHolder> serverHolderMap = new HashMap<ImmutableDruidServer, ServerHolder>();
+		HashMap<DruidServerMetadata, ServerHolder> serverMetaDataMap = new HashMap<DruidServerMetadata, ServerHolder>();
+		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier()) {
+			for (ServerHolder holder : serverQueue) {
+				serverHolderMap.put(holder.getServer(), holder);
+				serverMetaDataMap.put(holder.getServer().getMetadata(), holder);
+			}
+		}
+
+		if (serverHolderMap.size() == 0) {
+			log.makeAlert("Cluster has no servers! Check your cluster configuration!").emit();
+			return;
+		}
+
+		HashMap<DataSegment, List<DruidServerMetadata>> currentTable = new HashMap<DataSegment, List<DruidServerMetadata>>();
+		for (ImmutableDruidServer server : serverHolderMap.keySet()) {
+			for (DataSegment segment : server.getSegments().values()) {
+				log.info("Server [%s] has segment [%s]", server.getHost(), segment.getIdentifier());
 				if (!currentTable.containsKey(segment))
 					currentTable.put(segment, new ArrayList<DruidServerMetadata>());
 				currentTable.get(segment).add(server.getMetadata());
@@ -506,47 +512,125 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 			return;
 		}
 		final String tier = tierNameList.get(0);
-		
-		for (Map.Entry<DataSegment, HashMap<DruidServerMetadata, Long>> entry : routingTable.entrySet())
-		{
+
+		for (Map.Entry<DataSegment, HashMap<DruidServerMetadata, Long>> entry : routingTable.entrySet()) {
 			DataSegment segment = entry.getKey();
-			for (DruidServerMetadata server : entry.getValue().keySet())
-			{
-                //log.info("Server [%s] should have segment [%s]", server.getHost(), segment.getIdentifier());
-				if (!currentTable.containsKey(segment) || !currentTable.get(segment).contains(server))
-				{
+			for (DruidServerMetadata server : entry.getValue().keySet()) {
+				//log.info("Server [%s] should have segment [%s]", server.getHost(), segment.getIdentifier());
+				if (!currentTable.containsKey(segment) || !currentTable.get(segment).contains(server)) {
 					CoordinatorStats assignStats = DruidCoordinatorReplicatorHelper.assign(
-							replicatorThrottler,
-							tier,
-							serverMetaDataMap.get(server),
-							segment
-							);
+									replicatorThrottler,
+									tier,
+									serverMetaDataMap.get(server),
+									segment
+					);
 					stats.accumulate(assignStats);
 				}
 			}
 		}
-		
-		for (Map.Entry<DataSegment, List<DruidServerMetadata>> entry : currentTable.entrySet())
-		{
+
+		for (Map.Entry<DataSegment, List<DruidServerMetadata>> entry : currentTable.entrySet()) {
 			DataSegment segment = entry.getKey();
-			if(entry.getValue().size() > 1)
-			{			
-				for (DruidServerMetadata server : entry.getValue())
-				{
-					if (!routingTable.containsKey(segment) || !routingTable.get(segment).keySet().contains(server))
-					{
-						log.info("[GETAFIX PLACEMENT] Dropping " + segment.getIdentifier() + " from " + server.getHost());
-						CoordinatorStats dropStats = DruidCoordinatorReplicatorHelper.drop(
-								replicatorThrottler,
-								tier,
-								serverMetaDataMap.get(server),
-								segment
-								);
-						stats.accumulate(dropStats); 
-						break; // Removing only 1 replica at a time
-					}
+			int numReplicas = entry.getValue().size();
+
+			for (DruidServerMetadata server : entry.getValue()) {
+				if (numReplicas <= 1) {
+					break;
 				}
-			}			
+				if (!routingTable.containsKey(segment) || !routingTable.get(segment).keySet().contains(server)) {
+					log.info("[GETAFIX PLACEMENT] Dropping " + segment.getIdentifier() + " from " + server.getHost());
+					CoordinatorStats dropStats = DruidCoordinatorReplicatorHelper.drop(
+									replicatorThrottler,
+									tier,
+									serverMetaDataMap.get(server),
+									segment
+					);
+					stats.accumulate(dropStats);
+					numReplicas--;
+					//break; // Removing only 1 replica at a time
+				}
+			}
 		}
+
+//		HashMap<DataSegment, DruidServerMetadata> addList = new HashMap<DataSegment, DruidServerMetadata>();
+//		for (Map.Entry<DataSegment, HashMap<DruidServerMetadata, Long>> entry : routingTable.entrySet())
+//		{
+//			DataSegment segment = entry.getKey();
+//			for (DruidServerMetadata server : entry.getValue().keySet())
+//			{
+//				//log.info("Server [%s] should have segment [%s]", server.getHost(), segment.getIdentifier());
+//				if (!currentTable.containsKey(segment) || !currentTable.get(segment).contains(server))
+//				{
+//					addList.put(segment, server);
+//				}
+//			}
+//		}
+//
+//		// add and remove segment one after another
+//		for(Map.Entry<DataSegment, DruidServerMetadata> item : addList.entrySet()){
+//			// add the segment to the server
+//			CoordinatorStats assignStats = DruidCoordinatorReplicatorHelper.assign(
+//							replicatorThrottler,
+//							tier,
+//							serverMetaDataMap.get(item.getValue()),
+//							item.getKey()
+//							);
+//			stats.accumulate(assignStats);
+//
+//			// delete the same segment from other server, if needed
+//			if(!currentTable.containsKey(item.getKey())){
+//				continue;
+//			}
+//
+//			DataSegment segment = item.getKey();
+//			int numReplicas = currentTable.get(item.getKey()).size();
+//
+//			//for (DruidServerMetadata server : entry.getValue())
+//			for (DruidServerMetadata server : currentTable.get(item.getKey()))
+//			{
+//				if(numReplicas <= 1){
+//					break;
+//				}
+//				if (!routingTable.containsKey(segment) || !routingTable.get(segment).keySet().contains(server))
+//				{
+//					log.info("[GETAFIX PLACEMENT] Dropping " + segment.getIdentifier() + " from " + server.getHost());
+//					CoordinatorStats dropStats = DruidCoordinatorReplicatorHelper.drop(
+//									replicatorThrottler,
+//									tier,
+//									serverMetaDataMap.get(server),
+//									segment
+//					);
+//					stats.accumulate(dropStats);
+//					numReplicas--;
+//					//break; // Removing only 1 replica at a time
+//				}
+//			}
 	}
+//
+//		// remove other segments
+//		for (Map.Entry<DataSegment, List<DruidServerMetadata>> entry : currentTable.entrySet())
+//		{
+//			DataSegment segment = entry.getKey();
+//			int numReplicas = entry.getValue().size();
+//
+//			for (DruidServerMetadata server : entry.getValue())
+//			{
+//				if(numReplicas <= 1){
+//					break;
+//				}
+//				if (!routingTable.containsKey(segment) || !routingTable.get(segment).keySet().contains(server))
+//				{
+//					log.info("[GETAFIX PLACEMENT] Dropping " + segment.getIdentifier() + " from " + server.getHost());
+//					CoordinatorStats dropStats = DruidCoordinatorReplicatorHelper.drop(
+//							replicatorThrottler,
+//							tier,
+//							serverMetaDataMap.get(server),
+//							segment
+//							);
+//					stats.accumulate(dropStats);
+//					numReplicas--;
+//					//break; // Removing only 1 replica at a time
+//				}
+//			}
+//		}
 }

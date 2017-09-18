@@ -16,7 +16,7 @@ do
 	if (( $flag==0 )); then
 		break
 	fi
-	sleep 3m
+	sleep 15
 done
 
 echo "Yeah!"
