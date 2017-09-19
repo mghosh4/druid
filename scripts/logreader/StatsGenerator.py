@@ -82,8 +82,8 @@ if "historical" in resultmetrics:
         filename = resultfolder + "/historical" + "-" + newmetrics + ".log"
         Utils.writeTimeSeriesMetricStats(filename, aggValues[metric], stats, headerStr)
     
-    stats = [numpy.median, Utils.percentile75, Utils.percentile90, Utils.percentile95, Utils.percentile99, numpy.mean]
-    headerStr = "Median\t75th Percentile\t90th Percentile\t95th Percentile\t99th Percentile\tMean\n"
+    stats = [numpy.median, Utils.percentile75, Utils.percentile90, Utils.percentile95, Utils.percentile99, numpy.mean, sum]
+    headerStr = "Median\t75th Percentile\t90th Percentile\t95th Percentile\t99th Percentile\tMean\nSum\n"
     for metric in ["segment/count","segment/used"]:
         if metric not in historicalmetrics:
             continue

@@ -392,12 +392,12 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 			//routingTable.putAll(matchedTable);
 
 			//7. balance the segments to reduce memory spikes
-//			log.info("RTUB");
-//			DruidCoordinatorReplicatorHelper.printRoutingTable(routingTable);
-//			HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> segmentBalancedTable;
-//			segmentBalancedTable = DruidCoordinatorReplicatorHelper.balanceRoutingTableSegments(routingTable);
-//			routingTable.clear();
-//			routingTable.putAll(segmentBalancedTable);
+			log.info("RTUB");
+			DruidCoordinatorReplicatorHelper.printRoutingTable(routingTable);
+			HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> segmentBalancedTable;
+			segmentBalancedTable = DruidCoordinatorReplicatorHelper.balanceRoutingTableSegments(routingTable);
+			routingTable.clear();
+			routingTable.putAll(segmentBalancedTable);
 			log.info("RTAB");
 			DruidCoordinatorReplicatorHelper.printRoutingTable(routingTable);
 		}

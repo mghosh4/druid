@@ -69,7 +69,7 @@ class ParseConfig:
                     self.brokerendpoint = value
                 elif key == "minops":
                     self.minops = int(value)
-                elif key == "maxnops":
+                elif key == "maxops":
                     self.maxops = int(value)
                 elif key == "logfolder":
                     self.logfolder = value

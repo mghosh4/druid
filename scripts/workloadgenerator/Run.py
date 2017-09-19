@@ -102,7 +102,7 @@ def genPoissonQuerySchedule(queryPerMilliSecond, numSamples):
 def threadoperation(queryPerSec):
     @gen.coroutine
     def printresults():
-        logger.info('{} {} {} {}'.format(start.strftime("%Y-%m-%d %H:%M:%S"), end.strftime("%Y-%m-%d %H:%M:%S"), runtime, queryPerSec))
+        logger.log(STATS, '{} {} {} {} {}'.format(start.strftime("%Y-%m-%d %H:%M:%S"), end.strftime("%Y-%m-%d %H:%M:%S"), runtime, queryPerSec, queryratio))
         
         querypermin = queryPerSec * 60
         endtime = datetime.now(timezone('UTC')) + timedelta(minutes=runtime)
@@ -201,14 +201,20 @@ numpy.random.seed(int(socket.gethostname().split(".")[0].split("-")[-1]))
 signal.signal(signal.SIGTERM, signal_term_handler)
 configFile = checkAndReturnArgs(sys.argv, '')
 config = getConfig(configFile)
-
+STATS = 25 #logger level just above info and below warning
 
 accessdistribution = config.getAccessDistribution()
 perioddistribution = config.getPeriodDistribution()
 querytype = config.getQueryType()
 queryratio = list()
 if querytype == "mixture":
-    queryratio = [int(n) for n in config.getQueryRatio().split(":")]
+    #queryratio = [int(n) for n in config.getQueryRatio().split(":")]
+    groupby = numpy.random.randint(20,30)
+    topn = numpy.random.randint(30,50)
+    timeseries = 100 - groupby - topn
+    queryratio.append(timeseries)
+    queryratio.append(topn)
+    queryratio.append(groupby)
 
 logfolder = config.getLogFolder()
 
@@ -232,17 +238,15 @@ if len(sys.argv) == 4:
 if len(sys.argv) >= 3:
     brokernameurl = sys.argv[2]
 
-print(outputfilename, brokernameurl)
-
 logKey = 'workloadgen'
 logfilename = logfolder + '/' + outputfilename
 logformat = '%(asctime)s (%(threadName)-10s) %(message)s'
 
 logger = logging.getLogger(logKey)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(STATS)
 logger.propagate = False
 curllogger = logging.getLogger('tornado.curl_httpclient')
-curllogger.setLevel(logging.DEBUG)
+curllogger.setLevel(STATS)
 curllogger.propagate = False
 
 if not os.path.exists(os.path.dirname(logfilename)):
@@ -263,7 +267,7 @@ logger.addHandler(ch)
 curllogger.addHandler(fh)
 curllogger.addHandler(ch)
 
-SINGLE_THREAD_THROUGHPUT = 400
+SINGLE_THREAD_THROUGHPUT = 500
 if filename != "" or isbatch == True:
     SINGLE_THREAD_THROUGHPUT = 2000
 
@@ -309,4 +313,4 @@ totaltime = (datetime.now() - t1).total_seconds()
 totalqueries = opspersecond * 60 * runtime
 throughput = float(totalqueries) / totaltime
 
-logger.info("Total Time Taken: " + str(totaltime))
+logger.log(STATS, "Total Time Taken: " + str(totaltime))
