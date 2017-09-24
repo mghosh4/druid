@@ -481,10 +481,10 @@ public class DruidCoordinatorReplicatorHelper {
         numHns = hnAllocMap.keySet().size();
         numSegmentsPerHnGoal = Math.round((float)numSegmentReplicas/(float)numHns);
 
-        log.info("SBAL: numSegmentReplicas %d, numHns %d, numSegmentsPerHnGoal %d", numSegmentReplicas, numHns, numSegmentsPerHnGoal);
-        log.info("SBAL: hnToSegMap %s", hnToSegMap.toString());
+        //log.info("SBAL: numSegmentReplicas %d, numHns %d, numSegmentsPerHnGoal %d", numSegmentReplicas, numHns, numSegmentsPerHnGoal);
+        //log.info("SBAL: hnToSegMap %s", hnToSegMap.toString());
         //log.info("SBAL: hnAllocMap %s", hnAllocMap.toString());
-        log.info("SBAL: hnSegmentCountMap %s", hnSegmentCountMap.toString());
+        //log.info("SBAL: hnSegmentCountMap %s", hnSegmentCountMap.toString());
 
         while(true) {
 
@@ -510,8 +510,7 @@ public class DruidCoordinatorReplicatorHelper {
 
             while(balancedList.size() > 0) {
                 minHn = Collections.min(balancedList, segmentComparator);
-                log.info("Testing Max hn %s numseg %d alloc %d, Min hn %s numseg %d alloc %d", maxHn.lhs.rhs.getHost(),
-                        maxHn.rhs.lhs, maxHn.rhs.rhs, minHn.lhs.rhs.getHost(), minHn.rhs.lhs, minHn.rhs.rhs);
+                //log.info("Testing Max hn %s numseg %d alloc %d, Min hn %s numseg %d alloc %d", maxHn.lhs.rhs.getHost(), maxHn.rhs.lhs, maxHn.rhs.rhs, minHn.lhs.rhs.getHost(), minHn.rhs.lhs, minHn.rhs.rhs);
 
                 Long currAlloc = hnAllocMap.get(minHn.lhs.rhs);
                 float allocRatio = (float)maxHn.rhs.rhs/(float)currAlloc;
@@ -546,11 +545,9 @@ public class DruidCoordinatorReplicatorHelper {
             maxHn.lhs.lhs = minAllocSeg;
             maxHn.rhs.rhs = minSegAllocValue;
 
-            log.info("Found Max hn %s numseg %d alloc %d, Min hn %s numseg %d alloc %d", maxHn.lhs.rhs.getHost(),
-                    maxHn.rhs.lhs, maxHn.rhs.rhs, minHn.lhs.rhs.getHost(), minHn.rhs.lhs, minHn.rhs.rhs);
+            //log.info("Found Max hn %s numseg %d alloc %d, Min hn %s numseg %d alloc %d", maxHn.lhs.rhs.getHost(), maxHn.rhs.lhs, maxHn.rhs.rhs, minHn.lhs.rhs.getHost(), minHn.rhs.lhs, minHn.rhs.rhs);
 
-            log.info("Moving segment %s %s %s ===>>> %s %s", maxHn.lhs.lhs.getInterval().toString(), maxHn.lhs.rhs.getHost(),
-                    maxHn.rhs.lhs.toString(), minHn.lhs.rhs.getHost(), minHn.rhs.lhs.toString());
+            //log.info("Moving segment %s %s %s ===>>> %s %s", maxHn.lhs.lhs.getInterval().toString(), maxHn.lhs.rhs.getHost(), maxHn.rhs.lhs.toString(), minHn.lhs.rhs.getHost(), minHn.rhs.lhs.toString());
 
             // remove the moving segment from the old hn in the routing table
             HashMap<DruidServerMetadata, Long> temp = balancedRoutingTable.get(maxHn.lhs.lhs);
