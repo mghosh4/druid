@@ -2,6 +2,7 @@ import numpy
 import matplotlib.pyplot as plt
 from scipy.interpolate import UnivariateSpline
 from datetime import datetime, timedelta
+from random import randint
 
 class Uniform(object):
 
@@ -233,3 +234,79 @@ class ScrambledZipfian(Zipfian):
         scrambledzipfiansample = super(ScrambledZipfian, self).generateDistribution(minSample, maxSample, numSamples, popularityList, logger)
         itemcount = maxSample - minSample + 1
         return [minSample + x % itemcount for x in scrambledzipfiansample]
+
+
+
+
+
+class Yahoo(object):
+
+    def readDistFromFile(self, filename):
+        accessDict = {}
+        f = open(filename, 'rU')
+        for line in f:
+            lineArr = line.split(" ")
+            ts = ' '.join(lineArr[0], lineArr[1])
+            ts_long = long((ts-datetime.datetime(2017,9,27)).total_seconds())
+            access = int(lineArr[2])
+            accessDict[ts_long] = access
+        return accessDict
+
+    def generateBinBasedDistribution(self, minSample, maxSample, numSamples, popularityList, binCount, accessDict, logger):
+        binToProb = [] # bin id -> probablity of the bin
+        binToSegment = [] # bin id -> segment
+        binToAccess = [] # bin id -> probability
+
+        # calculate per bin size
+        binSize = len(accessDict) / binCount
+
+        # add segments to each map
+        currBinIdx = 0
+        binSum = 0
+        for key in sorted(accessDict):
+            if currBinIdx not in binToAccess: # new bin that hasnt been created yet
+                binToAccess[currBinIdx] = []
+                binToSegment[currBinIdx] = []
+                binSum = 0 # reset binSum
+            binToSegment[currBinIdx].append(key)
+            binToAccess[currBinIdx].append(accessDict[key])
+            binSum += accessDict[key]
+
+            if currBinIdx < binCount-1: # if not at the last bin
+                if len(binToAccess[currBinIdx]) >= binSize: # move on to the next bin
+                    binToProb.append(binSum)
+                    currBinIdx += 1
+        binToProb.append(binSum) # append the last binSum
+
+        retPositions = []
+        for i in xrange(numSamples):
+            binPicked = self.pickByProbability(binToProb) # return the index of picked bin
+            positionSegPicked = self.pickByProbability(binToSegment[binPicked])
+            relativePosition = positionSegPicked*(maxSample-minSample)/(max(accessDict)-min(accessDict))
+            retPositions.append(relativePosition)
+        return [minSample + x for x in retPositions]
+
+
+    def pickByProbability(self, binToProb): # binary search to get the desired probability
+        sum = sum(binToProb)
+        cumulative = numpy.cumsum(binToProb)
+        seed = randint(1, sum)
+        l = 0
+        r = len(cumulative)-1
+        while l<r:
+            mid = (l+r)/2
+            if cumulative[mid]<seed: # seed needs to be smaller the desiring indexed value
+                l = mid
+            else:
+                r = mid
+        return l
+
+
+
+
+
+    def generateDistribution(self, minSample, maxSample, numSamples, popularityList, logger):
+        binCount = 4
+        accessDict = self.readDistFromFile("SegmentPopularityTimeDistrib.dat")
+        return self.generateBinBasedDistribution(self, minSample, maxSample, numSamples, popularityList, binCount, accessDict, logger)
+

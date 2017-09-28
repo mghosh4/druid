@@ -101,8 +101,8 @@ class QueryGenerator(object):
             #print "count: ", count
             #print "i: ", i
             period_pair = period_interval_str.split("/")
-            period_start = datetime.strptime(period_pair[0], '%Y-%m-%dT%H:%M:%S.%fZ')
-            period_end = datetime.strptime(period_pair[1], '%Y-%m-%dT%H:%M:%S.%fZ')
+            period_start = dt.strptime(period_pair[0], '%Y-%m-%dT%H:%M:%S.%fZ')
+            period_end = dt.strptime(period_pair[1], '%Y-%m-%dT%H:%M:%S.%fZ')
             days=(period_end-period_start).days
             #print "count: ", count
             for j in range(count):
