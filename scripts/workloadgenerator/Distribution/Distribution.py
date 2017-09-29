@@ -241,21 +241,30 @@ class ScrambledZipfian(Zipfian):
 
 class Yahoo(object):
 
+    def plotDistribution(self, data, figfilename, figtitle):
+
+        plt.plot(list(range(0,len(data))), data, 'b')
+        plt.title(figtitle)
+        #print data
+        plt.show()
+        #plt.savefig(figfilename)
+
     def readDistFromFile(self, filename):
         accessDict = {}
         f = open(filename, 'rU')
         for line in f:
             lineArr = line.split(" ")
-            ts = ' '.join(lineArr[0], lineArr[1])
-            ts_long = long((ts-datetime.datetime(2017,9,27)).total_seconds())
+            ts_str = lineArr[0] + " " + lineArr[1]
+            ts = datetime.strptime(ts_str[:19], '%Y-%m-%d %H:%M:%S')
+            ts_long = (ts - datetime(2017,9,27)).total_seconds()
             access = int(lineArr[2])
             accessDict[ts_long] = access
         return accessDict
 
     def generateBinBasedDistribution(self, minSample, maxSample, numSamples, popularityList, binCount, accessDict, logger):
         binToProb = [] # bin id -> probablity of the bin
-        binToSegment = [] # bin id -> segment
-        binToAccess = [] # bin id -> probability
+        binToSegment = {} # bin id -> segment
+        binToAccess = {} # bin id -> probability
 
         # calculate per bin size
         binSize = len(accessDict) / binCount
@@ -281,25 +290,34 @@ class Yahoo(object):
         retPositions = []
         for i in xrange(numSamples):
             binPicked = self.pickByProbability(binToProb) # return the index of picked bin
-            positionSegPicked = self.pickByProbability(binToSegment[binPicked])
-            relativePosition = positionSegPicked*(maxSample-minSample)/(max(accessDict)-min(accessDict))
+            #print binPicked
+            positionSegPicked = self.pickByProbability(binToAccess[binPicked])
+            print positionSegPicked
+            relativePosition = (positionSegPicked+1)*(maxSample-minSample)/(len(binToAccess[binPicked]))
             retPositions.append(relativePosition)
+        #print "rest positions"
+        #print retPositions
         return [minSample + x for x in retPositions]
 
 
     def pickByProbability(self, binToProb): # binary search to get the desired probability
-        sum = sum(binToProb)
+        binSum = sum(binToProb)
+        #print "binsum " + str(binSum)
         cumulative = numpy.cumsum(binToProb)
-        seed = randint(1, sum)
+        seed = randint(1, binSum)
+        #print "seed " + str(seed)
+        #print cumulative
         l = 0
         r = len(cumulative)-1
-        while l<r:
+        while l+1<r:
             mid = (l+r)/2
+            #print l
+            #print r
             if cumulative[mid]<seed: # seed needs to be smaller the desiring indexed value
                 l = mid
             else:
                 r = mid
-        return l
+        return r
 
 
 
@@ -308,5 +326,16 @@ class Yahoo(object):
     def generateDistribution(self, minSample, maxSample, numSamples, popularityList, logger):
         binCount = 4
         accessDict = self.readDistFromFile("SegmentPopularityTimeDistrib.dat")
-        return self.generateBinBasedDistribution(self, minSample, maxSample, numSamples, popularityList, binCount, accessDict, logger)
+        # print accessDict
+        allsamples =  self.generateBinBasedDistribution(minSample, maxSample, numSamples, popularityList, binCount, accessDict, logger)
+        print allsamples
+        self.plotDistribution(allsamples, 'druid_distribution.png', 'Druid-Distribution')
+        return allsamples
+
+
+
+
+for i in xrange(1, 2):
+    yahoo = Yahoo()
+    yahoo.generateDistribution( 1, 100, 100, [], None)
 
