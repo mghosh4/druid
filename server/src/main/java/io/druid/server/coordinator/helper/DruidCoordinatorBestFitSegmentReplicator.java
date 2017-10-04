@@ -84,7 +84,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 
 	@Override
 	public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params) {
-		//log.info("Starting replication. Getting Segment Popularity");
+		//log.debug("Starting replication. Getting Segment Popularity");
 		replicatorThrottler.updateParams(
 						coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
 						coordinator.getDynamicConfigs().getReplicantLifetime()
@@ -149,12 +149,12 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 				e.printStackTrace();
 			}
 
-			//log.info("URI [%s]", uri.toString());
+			//log.debug("URI [%s]", uri.toString());
 
 			uris.add(uri);
 		}
 
-		//log.info("Number of Historical Servers [%d]", historicals.size());
+		//log.debug("Number of Historical Servers [%d]", historicals.size());
 
 		return uris;
 	}
@@ -188,7 +188,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 							);
 						}
 
-						//log.info("Response Length [%d]", response.getContent().length());
+						//log.debug("Response Length [%d]", response.getContent().length());
 
 						totalAccessMap = jsonMapper.readValue(
 										response.getContent(), new TypeReference<Map<String, Integer>>() {
@@ -200,7 +200,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 					}
 
 					for (Map.Entry<String, Integer> entry : totalAccessMap.entrySet()) {
-						log.info("Segment Received [%s] with value [%d] from [%s]", entry.getKey(), entry.getValue(), url.getHost());
+						log.debug("Segment Received [%s] with value [%d] from [%s]", entry.getKey(), entry.getValue(), url.getHost());
 					}
 
 					return totalAccessMap;
@@ -253,7 +253,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 
 		for (Entry<DataSegment> entry : segmentCounts.entrySet()) {
 			if (entry != null)
-				log.info("Segment Received [%s] Count [%d]", entry.getElement().getIdentifier(), entry.getCount());
+				log.debug("Segment Received [%s] Count [%d]", entry.getElement().getIdentifier(), entry.getCount());
 		}
 	}
 
@@ -263,7 +263,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 					Multiset<DataSegment> segments,
 					HashMap<DataSegment, Long> weightedAccessCounts) {
 		float alpha = 0.5F;
-		//log.info("Calculating Weighted Access Counts for Segments");
+		//log.debug("Calculating Weighted Access Counts for Segments");
 
 		// Handle those segments which are in Coordinator's map but not in segments collected from query
 		if (alpha > 0) {
@@ -284,9 +284,9 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 			}
 		}
 
-//		log.info("Weighted access count map");
+//		log.debug("Weighted access count map");
 //		for (Map.Entry<DataSegment, Long> entry : weightedAccessCounts.entrySet()){
-//			log.info("Segment %s value %d", entry.getKey().getIdentifier(), entry.getValue());
+//			log.debug("Segment %s value %d", entry.getKey().getIdentifier(), entry.getValue());
 //		}
 
 		// Remove segments with counts less than a threshold from weightedAccessCounts. Also add it to removeList
@@ -294,7 +294,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 //		while (it.hasNext())
 //		{
 //            Map.Entry<DataSegment, Long> entry = (Map.Entry<DataSegment, Long>)it.next();
-//			//log.info("Segment Received [%s] Count [%f]", entry.getKey().getIdentifier(), entry.getValue().doubleValue());
+//			//log.debug("Segment Received [%s] Count [%f]", entry.getKey().getIdentifier(), entry.getValue().doubleValue());
 //
 //			if (entry.getValue() < MIN_THRESHOLD)
 //			{
@@ -307,7 +307,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 					DruidCoordinatorRuntimeParams params,
 					HashMap<DataSegment, Long> weightedAccessCounts,
 					HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable) {
-		log.info("Calculating Best Fit Replication for Segments");
+		log.debug("Calculating Best Fit Replication for Segments");
 		int historicalNodeCount = 0;
 		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier())
 			historicalNodeCount += serverQueue.size();
@@ -316,7 +316,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		for (long number : weightedAccessCounts.values())
 			totalWeightCount += number;
 
-		log.info("Total Weight Count [%f]", totalWeightCount);
+		log.debug("Total Weight Count [%f]", totalWeightCount);
 
 		//Can try with a higher value than average load
 		long averageLoad = (long) Math.ceil((double) totalWeightCount / historicalNodeCount);
@@ -349,13 +349,13 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		HashMap<Integer, DruidServerMetadata> IDToMetadataMap = DruidCoordinatorReplicatorHelper.IDToMetadata(metadataToIDMap);
 
 		//2. construct before map
-		log.info("Construct Before Map");
+		log.debug("Construct Before Map");
 		//TODO: This is not a good way of constructing the before map. We should cluster state instead of using routingTable.
 		HashMap<Integer, HashMap<DataSegment, Integer>> beforeMap = DruidCoordinatorReplicatorHelper.constructReverseMap(coordinator.getRoutingTable(), metadataToIDMap);
 
 		while (maxheap.peek() != null) {
 			Tuple candidate = maxheap.poll();
-			//log.info("Chosen Segment [%s] [%f]", candidate.segment.getIdentifier(), candidate.weight);
+			//log.debug("Chosen Segment [%s] [%f]", candidate.segment.getIdentifier(), candidate.weight);
 
 			long valleft = bestFit(candidate, nodeCapacities, routingTable);
 			if (valleft > 0) {
@@ -364,7 +364,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		}
 
 		//3. construct after map
-		log.info("Construct After Map");
+		log.debug("Construct After Map");
 		HashMap<Integer, HashMap<DataSegment, Integer>> afterMap = DruidCoordinatorReplicatorHelper.constructReverseMap(routingTable, metadataToIDMap);
 
 		if (beforeMap.size() > 0 && afterMap.size() > 0 && beforeMap.size() == afterMap.size()) {
@@ -373,9 +373,9 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 
 			//5. Hungarian Matching
 			int[] hungarianMap = DruidCoordinatorReplicatorHelper.hungarianMatching(costMatrix);
-			log.info("calculateBestFitReplication: Result Mapping:");
+			log.debug("calculateBestFitReplication: Result Mapping:");
 			for (int i = 0; i < hungarianMap.length; i++)
-				log.info("Original [%s] New [%s]", i, hungarianMap[i]);
+				log.debug("Original [%s] New [%s]", i, hungarianMap[i]);
 
 			int start = bestFitReplicationRound % historicalNodeCount;
 			int[] roundRobinMap = new int[historicalNodeCount];
@@ -383,7 +383,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 				roundRobinMap[i] = (start + i) % historicalNodeCount;
 			}
 			bestFitReplicationRound++;
-			log.info("Round robin map is %s", Arrays.toString(roundRobinMap));
+			log.debug("Round robin map is %s", Arrays.toString(roundRobinMap));
 
 			//6. replace all modified variable based on map
 			HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> matchedTable;
@@ -392,13 +392,13 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 			//routingTable.putAll(matchedTable);
 
 			//7. balance the segments to reduce memory spikes
-			//log.info("RTUB");
+			//log.debug("RTUB");
 			//DruidCoordinatorReplicatorHelper.printRoutingTable(routingTable);
 			HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> segmentBalancedTable;
 			segmentBalancedTable = DruidCoordinatorReplicatorHelper.balanceRoutingTableSegments(routingTable);
 			routingTable.clear();
 			routingTable.putAll(segmentBalancedTable);
-			//log.info("RTAB");
+			//log.debug("RTAB");
 			//DruidCoordinatorReplicatorHelper.printRoutingTable(routingTable);
 		}
 	}
@@ -407,7 +407,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 					Tuple candidate,
 					HashMap<DruidServerMetadata, Long> nodeCapacities,
 					HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable) {
-		//log.info("Segment [%s] Weight [%d]", candidate.segment.getIdentifier(), candidate.weight);
+		//log.debug("Segment [%s] Weight [%d]", candidate.segment.getIdentifier(), candidate.weight);
 		long val = candidate.weight;
 		if (!routingTable.containsKey(candidate.segment))
 			routingTable.put(candidate.segment, new HashMap<DruidServerMetadata, Long>());
@@ -419,7 +419,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		boolean fits = false;
 		long empty = 0;
 		for (Map.Entry<DruidServerMetadata, Long> entry : nodeCapacities.entrySet()) {
-			//log.info("Server [%s] Capacity [%d]", entry.getKey().getHost(), entry.getValue());
+			//log.debug("Server [%s] Capacity [%d]", entry.getKey().getHost(), entry.getValue());
 			long capacity = entry.getValue();
 			if (capacity == 0)
 				continue;
@@ -430,14 +430,14 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 				if (leftafterfill < mincapleftafterfill) {
 					mincapleftafterfill = leftafterfill;
 					minfitServer = entry.getKey();
-					//log.info("Server [%s] fits segment [%s]", minfitServer.getHost(), candidate.segment.getIdentifier());
+					//log.debug("Server [%s] fits segment [%s]", minfitServer.getHost(), candidate.segment.getIdentifier());
 				}
 			} else {
 				long leftafterfill = val - capacity;
 				if (leftafterfill < minvalleftafterfill) {
 					minvalleftafterfill = leftafterfill;
 					minspillServer = entry.getKey();
-					//log.info("Server [%s] spills segment [%s]", minspillServer.getHost(), candidate.segment.getIdentifier());
+					//log.debug("Server [%s] spills segment [%s]", minspillServer.getHost(), candidate.segment.getIdentifier());
 				}
 			}
 		}
@@ -468,10 +468,10 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		}
 
 		HashMap<DataSegment, List<DruidServerMetadata>> currentTable = new HashMap<DataSegment, List<DruidServerMetadata>>();
-		log.info("Cluster configuration");
+		log.debug("Cluster configuration");
 		for (ImmutableDruidServer server : serverHolderMap.keySet()) {
 			for (DataSegment segment : server.getSegments().values()) {
-				log.info("Server [%s] has segment [%s]", server.getHost(), segment.getIdentifier());
+				log.debug("Server [%s] has segment [%s]", server.getHost(), segment.getIdentifier());
 			}
 		}
 	}
@@ -480,7 +480,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 					DruidCoordinatorRuntimeParams params,
 					HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable,
 					CoordinatorStats stats) {
-		//log.info("Managing Replicas by inserting and removing replicas for relevant data segments");
+		//log.debug("Managing Replicas by inserting and removing replicas for relevant data segments");
 
 		HashMap<ImmutableDruidServer, ServerHolder> serverHolderMap = new HashMap<ImmutableDruidServer, ServerHolder>();
 		HashMap<DruidServerMetadata, ServerHolder> serverMetaDataMap = new HashMap<DruidServerMetadata, ServerHolder>();
@@ -499,7 +499,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		HashMap<DataSegment, List<DruidServerMetadata>> currentTable = new HashMap<DataSegment, List<DruidServerMetadata>>();
 		for (ImmutableDruidServer server : serverHolderMap.keySet()) {
 			for (DataSegment segment : server.getSegments().values()) {
-				log.info("Server [%s] has segment [%s]", server.getHost(), segment.getIdentifier());
+				log.debug("Server [%s] has segment [%s]", server.getHost(), segment.getIdentifier());
 				if (!currentTable.containsKey(segment))
 					currentTable.put(segment, new ArrayList<DruidServerMetadata>());
 				currentTable.get(segment).add(server.getMetadata());
@@ -516,7 +516,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		for (Map.Entry<DataSegment, HashMap<DruidServerMetadata, Long>> entry : routingTable.entrySet()) {
 			DataSegment segment = entry.getKey();
 			for (DruidServerMetadata server : entry.getValue().keySet()) {
-				//log.info("Server [%s] should have segment [%s]", server.getHost(), segment.getIdentifier());
+				//log.debug("Server [%s] should have segment [%s]", server.getHost(), segment.getIdentifier());
 				if (!currentTable.containsKey(segment) || !currentTable.get(segment).contains(server)) {
 					CoordinatorStats assignStats = DruidCoordinatorReplicatorHelper.assign(
 									replicatorThrottler,
@@ -538,7 +538,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 					break;
 				}
 				if (!routingTable.containsKey(segment) || !routingTable.get(segment).keySet().contains(server)) {
-					log.info("[GETAFIX PLACEMENT] Dropping " + segment.getIdentifier() + " from " + server.getHost());
+					log.debug("[GETAFIX PLACEMENT] Dropping " + segment.getIdentifier() + " from " + server.getHost());
 					CoordinatorStats dropStats = DruidCoordinatorReplicatorHelper.drop(
 									replicatorThrottler,
 									tier,
@@ -558,7 +558,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 //			DataSegment segment = entry.getKey();
 //			for (DruidServerMetadata server : entry.getValue().keySet())
 //			{
-//				//log.info("Server [%s] should have segment [%s]", server.getHost(), segment.getIdentifier());
+//				//log.debug("Server [%s] should have segment [%s]", server.getHost(), segment.getIdentifier());
 //				if (!currentTable.containsKey(segment) || !currentTable.get(segment).contains(server))
 //				{
 //					addList.put(segment, server);
@@ -593,7 +593,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 //				}
 //				if (!routingTable.containsKey(segment) || !routingTable.get(segment).keySet().contains(server))
 //				{
-//					log.info("[GETAFIX PLACEMENT] Dropping " + segment.getIdentifier() + " from " + server.getHost());
+//					log.debug("[GETAFIX PLACEMENT] Dropping " + segment.getIdentifier() + " from " + server.getHost());
 //					CoordinatorStats dropStats = DruidCoordinatorReplicatorHelper.drop(
 //									replicatorThrottler,
 //									tier,
@@ -620,7 +620,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 //				}
 //				if (!routingTable.containsKey(segment) || !routingTable.get(segment).keySet().contains(server))
 //				{
-//					log.info("[GETAFIX PLACEMENT] Dropping " + segment.getIdentifier() + " from " + server.getHost());
+//					log.debug("[GETAFIX PLACEMENT] Dropping " + segment.getIdentifier() + " from " + server.getHost());
 //					CoordinatorStats dropStats = DruidCoordinatorReplicatorHelper.drop(
 //							replicatorThrottler,
 //							tier,

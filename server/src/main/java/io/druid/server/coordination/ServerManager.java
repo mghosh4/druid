@@ -115,7 +115,6 @@ public class ServerManager implements QuerySegmentWalker
   private final ConcurrentHashMap<String, Double> runtimeEstimate = new ConcurrentHashMap<>();
   private final String[] queryTypes = {Query.TIMESERIES, Query.TOPN, Query.GROUP_BY};
   private final ServerDiscoveryFactory serverDiscoveryFactory;
-  private final ScheduledExecutorService pool;
   public static HttpClient httpClient;
 
   @Inject
@@ -166,9 +165,6 @@ public class ServerManager implements QuerySegmentWalker
 
     this.serverDiscoveryFactory = serverDiscoveryFactory;
     this.httpClient = httpClient;
-    log.info("Instantiating periodic load POST task");
-    this.pool = Executors.newScheduledThreadPool(1);
-    //pool.scheduleWithFixedDelay(new PeriodicLoadUpdate(this, this.serverDiscoveryFactory), 1000, 5, TimeUnit.MILLISECONDS);
   }
 
   private ArrayList<Double> loadAndParse(String filename, HashMap<Double, Double> histogram) throws IOException {
@@ -327,8 +323,8 @@ public class ServerManager implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
   {
-	log.info("======1. Entering getQueryRunnerForIntervals====");
-	log.info("(1). get query runner for query [%s] and intervals [%s}", query.getIntervals());
+	log.debug("======1. Entering getQueryRunnerForIntervals====");
+	log.debug("(1). get query runner for query [%s] and intervals [%s}", query.getIntervals());
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {
       throw new ISE("Unknown query type[%s].", query.getClass());
@@ -360,7 +356,7 @@ public class ServerManager implements QuerySegmentWalker
               @Override
               public Iterable<TimelineObjectHolder<String, ReferenceCountingSegment>> apply(Interval input)
               {
-            	log.info("(1). Lookup interval input [%s] from the timeline", input.toString());
+            	log.debug("(1). Lookup interval input [%s] from the timeline", input.toString());
                 return timeline.lookup(input);
               }
             }
@@ -386,7 +382,7 @@ public class ServerManager implements QuerySegmentWalker
                           @Override
                           public QueryRunner<T> apply(PartitionChunk<ReferenceCountingSegment> input)
                           {
-                        	log.info("(1). build and decorate Query Runner for [%s] ", holder.getInterval());
+                        	log.debug("(1). build and decorate Query Runner for [%s] ", holder.getInterval());
                             return buildAndDecorateQueryRunner(
                                 factory,
                                 toolChest,
@@ -435,7 +431,7 @@ public class ServerManager implements QuerySegmentWalker
 		}
 		
 		result = objectMapper.writeValueAsString(concurrentAccessMap);
-		log.info("Serializing Concurrent Access Map [%d]", result.length());
+		log.debug("Serializing Concurrent Access Map [%d]", result.length());
 	} catch (JsonProcessingException e) {
 		// TODO Auto-generated catch block
 		e.printStackTrace();
@@ -461,7 +457,7 @@ public class ServerManager implements QuerySegmentWalker
 		}
 		
 		result = objectMapper.writeValueAsString(totalAccessMap);
-		log.info("Serializing Total Access Map [%d]", result.length());
+		log.debug("Serializing Total Access Map [%d]", result.length());
 	} catch (JsonProcessingException e) {
 		// TODO Auto-generated catch block
 		e.printStackTrace();
@@ -491,7 +487,7 @@ public class ServerManager implements QuerySegmentWalker
       }
 
       result = objectMapper.writeValueAsString(segmentAccessTimeMap);
-      log.info("Serializing Total Access Map [%d]", result.length());
+      log.debug("Serializing Total Access Map [%d]", result.length());
     } catch (JsonProcessingException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
@@ -506,7 +502,7 @@ public class ServerManager implements QuerySegmentWalker
     long finalLoadValue = 0;
     MetricsEmittingExecutorService service = (MetricsEmittingExecutorService)(exec);
     finalLoadValue = service.getQueueSize() + service.getActiveTaskCount();
-    log.info("Current Load [%d]", finalLoadValue);
+    log.debug("Current Load [%d]", finalLoadValue);
     try
     {
         Map<String, Long> returnValue = Maps.newHashMap();
@@ -525,8 +521,8 @@ public class ServerManager implements QuerySegmentWalker
     long finalLoadValue = 0;
     MetricsEmittingExecutorService service = (MetricsEmittingExecutorService)(exec);
     finalLoadValue = service.getQueueSize() + service.getActiveTaskCount();
-    log.info("QSize %d", service.getQueueSize());
-    log.info("ActiveTaskCount %d", service.getActiveTaskCount());
+    log.debug("QSize %d", service.getQueueSize());
+    log.debug("ActiveTaskCount %d", service.getActiveTaskCount());
     return Long.toString(finalLoadValue);
   }
 
@@ -538,7 +534,7 @@ public class ServerManager implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
   {
-	log.info("======6. getQueryRunner For Segments [%s]====", query.toString());
+	log.debug("======6. getQueryRunner For Segments [%s]====", query.toString());
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {
       log.makeAlert("Unknown query type, [%s]", query.getClass())
@@ -574,7 +570,7 @@ public class ServerManager implements QuerySegmentWalker
               public Iterable<QueryRunner<T>> apply(SegmentDescriptor input)
               {
 
-            	log.info("(6). input segment descriptor [%s]", input.getInterval());
+            	log.debug("(6). input segment descriptor [%s]", input.getInterval());
                 final PartitionHolder<ReferenceCountingSegment> entry = timeline.findEntry(
                     input.getInterval(), input.getVersion()
                 );
@@ -617,7 +613,7 @@ public class ServerManager implements QuerySegmentWalker
       final AtomicLong cpuTimeAccumulator
   )
   {
-	log.info("======3. buildAndDecorateQueryRunner====");
+	log.debug("======3. buildAndDecorateQueryRunner====");
     SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
     return CPUTimeMetricQueryRunner.safeBuild(
         new SpecificSegmentQueryRunner<T>(

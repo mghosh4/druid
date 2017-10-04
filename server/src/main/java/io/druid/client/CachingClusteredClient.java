@@ -351,7 +351,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
           }
 
           double oldallocation = allocationMap.get(segmentId).get(serverId);
-          log.info("[GETAFIX ROUTING] adding weight to allocation [%s]", estimated_weight);
+          log.debug("[GETAFIX ROUTING] adding weight to allocation [%s]", estimated_weight);
           double newallocation = oldallocation + estimated_weight;
           allocationMap.get(segmentId).put(serverId, newallocation);
           druidBroker.setAllocationTable(allocationMap);

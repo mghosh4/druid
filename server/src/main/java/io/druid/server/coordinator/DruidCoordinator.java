@@ -237,13 +237,13 @@ public class DruidCoordinator
 		this.httpClient = httpClient;
 		this.serverDiscoveryFactory = factory;
 		if(config.getReplicationPolicy().equals("getafix")) {
-			log.info("GETAFIX");
+			log.debug("GETAFIX");
 			replicator = new DruidCoordinatorBestFitSegmentReplicator(DruidCoordinator.this);
 		} else if(config.getReplicationPolicy().equals("scarlett")) {
-			log.info("SCARLETT");
+			log.debug("SCARLETT");
 			replicator = new DruidCoordinatorScarlettSegmentReplicator(DruidCoordinator.this);
 		} else if(config.getReplicationPolicy().equals("rulebased")){
-            log.info("RULEBASED");
+            log.debug("RULEBASED");
 			replicator = new DruidCoordinatorRuleRunner(DruidCoordinator.this);
 		}
 		else{
@@ -416,7 +416,7 @@ public class DruidCoordinator
 
 	public void removeSegment(DataSegment segment)
 	{
-		log.info("Removing Segment[%s]", segment);
+		log.debug("Removing Segment[%s]", segment);
 		metadataSegmentManager.removeSegment(segment.getDataSource(), segment.getIdentifier());
 	}
 
@@ -453,7 +453,7 @@ public class DruidCoordinator
 
 	// TODO: Might need to push to a queue, and block. Have a coordinator helper to periodically scan through the queue
 	public synchronized ImmutableDruidServer loadSegment(String segmentIdentifier) {
-		log.info("[GETAFIX PLACEMENT] Loading staled segment: " + segmentIdentifier);
+		log.debug("[GETAFIX PLACEMENT] Loading staled segment: " + segmentIdentifier);
 
 		// Display info about all historical servers
 		Iterable<ImmutableDruidServer> servers = FunctionalIterable
@@ -495,7 +495,7 @@ public class DruidCoordinator
 		final DruidCluster cluster = new DruidCluster();
 		for (ImmutableDruidServer server : servers) {
 			if (server.getSegment(segmentIdentifier) != null) {
-				log.info("[GETAFIX PLACEMENT] Has already loaded staled segment: " + segmentIdentifier);
+				log.debug("[GETAFIX PLACEMENT] Has already loaded staled segment: " + segmentIdentifier);
 				return server;
 			}
 			if (!loadManagementPeons.containsKey(server.getName())) {
@@ -582,7 +582,7 @@ public class DruidCoordinator
 			final DataSegment segment
 	)
 	{
-		log.info("Insert Segment [%s] [%d]", segment.getIdentifier(), 1);
+		log.debug("Insert Segment [%s] [%d]", segment.getIdentifier(), 1);
 
 		HashMap<DruidServerMetadata, Long> bootstrapRouting = new HashMap<>();
 		final ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
@@ -616,7 +616,7 @@ public class DruidCoordinator
 				}
 		);
 
-		log.info("Inserted Segment [%s]", segment.getIdentifier());
+		log.debug("Inserted Segment [%s]", segment.getIdentifier());
 		bootstrapRouting.put(holder.getServer().getMetadata(), 1L);
 
 		routingTable.put(segment, bootstrapRouting);

@@ -101,7 +101,7 @@ public class DruidCoordinatorVoidSegmentReplicator implements DruidCoordinatorHe
 	@Override
 	public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
 	{
-		log.info("Void Replication");
+		log.debug("Void Replication");
 		final CoordinatorStats stats = new CoordinatorStats();
 		
 

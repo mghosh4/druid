@@ -28,7 +28,7 @@ public class DruidCoordinatorReplicatorHelper {
             final ServerHolder holder,
             final DataSegment segment)
     {
-        log.info("Insert Segment [%s] to [%s]", segment.getIdentifier(), holder.getServer().getHost());
+        log.debug("Insert Segment [%s] to [%s]", segment.getIdentifier(), holder.getServer().getHost());
 
         final CoordinatorStats stats = new CoordinatorStats();
         stats.addToTieredStat(assignedCount, tier, 0);
@@ -64,10 +64,10 @@ public class DruidCoordinatorReplicatorHelper {
             final ServerHolder holder,
             final DataSegment segment)
     {
-        log.info("Remove Segment [%s] from [%s]", segment.getIdentifier(), holder.getServer().getHost());
+        log.debug("Remove Segment [%s] from [%s]", segment.getIdentifier(), holder.getServer().getHost());
         CoordinatorStats stats = new CoordinatorStats();
 
-        //log.info("Removing Segment from [%s] because it has [%d] segments", entry.getValue().getServer().getMetadata().toString(), entry.getKey().intValue());
+        //log.debug("Removing Segment from [%s] because it has [%d] segments", entry.getValue().getServer().getMetadata().toString(), entry.getKey().intValue());
         stats.addToTieredStat(droppedCount, tier, 0);
 
         if (holder.isServingSegment(segment)) {
@@ -122,11 +122,11 @@ public class DruidCoordinatorReplicatorHelper {
         final String tier = tierNameList.get(0);
 
         Set<DataSegment> orderedAvailableDataSegments = coordinator.getOrderedAvailableDataSegments();
-        log.info("latest segment: " + coordinator.getLatestSegment());
+        log.debug("latest segment: " + coordinator.getLatestSegment());
 
         int holderCount = 0;
         for (DataSegment segment : orderedAvailableDataSegments) {
-            //log.info("segment:" + segment.getIdentifier());
+            //log.debug("segment:" + segment.getIdentifier());
             if (segment.getIdentifier().equals(coordinator.getLatestSegment())) {
                 break;
             }
@@ -144,7 +144,7 @@ public class DruidCoordinatorReplicatorHelper {
         }
 
         if (!orderedAvailableDataSegments.isEmpty()) {
-            //log.info("set latest segment:" + orderedAvailableDataSegments.iterator().next().getIdentifier());
+            //log.debug("set latest segment:" + orderedAvailableDataSegments.iterator().next().getIdentifier());
             coordinator.setLatestSegment(orderedAvailableDataSegments.iterator().next().getIdentifier());
         }
     }
@@ -176,11 +176,11 @@ public class DruidCoordinatorReplicatorHelper {
                 ret.put(entry.getValue(), entry.getKey());
             }
             else{
-                log.info("IDToMetaData: ID [%s] contains multiple server map to it", entry.getValue());
+                log.debug("IDToMetaData: ID [%s] contains multiple server map to it", entry.getValue());
             }
         }
         for(Map.Entry<Integer,DruidServerMetadata> e : ret.entrySet()){
-            log.info("IDToMetaData: ID [%s] maps to metadata [%s]", e.getKey(), e.getValue().getHost());
+            log.debug("IDToMetaData: ID [%s] maps to metadata [%s]", e.getKey(), e.getValue().getHost());
         }
         return ret;
     }
@@ -219,11 +219,11 @@ public class DruidCoordinatorReplicatorHelper {
             }
         }
 
-        /*log.info("pringReverseMap:");
+        /*log.debug("pringReverseMap:");
         for(Map.Entry<Integer, HashMap<DataSegment, Integer>> e : ret.entrySet()){
-            log.info("server: [%s] segmentList: ", e.getKey());
+            log.debug("server: [%s] segmentList: ", e.getKey());
             for(Map.Entry<DataSegment, Integer> entry : e.getValue().entrySet()){
-                log.info("[%s]: [%s]", entry.getKey().getIdentifier(), entry.getValue());
+                log.debug("[%s]: [%s]", entry.getKey().getIdentifier(), entry.getValue());
             }
         }*/
 
@@ -236,7 +236,7 @@ public class DruidCoordinatorReplicatorHelper {
                                            HashMap< Integer, HashMap<DataSegment, Integer>> after){
 
         if(before.size()!=after.size()){
-            log.info("buildCostMatrix: before and after map have different sizes");
+            log.debug("buildCostMatrix: before and after map have different sizes");
         }
 
         //printRoutingMaps(before, "BEFORE MAP:");
@@ -258,20 +258,20 @@ public class DruidCoordinatorReplicatorHelper {
             }
         }
 
-        /*log.info("------ buildCostMatrix: printing matrix -------");
+        /*log.debug("------ buildCostMatrix: printing matrix -------");
         for(int i = 0; i<before.size();i++){
-            log.info("row %s: %s", i, Arrays.toString(ret[i]));
+            log.debug("row %s: %s", i, Arrays.toString(ret[i]));
         }*/
 
         return ret;
     }
 
     private static void printRoutingMaps(HashMap<Integer, HashMap<DataSegment, Integer>> map, String arg) {
-        log.info("pringRoutingMap: [%s]", arg);
+        log.debug("pringRoutingMap: [%s]", arg);
         for(Map.Entry<Integer, HashMap<DataSegment, Integer>> e : map.entrySet()){
-            log.info("server: [%s] segmentList: ", e.getKey());
+            log.debug("server: [%s] segmentList: ", e.getKey());
             for(Map.Entry<DataSegment, Integer> entry : e.getValue().entrySet()){
-                log.info("[%s]: [%s]", entry.getKey().getIdentifier(), entry.getValue());
+                log.debug("[%s]: [%s]", entry.getKey().getIdentifier(), entry.getValue());
             }
         }
     }
@@ -280,14 +280,14 @@ public class DruidCoordinatorReplicatorHelper {
         int numSegments = 0;
         int numSegmentReplicas = 0;
         for(Map.Entry<DataSegment, HashMap<DruidServerMetadata, Long>> entry : routingTable.entrySet()){
-            log.info("Segment [%s]:", entry.getKey().getIdentifier());
+            log.debug("Segment [%s]:", entry.getKey().getIdentifier());
             numSegments++;
             for(Map.Entry<DruidServerMetadata, Long> e: entry.getValue().entrySet()){
-                log.info("HN [%s]: [%s]", e.getKey().getHost(), e.getValue());
+                log.debug("HN [%s]: [%s]", e.getKey().getHost(), e.getValue());
                 numSegmentReplicas++;
             }
         }
-        log.info("Replication factor=%f, num segments=%d, num replicas=%d", (float)numSegmentReplicas/(float)numSegments, numSegments, numSegmentReplicas);
+        log.debug("Replication factor=%f, num segments=%d, num replicas=%d", (float)numSegmentReplicas/(float)numSegments, numSegments, numSegmentReplicas);
     }
 
     public static int[] hungarianMatching(double[][] m){
@@ -481,10 +481,10 @@ public class DruidCoordinatorReplicatorHelper {
         numHns = hnAllocMap.keySet().size();
         numSegmentsPerHnGoal = Math.round((float)numSegmentReplicas/(float)numHns);
 
-        //log.info("SBAL: numSegmentReplicas %d, numHns %d, numSegmentsPerHnGoal %d", numSegmentReplicas, numHns, numSegmentsPerHnGoal);
-        //log.info("SBAL: hnToSegMap %s", hnToSegMap.toString());
-        //log.info("SBAL: hnAllocMap %s", hnAllocMap.toString());
-        //log.info("SBAL: hnSegmentCountMap %s", hnSegmentCountMap.toString());
+        //log.debug("SBAL: numSegmentReplicas %d, numHns %d, numSegmentsPerHnGoal %d", numSegmentReplicas, numHns, numSegmentsPerHnGoal);
+        //log.debug("SBAL: hnToSegMap %s", hnToSegMap.toString());
+        //log.debug("SBAL: hnAllocMap %s", hnAllocMap.toString());
+        //log.debug("SBAL: hnSegmentCountMap %s", hnSegmentCountMap.toString());
 
         while(true) {
 
@@ -510,13 +510,13 @@ public class DruidCoordinatorReplicatorHelper {
 
             while(balancedList.size() > 0) {
                 minHn = Collections.min(balancedList, segmentComparator);
-                //log.info("Testing Max hn %s numseg %d alloc %d, Min hn %s numseg %d alloc %d", maxHn.lhs.rhs.getHost(), maxHn.rhs.lhs, maxHn.rhs.rhs, minHn.lhs.rhs.getHost(), minHn.rhs.lhs, minHn.rhs.rhs);
+                //log.debug("Testing Max hn %s numseg %d alloc %d, Min hn %s numseg %d alloc %d", maxHn.lhs.rhs.getHost(), maxHn.rhs.lhs, maxHn.rhs.rhs, minHn.lhs.rhs.getHost(), minHn.rhs.lhs, minHn.rhs.rhs);
 
                 Long currAlloc = hnAllocMap.get(minHn.lhs.rhs);
                 float allocRatio = (float)maxHn.rhs.rhs/(float)currAlloc;
-                //log.info("allocratio = %f", allocRatio);
+                //log.debug("allocratio = %f", allocRatio);
 //                if(allocRatio > 0.14){
-//                    log.info("Skipping segment move hn alloc %s, segment alloc %s, ratio %f",currAlloc.toString(),
+//                    log.debug("Skipping segment move hn alloc %s, segment alloc %s, ratio %f",currAlloc.toString(),
 //                            maxHn.rhs.toString(), allocRatio);
 //                    balancedList.remove(minHn);
 //                    continue;
@@ -545,9 +545,9 @@ public class DruidCoordinatorReplicatorHelper {
             maxHn.lhs.lhs = minAllocSeg;
             maxHn.rhs.rhs = minSegAllocValue;
 
-            //log.info("Found Max hn %s numseg %d alloc %d, Min hn %s numseg %d alloc %d", maxHn.lhs.rhs.getHost(), maxHn.rhs.lhs, maxHn.rhs.rhs, minHn.lhs.rhs.getHost(), minHn.rhs.lhs, minHn.rhs.rhs);
+            //log.debug("Found Max hn %s numseg %d alloc %d, Min hn %s numseg %d alloc %d", maxHn.lhs.rhs.getHost(), maxHn.rhs.lhs, maxHn.rhs.rhs, minHn.lhs.rhs.getHost(), minHn.rhs.lhs, minHn.rhs.rhs);
 
-            //log.info("Moving segment %s %s %s ===>>> %s %s", maxHn.lhs.lhs.getInterval().toString(), maxHn.lhs.rhs.getHost(), maxHn.rhs.lhs.toString(), minHn.lhs.rhs.getHost(), minHn.rhs.lhs.toString());
+            //log.debug("Moving segment %s %s %s ===>>> %s %s", maxHn.lhs.lhs.getInterval().toString(), maxHn.lhs.rhs.getHost(), maxHn.rhs.lhs.toString(), minHn.lhs.rhs.getHost(), minHn.rhs.lhs.toString());
 
             // remove the moving segment from the old hn in the routing table
             HashMap<DruidServerMetadata, Long> temp = balancedRoutingTable.get(maxHn.lhs.lhs);
@@ -576,20 +576,20 @@ public class DruidCoordinatorReplicatorHelper {
             balancedRoutingTable.put(maxHn.lhs.lhs, temp);
 
             // update hnToSegMap
-            //log.info("hnToSegMap before %s ", hnToSegMap.toString());
+            //log.debug("hnToSegMap before %s ", hnToSegMap.toString());
             HashMap<DataSegment, Long> maxHnMap = hnToSegMap.get(maxHn.lhs.rhs);
             DataSegment maxHnSegment = maxHn.lhs.lhs;
             //Long maxHnSegmentAlloc = maxHnMap.remove(maxHnSegment);
-            //log.info("maxhnmap before %s", maxHnMap.toString());
+            //log.debug("maxhnmap before %s", maxHnMap.toString());
             maxHnMap.remove(maxHnSegment);
-            //log.info("maxhnmap after %s", maxHnMap.toString());
+            //log.debug("maxhnmap after %s", maxHnMap.toString());
             if(maxHnMap.isEmpty()){
                 hnToSegMap.remove(maxHn.lhs.rhs);
             }
             else{
                 hnToSegMap.put(maxHn.lhs.rhs, maxHnMap);
             }
-            //log.info("hnToSegMap after %s ", hnToSegMap.toString());
+            //log.debug("hnToSegMap after %s ", hnToSegMap.toString());
 
             HashMap<DataSegment, Long> minHnMap = hnToSegMap.get(minHn.lhs.rhs);
             if (minHnMap == null){
@@ -651,10 +651,10 @@ public class DruidCoordinatorReplicatorHelper {
         numHns = hnAllocMap.keySet().size();
         numSegmentsPerHnGoal = Math.round((float)numSegmentReplicas/(float)numHns);
 
-        log.info("SBAL: numSegmentReplicas %d, numHns %d, numSegmentsPerHnGoal %d", numSegmentReplicas, numHns, numSegmentsPerHnGoal);
-        log.info("SBAL: hnToSegMap %s", hnToSegMap.toString());
-        //log.info("SBAL: hnAllocMap %s", hnAllocMap.toString());
-        log.info("SBAL: hnSegmentCountMap %s", hnSegmentCountMap.toString());
+        log.debug("SBAL: numSegmentReplicas %d, numHns %d, numSegmentsPerHnGoal %d", numSegmentReplicas, numHns, numSegmentsPerHnGoal);
+        log.debug("SBAL: hnToSegMap %s", hnToSegMap.toString());
+        //log.debug("SBAL: hnAllocMap %s", hnAllocMap.toString());
+        log.debug("SBAL: hnSegmentCountMap %s", hnSegmentCountMap.toString());
 
         List<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>> under =
                 new ArrayList<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>>();
@@ -663,8 +663,8 @@ public class DruidCoordinatorReplicatorHelper {
 
         createUnderOverLists(under, over, hnSegmentCountMap, hnToSegMap, numSegmentsPerHnGoal);
 
-        log.info("SBAL: under list %s", under.toString());
-        log.info("SBAL: over list %s", over.toString());
+        log.debug("SBAL: under list %s", under.toString());
+        log.debug("SBAL: over list %s", over.toString());
 
         // if routing table is already balanced, return
         if(under.size() == 0){
@@ -672,10 +672,10 @@ public class DruidCoordinatorReplicatorHelper {
         }
 
         //Collections.sort(under, allocCompDescending);
-        //log.info("SBAL: under sorted list %s", under.toString());
+        //log.debug("SBAL: under sorted list %s", under.toString());
 
         Collections.sort(over, allocCompAscending);
-        //log.info("SBAL: over sorted list %s", over.toString());
+        //log.debug("SBAL: over sorted list %s", over.toString());
 
         int overListSize = over.size();
         for(int i=0; i<overListSize; i++){
@@ -693,9 +693,9 @@ public class DruidCoordinatorReplicatorHelper {
                     Long currAlloc = hnAllocMap.get(under.get(i).lhs.rhs);
                     if(currAlloc != null){
                         float allocRatio = (float)beforeMove.rhs/(float)currAlloc;
-                        log.info("allocratio = %f", allocRatio);
+                        log.debug("allocratio = %f", allocRatio);
 //                        if(allocRatio > 0.14){
-//                            log.info("Skipping segment move hn alloc %s, segment alloc %s, ratio %f",currAlloc.toString(),
+//                            log.debug("Skipping segment move hn alloc %s, segment alloc %s, ratio %f",currAlloc.toString(),
 //                                    beforeMove.rhs.toString(), allocRatio);
 //                            continue;
 //                        }
@@ -707,7 +707,7 @@ public class DruidCoordinatorReplicatorHelper {
             if(afterMove==null){
                 continue;
             }
-            log.info("Moving segment %s %s %s ===>>> %s %s %s", beforeMove.lhs.lhs.getInterval().toString(), beforeMove.lhs.rhs.getHost(),
+            log.debug("Moving segment %s %s %s ===>>> %s %s %s", beforeMove.lhs.lhs.getInterval().toString(), beforeMove.lhs.rhs.getHost(),
                     beforeMove.rhs.toString(), afterMove.lhs.lhs.getInterval().toString(), afterMove.lhs.rhs.getHost(),
                     afterMove.rhs.toString());
 

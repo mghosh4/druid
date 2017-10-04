@@ -83,7 +83,7 @@ public class BrokerResource
   @Consumes(MediaType.APPLICATION_JSON)
   public Response applyNewRoutingTable(final byte[] routingTable)
   {
-      log.info("Received POST for routing table %s", routingTable.toString());
+      log.debug("Received POST for routing table %s", routingTable.toString());
       Map<String, Map<String, Long>> rt = null;
       try {
           rt = jsonMapper.readValue(
@@ -96,7 +96,7 @@ public class BrokerResource
 
       // save the routing table
       druidBroker.setRoutingTable(rt);
-      log.info("Sent response of POST for routing table");
+      log.debug("Sent response of POST for routing table");
       return Response.ok().build();
   }
 
@@ -114,21 +114,21 @@ public class BrokerResource
           SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
           String load = loadInfo.split("_")[0];
           Date time = sdf.parse(loadInfo.split("_")[1]);
-          log.info("Received load POST from HN=%s, load=%s, time=%s",req.getRemoteHost(), load, sdf.format(time));
-          //log.info("Server Map num keys %d", (brokerServerView.getServerMap().keySet()).size());
+          log.debug("Received load POST from HN=%s, load=%s, time=%s",req.getRemoteHost(), load, sdf.format(time));
+          //log.debug("Server Map num keys %d", (brokerServerView.getServerMap().keySet()).size());
           //for (String key : brokerServerView.getServerMap().keySet()) {
-          //  log.info("Key " + key + " maps to " + brokerServerView.getServerMap().get(key));
+          //  log.debug("Key " + key + " maps to " + brokerServerView.getServerMap().get(key));
           //}
           String hostname = req.getRemoteHost();
           try{
               String resolvedHostname = InetAddress.getByName(hostname).getHostName();
               //String port = String.valueOf(req.getRemotePort());
               String port = String.valueOf(8081);
-              log.info("POST request hostname %s, port %s, resolved hostname %s", hostname, port, resolvedHostname);
+              log.debug("POST request hostname %s, port %s, resolved hostname %s", hostname, port, resolvedHostname);
 
               if (brokerServerView.getServerMap().get(resolvedHostname+":"+port) != null){
                 DruidServer ds = brokerServerView.getServerMap().get(resolvedHostname+":"+port).getServer();
-                log.info("Setting load %s at time %s", load, sdf.format(time));
+                log.debug("Setting load %s at time %s", load, sdf.format(time));
                 ds.setCurrentLoad(Long.parseLong(load));
                 ds.setCurrentLoadTimeAtServer(time);
               }

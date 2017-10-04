@@ -179,11 +179,11 @@ public class DruidBroker
 
   private void printRoutingTable(final Map<String, Map<String, Long>> routingTable){
       for(Map.Entry<String, Map<String, Long>> entry : routingTable.entrySet()){
-          //log.info("Segment [%s]:", entry.getKey().getIdentifier());
-          log.info("Segment [%s]:", entry.getKey());
+          //log.debug("Segment [%s]:", entry.getKey().getIdentifier());
+          log.debug("Segment [%s]:", entry.getKey());
           for(Map.Entry<String, Long> e: entry.getValue().entrySet()){
-              //log.info("[%s]: [%s]", e.getKey().getHost(), e.getValue());
-              log.info("[%s]: [%s]", e.getKey(), e.getValue());
+              //log.debug("[%s]: [%s]", e.getKey().getHost(), e.getValue());
+              log.debug("[%s]: [%s]", e.getKey(), e.getValue());
           }
       }
   }
@@ -191,7 +191,7 @@ public class DruidBroker
   public synchronized void setRoutingTable(Map<String, Map<String, Long>> routingTable)
   {
     this.routingTable = routingTable;
-    //log.info("Received routing table");
+    //log.debug("Received routing table");
     //printRoutingTable(routingTable);
   }
 

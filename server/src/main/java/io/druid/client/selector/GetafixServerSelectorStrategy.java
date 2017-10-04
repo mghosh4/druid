@@ -69,11 +69,11 @@ public class GetafixServerSelectorStrategy implements ServerSelectorStrategy
           return null;
         }
 
-        log.info("Chosen server: " + chosenServer);
+        log.debug("Chosen server: " + chosenServer);
         for (QueryableDruidServer server : servers) {
-          log.info("Looking at QueryableDruidServer: " + server.getServer().getMetadata().toString());
+          log.debug("Looking at QueryableDruidServer: " + server.getServer().getMetadata().toString());
           if (chosenServer.equals(server.getServer().getMetadata().toString())) {
-            log.info("[GETAFIX ROUTING] SUCCESS");
+            log.debug("[GETAFIX ROUTING] SUCCESS");
             return server;
           }
         }
@@ -91,7 +91,7 @@ public class GetafixServerSelectorStrategy implements ServerSelectorStrategy
     
     for (QueryableDruidServer server : servers) {
       if (druidServerMetadata.equals(server.getServer().getMetadata().toString())) {
-        log.info("[GETAFIX ROUTING] SUCCESS");
+        log.debug("[GETAFIX ROUTING] SUCCESS");
         return server;
       }
     }
@@ -136,7 +136,7 @@ public class GetafixServerSelectorStrategy implements ServerSelectorStrategy
       }
 
       String resp = response.getContent();
-      log.info("[GETAFIX PLACEMENT] Load segment " + segment.getIdentifier() + " on demand. " + resp);
+      log.debug("[GETAFIX PLACEMENT] Load segment " + segment.getIdentifier() + " on demand. " + resp);
       selector.stop();
       return resp;
     } catch (Exception e) {

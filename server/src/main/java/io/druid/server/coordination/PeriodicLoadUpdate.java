@@ -84,12 +84,12 @@ public class PeriodicLoadUpdate implements Runnable
         // TODO Auto-generated catch block
         e.printStackTrace();
       }
-      log.info("URI [%s]", uri.toString());
+      log.debug("URI [%s]", uri.toString());
 
       //uris.add(uri.toString());
       brokerURIs.add(uri);
     }
-    log.info("Number of Broker Servers [%d]", brokers.size());
+    log.debug("Number of Broker Servers [%d]", brokers.size());
   }
 
   @Override
@@ -100,7 +100,7 @@ public class PeriodicLoadUpdate implements Runnable
       genBrokerURIs();
       numBrokers = brokerURIs.size();
       if(numBrokers == 0) {
-        log.info("No broker URIs found");
+        log.warn("No broker URIs found");
         return;
       }
     }
@@ -117,7 +117,7 @@ public class PeriodicLoadUpdate implements Runnable
         {
           Map<String, Long> currentLoadMap = Maps.newHashMap();
           try {
-            log.info("Sending hnLoad POST message");
+            log.debug("Sending hnLoad POST message");
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
             StatusResponseHolder response = httpClient.go(
                     new Request(
@@ -136,7 +136,7 @@ public class PeriodicLoadUpdate implements Runnable
               );
             }
             else{
-              log.info("Received OK for HN load POST");
+              log.debug("Received OK for HN load POST");
             }
           }
           catch (Exception e) {

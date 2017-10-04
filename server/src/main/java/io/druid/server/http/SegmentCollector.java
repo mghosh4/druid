@@ -43,7 +43,7 @@ public final class SegmentCollector {
 	
 	public void addSegment(DataSegment segment)
 	{
-		log.info("Adding Segment ID [%s]", segment.getIdentifier());
+		log.debug("Adding Segment ID [%s]", segment.getIdentifier());
 		segmentList.add(segment);
 	}
 	
@@ -52,7 +52,7 @@ public final class SegmentCollector {
 		String result = null;
 		try {
 			result = mapper.writeValueAsString(segmentList);
-			log.info("Serializing Segment List [%d]", result.length());
+			log.debug("Serializing Segment List [%d]", result.length());
 			segmentList.clear();
 		} catch (JsonProcessingException e) {
 			// TODO Auto-generated catch block

@@ -121,7 +121,7 @@ public class PeriodicPollHistoricalLoad implements Runnable
           }
 
           if (serverLoad > 0)
-            log.info("Current Server Load [%d]", serverLoad);
+            log.debug("Current Server Load [%d]", serverLoad);
           
           server.setCurrentLoad(serverLoad);
           return null;

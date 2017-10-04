@@ -49,7 +49,7 @@ public class DruidCoordinatorSegmentGarbageCollector implements DruidCoordinator
         double maxSize = holder.getMaxSize().doubleValue();
         int iter = 0;
         while (currSize / maxSize > gcThreshold) {
-          log.info("[GETAFIX GC] Found server %s(%s) with size %s/%s(%s), which is more than gcThreshold. Dropping iter %s...",
+          log.debug("[GETAFIX GC] Found server %s(%s) with size %s/%s(%s), which is more than gcThreshold. Dropping iter %s...",
                   holder.getServer().getName(), holder.getServer().getHost(), currSize, holder.getMaxSize(), currSize/maxSize, iter);
           // find the segment that is owned by this server holder, and has the lowest weighted access count
           DataSegment segmentToDrop = null;
@@ -63,7 +63,7 @@ public class DruidCoordinatorSegmentGarbageCollector implements DruidCoordinator
               }
 
               if (!routingTable.get(entry.getKey()).containsKey(holder.getServer().getMetadata())) {
-                log.info("[GETAFIX GC] Server doesn't have this segment");
+                log.debug("[GETAFIX GC] Server doesn't have this segment");
                 continue;
               }
 
@@ -85,7 +85,7 @@ public class DruidCoordinatorSegmentGarbageCollector implements DruidCoordinator
           }
           final String tier = tierNameList.get(0);
 
-          log.info("[GETAFIX GC] Dropping " + segmentToDrop.getIdentifier() + " from " + holder.getServer().getHost());
+          log.debug("[GETAFIX GC] Dropping " + segmentToDrop.getIdentifier() + " from " + holder.getServer().getHost());
           drop(
                   params.getReplicationManager(),
                   tier,
@@ -94,7 +94,7 @@ public class DruidCoordinatorSegmentGarbageCollector implements DruidCoordinator
           );
           currSize -= segmentToDrop.getSize();
           if (!this.isGCAggressive) {
-            log.info("[GETAFIX GC] Not Aggressive");
+            log.debug("[GETAFIX GC] Not Aggressive");
             break;
           }
           iter++;
@@ -114,7 +114,7 @@ public class DruidCoordinatorSegmentGarbageCollector implements DruidCoordinator
           final long numReplicantsToRemove
   )
   {
-    log.info("Remove Segment [%s] [%d]", segment.getIdentifier(), numReplicantsToRemove);
+    log.debug("Remove Segment [%s] [%d]", segment.getIdentifier(), numReplicantsToRemove);
     CoordinatorStats stats = new CoordinatorStats();
 
     // Pick the server which has the maximum number of segments for load balance
@@ -126,7 +126,7 @@ public class DruidCoordinatorSegmentGarbageCollector implements DruidCoordinator
     long numReplicants = numReplicantsToRemove;
     for (Map.Entry<Number, ServerHolder> entry : segmentCountMap.entrySet())
     {
-      //log.info("Removing Segment from [%s] because it has [%d] segments", entry.getValue().getServer().getMetadata().toString(), entry.getKey().intValue());
+      //log.debug("Removing Segment from [%s] because it has [%d] segments", entry.getValue().getServer().getMetadata().toString(), entry.getKey().intValue());
       final ServerHolder holder = entry.getValue();
       stats.addToTieredStat(droppedCount, tier, 0);
 
@@ -156,7 +156,7 @@ public class DruidCoordinatorSegmentGarbageCollector implements DruidCoordinator
 
       --numReplicants;
       stats.addToTieredStat(droppedCount, tier, 1);
-      log.info("Removed Segment [%s]", segment.getIdentifier());
+      log.debug("Removed Segment [%s]", segment.getIdentifier());
 
       if (numReplicants == 0)
         break;
@@ -171,10 +171,10 @@ public class DruidCoordinatorSegmentGarbageCollector implements DruidCoordinator
           final DataSegment segment
   )
   {
-    log.info("Remove Segment [%s] from [%s]", segment.getIdentifier(), holder.getServer().getHost());
+    log.debug("Remove Segment [%s] from [%s]", segment.getIdentifier(), holder.getServer().getHost());
     CoordinatorStats stats = new CoordinatorStats();
 
-    //log.info("Removing Segment from [%s] because it has [%d] segments", entry.getValue().getServer().getMetadata().toString(), entry.getKey().intValue());
+    //log.debug("Removing Segment from [%s] because it has [%d] segments", entry.getValue().getServer().getMetadata().toString(), entry.getKey().intValue());
     stats.addToTieredStat(droppedCount, tier, 0);
 
     if (holder.isServingSegment(segment)) {
@@ -202,7 +202,7 @@ public class DruidCoordinatorSegmentGarbageCollector implements DruidCoordinator
     );
 
     stats.addToTieredStat(droppedCount, tier, 1);
-    log.info("Removed Segment [%s]", segment.getIdentifier());
+    log.debug("Removed Segment [%s]", segment.getIdentifier());
 
     return stats;
   }

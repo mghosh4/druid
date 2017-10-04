@@ -42,7 +42,7 @@ public class SpecificSegmentSpec implements QuerySegmentSpec
   public SpecificSegmentSpec(
       SegmentDescriptor descriptor
   ) {
-	log.info("======4.specfic segment spec, construction for segment [%s]====", descriptor.getInterval());
+	log.debug("======4.specfic segment spec, construction for segment [%s]====", descriptor.getInterval());
     this.descriptor = descriptor;
   }
 

@@ -212,7 +212,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               // check if current update is latest
               //log.info("Server load update new load=%s, newHNLoadTime=%s, prev load=%d, prevHNLoadTime=%s", currentHNLoad, sdf.format(currentHNLoadTime), server.getCurrentLoad(), sdf.format(server.getCurrentLoadTimeAtServer()));
               if(currentHNLoadTime.before(server.getCurrentLoadTimeAtServer())) {
-                log.info("Out of order server load updates prev=%s, new=%s", sdf.format(server.getCurrentLoadTimeAtServer()), sdf.format(currentHNLoadTime));
+                log.warn("Out of order server load updates prev=%s, new=%s", sdf.format(server.getCurrentLoadTimeAtServer()), sdf.format(currentHNLoadTime));
               }
               else{
                 server.setCurrentLoad(Long.parseLong(currentHNLoad));

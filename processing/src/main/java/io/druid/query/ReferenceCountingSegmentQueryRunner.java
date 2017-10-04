@@ -53,7 +53,6 @@ public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
   public Sequence<T> run(final Query<T> query, Map<String, Object> responseContext)
   {
     final Closeable closeable = adapter.increment();
-    log.info("adapter plus one, query content [%s]", query.toString());
     if (closeable != null) {
       try {
         final Sequence<T> baseSequence = factory.createRunner(adapter).run(query, responseContext);

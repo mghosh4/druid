@@ -268,7 +268,7 @@ public class QueryResource
     }
     catch (QueryInterruptedException e) {
       try {
-        log.info("%s [%s]", e.getMessage(), queryId);
+        log.warn("%s [%s]", e.getMessage(), queryId);
         final long queryTime = System.currentTimeMillis() - start;
         emitter.emit(
             DruidMetrics.makeQueryTimeMetric(jsonMapper, query, req.getRemoteAddr())

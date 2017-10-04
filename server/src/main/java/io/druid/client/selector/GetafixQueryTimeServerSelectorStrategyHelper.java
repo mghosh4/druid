@@ -35,9 +35,9 @@ public class GetafixQueryTimeServerSelectorStrategyHelper {
             }
             cur = (left+right)/2;
         }
-        //log.info("Select left percentile [%s]: [%s]", left, percentileArr.get(left));
+        //log.debug("Select left percentile [%s]: [%s]", left, percentileArr.get(left));
         queryTime = histogram.get(percentileArr.get(left));
-        //log.info("Estimated Query Time [%s]", queryTime);
+        //log.debug("Estimated Query Time [%s]", queryTime);
         return queryTime;
     }
 
@@ -52,7 +52,7 @@ public class GetafixQueryTimeServerSelectorStrategyHelper {
 
 
         if(currentMap.size()!=goalMap.size()){
-            log.info("current map [%s] and goal map [%s] have different sizes", currentMap.size(), goalMap.size());
+            log.debug("current map [%s] and goal map [%s] have different sizes", currentMap.size(), goalMap.size());
         }
         int counter = 0;
         for(Map.Entry<String, Double> entry : currentMap.entrySet()){
@@ -66,7 +66,7 @@ public class GetafixQueryTimeServerSelectorStrategyHelper {
                 counter++;
             }
             else{
-                log.info("currentMap contains key [%s] that doesnt exist in goal Map", entry.getKey());
+                log.debug("currentMap contains key [%s] that doesnt exist in goal Map", entry.getKey());
             }
         }
 
@@ -79,22 +79,22 @@ public class GetafixQueryTimeServerSelectorStrategyHelper {
                 peakID = i;
             }
         }
-//        log.info("max multiplication factor [%s]", maxFactor);
-//        log.info("current array:");
+//        log.debug("max multiplication factor [%s]", maxFactor);
+//        log.debug("current array:");
 //        for(int i =0; i<currentArr.length;i++){
-//            log.info("[%s]", currentArr[i]);
+//            log.debug("[%s]", currentArr[i]);
 //        }
-//        log.info("original goal array:");
+//        log.debug("original goal array:");
 //        for(int i =0; i<goalArr.length;i++){
-//            log.info("[%s]", goalArr[i]);
+//            log.debug("[%s]", goalArr[i]);
 //        }
         //refactoring goal array
         for (int i = 0; i < goalArr.length; i++){
             refactoredGoalArr[i] = goalArr[i] * maxFactor;
         }
-//        log.info("refactoredGoalArr:");
+//        log.debug("refactoredGoalArr:");
 //        for(int i =0; i<refactoredGoalArr.length;i++){
-//            log.info("[%s]", refactoredGoalArr[i]);
+//            log.debug("[%s]", refactoredGoalArr[i]);
 //        }
 
         //find the one furthest from its goal
@@ -110,7 +110,7 @@ public class GetafixQueryTimeServerSelectorStrategyHelper {
                 targetID = i;
             }
         }
-        //log.info("max distance [%s]", maxDistance);
+        //log.debug("max distance [%s]", maxDistance);
         return IDToKey.get(targetID);
 
     }
