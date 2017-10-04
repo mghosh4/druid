@@ -313,6 +313,7 @@ do
         COMMAND=''
 
         COMMAND=$COMMAND" sudo sed -i '105s@.*@druid.monitoring.monitors=[\"com.metamx.metrics.SysMonitor\",\"com.metamx.metrics.JvmMonitor\"]@' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+        COMMAND=$COMMAND" sudo sed -i '107s@.*@druid.emitter.logging.logLevel=info@' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$OVERLORD_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/overlord/runtime.properties;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -Duser.timezone=UTC -Dlogfilename=overlord-$counter -Dfile.encoding=UTF-8 -Djava.io.tmpdir='/mnt' -classpath 'conf/druid/_common:conf/druid/overlord:lib/*' io.druid.cli.Main server overlord;"
 
@@ -415,7 +416,7 @@ do
             #COMMAND=$COMMAND" sudo sed -i '12s@.*@druid.broker.balancer.type=minimumload@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
             COMMAND=$COMMAND" sudo sed -i '12s@.*@druid.broker.balancer.type=connectionCount@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         fi 
-        COMMAND=$COMMAND" sudo sed -i '15s@.*@druid.request.logging.dir=$LOG_FILE/broker@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
+        #COMMAND=$COMMAND" sudo sed -i '15s@.*@druid.request.logging.dir=$LOG_FILE/broker@' $PATH_TO_DRUID_BIN/conf/druid/broker/runtime.properties;"
         COMMAND=$COMMAND" cd $PATH_TO_DRUID_BIN && screen -d -m sudo java -Xmx256m -XX:MaxDirectMemorySize=$MAX_DIRECT_MEMORY_SIZE -Duser.timezone=UTC -Dlogfilename=broker-$counter -Dfile.encoding=UTF-8 -Djava.io.tmpdir='/mnt' -classpath 'conf/druid/_common:conf/druid/broker:lib/*' io.druid.cli.Main server broker;"
 
         echo "Broker node startup command is $COMMAND"
