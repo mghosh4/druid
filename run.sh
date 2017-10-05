@@ -10,9 +10,8 @@ fi
 #echo Waiting for $duration secs before ingesting and running workload
 sleep $duration
 
-( cd scripts/workloadgenerator ; ./ingestAndRunWorkloadGen_mghosh4.sh $@ )
+( cd scripts/workloadgenerator ; ./ingestAndRunWorkloadGen_getafix.sh $@ )
 
 sleep 3
 
 screen -ls
-

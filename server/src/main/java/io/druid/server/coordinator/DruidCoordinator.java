@@ -45,7 +45,6 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.http.client.HttpClient;
-
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.ImmutableDruidDataSource;
@@ -67,24 +66,22 @@ import io.druid.segment.IndexIO;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
+import io.druid.server.coordinator.helper.DruidCoordinatorBestFitSegmentReplicator;
 import io.druid.server.coordinator.helper.DruidCoordinatorCleanupOvershadowed;
 import io.druid.server.coordinator.helper.DruidCoordinatorCleanupUnneeded;
 import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import io.druid.server.coordinator.helper.DruidCoordinatorLogger;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import io.druid.server.coordinator.helper.DruidCoordinatorScarlettSegmentReplicator;
-import io.druid.server.coordinator.helper.DruidCoordinatorBestFitSegmentReplicator;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentGarbageCollector;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentPopularityDumper;
-import io.druid.server.coordinator.helper.DruidCoordinatorVoidSegmentReplicator;
 import io.druid.server.coordinator.rules.LoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
-
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
@@ -1156,7 +1153,7 @@ public class DruidCoordinator
 							new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),
 							new DruidCoordinatorBalancer(DruidCoordinator.this),
 							new DruidCoordinatorSegmentPopularityDumper(DruidCoordinator.this, DruidCoordinator.this.metadataSegmentManager),
-							new DruidCoordinatorSegmentGarbageCollector(DruidCoordinator.this, config.getGCThreshold(), config.isGCAggressive()),
+							new DruidCoordinatorSegmentGarbageCollector(DruidCoordinator.this, config.isGCEnabled(), config.getGCThreshold(), config.isGCAggressive()),
 							new DruidCoordinatorLogger()
 					),
 					startingLeaderCounter

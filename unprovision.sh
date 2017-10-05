@@ -1,1 +1,1 @@
-docker-machine rm p-druid-swarm-master p-mh-keystore p-node-1 p-node-2 p-node-3 p-node-4 p-node-5 p-node-6 p-node-7 p-node-8 p-node-9 p-node-10
+docker-machine rm $1-druid-swarm-master $1-mh-keystore $1-node-1 $1-node-2 $1-node-3 $1-node-4 $1-node-5 $1-node-6 $1-node-7 $1-node-8 $1-node-9 $1-node-10

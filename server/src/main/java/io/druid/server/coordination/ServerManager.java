@@ -106,7 +106,7 @@ public class ServerManager implements QuerySegmentWalker
   private long estimatedLoad;
   private long lastLoadEstimateTime;
 
-  private final String loadingPath = "/proj/DCSQ/mghosh4/druid/estimation/";
+  private final String loadingPath = "/proj/DCSQ/getafix/druid/estimation/";
   private final String[] fullpaths = {loadingPath+"groupby.cdf", loadingPath+"timeseries.cdf", loadingPath+"topn.cdf"};
 
   private final HashMap<String, ArrayList<Double>> percentileCollection = new HashMap<String, ArrayList<Double>>();
@@ -413,11 +413,11 @@ public class ServerManager implements QuerySegmentWalker
         true
     );
   }
-  
+
   public String getConcurrentAccessMap()
   {
 	String result = null;
-	
+
 	try {
 		Map<String, Integer> concurrentAccessMap = Maps.newHashMap();
 		for (Map.Entry<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> dataSource : dataSources.entrySet())
@@ -429,21 +429,21 @@ public class ServerManager implements QuerySegmentWalker
                     concurrentAccessMap.put(segment.getIdentifier(), segment.getAndClearMaxConcurrentAccess());
             }
 		}
-		
+
 		result = objectMapper.writeValueAsString(concurrentAccessMap);
 		log.debug("Serializing Concurrent Access Map [%d]", result.length());
 	} catch (JsonProcessingException e) {
 		// TODO Auto-generated catch block
 		e.printStackTrace();
 	}
-	
-	return result;	
+
+	return result;
   }
 
   public String getTotalAccessMap()
   {
 	String result = null;
-	
+
 	try {
 		Map<String, Integer> totalAccessMap = Maps.newHashMap();
 		for (Map.Entry<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> dataSource : dataSources.entrySet())
@@ -455,15 +455,15 @@ public class ServerManager implements QuerySegmentWalker
                     totalAccessMap.put(segment.getIdentifier(), segment.getAndClearTotalAccess());
             }
 		}
-		
+
 		result = objectMapper.writeValueAsString(totalAccessMap);
 		log.debug("Serializing Total Access Map [%d]", result.length());
 	} catch (JsonProcessingException e) {
 		// TODO Auto-generated catch block
 		e.printStackTrace();
 	}
-	
-	return result;	
+
+	return result;
   }
 
   public String getSegmentAccessTimeMap()
