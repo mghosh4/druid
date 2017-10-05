@@ -85,6 +85,11 @@ public abstract class DruidCoordinatorConfig
     return null;
   }
 
+  @Config("druid.coordinator.gc.enabled")
+  public boolean isGCEnabled() {
+    return false;
+  }
+
   @Config("druid.coordinator.gc.threshold")
   public double getGCThreshold() { return 0.8; }
 

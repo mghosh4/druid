@@ -24,6 +24,7 @@ public class DruidCoordinatorSegmentGarbageCollector implements DruidCoordinator
 {
   private final double gcThreshold;
   private final boolean isGCAggressive;
+  private final boolean enabled;
   private final DruidCoordinator coordinator;
 
   private static final String droppedCount = "droppedCount";
@@ -31,11 +32,13 @@ public class DruidCoordinatorSegmentGarbageCollector implements DruidCoordinator
 
   public DruidCoordinatorSegmentGarbageCollector(
       DruidCoordinator coordinator,
+      boolean enabled,
       double gcThreshold,
       boolean isGCAggressive
   )
   {
     this.coordinator = coordinator;
+    this.enabled = enabled;
     this.gcThreshold = gcThreshold;
     this.isGCAggressive = isGCAggressive;
   }
@@ -43,6 +46,10 @@ public class DruidCoordinatorSegmentGarbageCollector implements DruidCoordinator
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
+    if (!enabled) {
+      return params;
+    }
+
     for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier()) {
       for (ServerHolder holder : serverQueue) {
         long currSize = holder.getCurrServerSize();

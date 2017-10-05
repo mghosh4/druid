@@ -68,7 +68,7 @@ public class DruidBroker
   private static final EmittingLogger log = new EmittingLogger(DruidBroker.class);
 
   //QueryTime distribution data structures
-  String loadingPath = "/proj/DCSQ/mghosh4/druid/estimation/";
+  String loadingPath = "/proj/DCSQ/getafix/druid/estimation/";
   String[] fullpaths = {loadingPath+"groupby.cdf", loadingPath+"timeseries.cdf", loadingPath+"topn.cdf"};
 
   HashMap<String, ArrayList<Double>> percentileCollection = new HashMap<String, ArrayList<Double>>();
