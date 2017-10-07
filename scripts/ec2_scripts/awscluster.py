@@ -165,6 +165,8 @@ def upload_artifacts():
         # subprocess.call(command, shell=True)
         command = "scp {1} druid.pem ubuntu@{0}:~/".format(hostname, SSH_OPTS)
         subprocess.call(command, shell=True)
+        command = "scp {1} credentials.csv ubuntu@{0}:~/".format(hostname, SSH_OPTS)
+        subprocess.call(command, shell=True)
 
 def terminate_instances(instancelist):
     response = ec2client.terminate_instances(InstanceIds=instancelist)

@@ -1,11 +1,15 @@
 When bootstrapping a new experiment:
+1. Download druid.pem and S3 credentials to this folder, copy the druid.pem to your home directory too
 1. Create EFS: `python awscluster.py -e <namespace>`
 1. Create S3: `python awscluster.py -g <namespace>`
 1. Create EC2: `python awscluster.py -c <namespace> <num_nodes>`
 1. Upload druid.pem: `python awscluster.py -u <namespace>`
 1. Setup hostname resolutions: `python awscluster.py -s <namespace>`
 1. To ssh into a node: ssh -i ~/druid.pem ubuntu@`python awscluster.py -n <namespace> <node_number>`
-1. Setup druid artifacts by: git clone druid, mvn install, untar built tar.
+1. Setup druid artifacts:
+  - `git clone -b aws_aws --depth=1 https://github.com/mghosh4/druid.git`
+  - `mvn install -DskipTests`
+  - untar built tar
 1. Modify scripts/deployment/config/getafix.aws.conf to reflect AWS keys, and bucket name
 1. start_druid.sh
 1. run.sh
