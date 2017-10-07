@@ -170,8 +170,8 @@ do
                     COMMAND=$COMMAND" sudo sed -i '72s/.*/druid.storage.type=s3/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
                     COMMAND=$COMMAND" sudo sed -i '73s/.*/druid.storage.bucket=$AWS_BUCKET_NAME/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
                     COMMAND=$COMMAND" sudo sed -i '74s/.*/druid.storage.baseKey=druid\/segments/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
-                    COMMAND=$COMMAND" sudo sed -i '75s/.*/druid.s3.accessKey=$AWS_ACCESS_KEY/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
-                    COMMAND=$COMMAND" sudo sed -i '76s/.*/druid.s3.secretKey=${AWS_SECRET_KEY//\//\\/}/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+                    COMMAND=$COMMAND" sudo sed -i '75s/.*/druid.s3.accessKey=`tail -1 ~/accessKeys.csv | tr , '\n' | head -1`/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
+                    COMMAND=$COMMAND" sudo sed -i '76s/.*/druid.s3.secretKey=`tail -1 accessKeys.csv | tr , '\n' | tail -1`//\//\\/}/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
 
                     COMMAND=$COMMAND" sudo sed -i '82s/.*/#druid.indexer.logs.type=file/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
                     COMMAND=$COMMAND" sudo sed -i '83s/.*/#druid.indexer.logs.directory=var\/druid\/indexing-logs/' $PATH_TO_DRUID_BIN/conf/druid/_common/common.runtime.properties;"
