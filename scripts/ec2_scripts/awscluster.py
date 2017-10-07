@@ -59,7 +59,7 @@ def create_s3():
     response = s3client.create_bucket(Bucket=S3_BUCKET_NAME_TEMPLATE.format(exp=EXPERIMENT))
     location = response['Location']
 
-def create_instances():
+def create_instances(num_nodes):
     print("Launching EC2 Cluster")
     response = efsclient.describe_file_systems(CreationToken=EXPERIMENT)
     fileSystemId = response['FileSystems'][0]['FileSystemId']
@@ -87,7 +87,7 @@ def create_instances():
             ImageId='ami-841f46ff',
             InstanceType='m4.4xlarge',
             KeyName='druid',
-            MaxCount=22,
+            MaxCount=num_nodes,
             MinCount=1,
             SecurityGroupIds=['sg-bf13f1cf',],
             DisableApiTermination=False,
@@ -206,7 +206,7 @@ def main(argv):
         elif opt in ("-e", "--efs"):
             create_efs()
         elif opt in ("-c", "--create"):
-            create_instances()
+            create_instances(int(argv[2]))
         elif opt in ("-s", "--setup"):
             setup_instances()
         elif opt in ("-g", "--s3"):
