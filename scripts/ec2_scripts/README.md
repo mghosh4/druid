@@ -10,8 +10,9 @@ When bootstrapping a new experiment:
   - `git clone -b aws_aws --depth=1 https://github.com/mghosh4/druid.git`
   - `mvn install -DskipTests`
   - untar built tar
-1. Modify scripts/deployment/config/getafix.aws.conf to reflect AWS keys, and bucket name
-1. start_druid.sh
+1. Modify scripts/deployment/config/getafix.aws.conf on bucket name, and node allocations
+1. Set AWS keys variables: `export AWS_ACCESS_KEY=<aws_access_key> && export AWS_SECRET_KEY=<aws_secret_key>`
+1. start_druid_aws.sh
 1. run.sh
 
 When EC2s are restarted:
