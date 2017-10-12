@@ -4,15 +4,13 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import com.metamx.common.Pair;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.client.ImmutableDruidServer;
-import io.druid.client.selector.QueryableDruidServer;
 import io.druid.query.MutablePair;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordinator.*;
 import io.druid.timeline.DataSegment;
 
+import javax.xml.crypto.Data;
 import java.util.*;
 
 
@@ -450,19 +448,32 @@ public class DruidCoordinatorReplicatorHelper {
         }
     };
 
-    private static final Comparator<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>>> allocComparator =
-            new Comparator<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>>>()
-    {
-        @Override
-        public int compare(MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>> left,
-                           MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>> right)
-        {
-            return Ints.compare(left.rhs.rhs.intValue(), right.rhs.rhs.intValue());
-        }
-    };
+    private static final Comparator<Map.Entry<DataSegment, Long>> loadComparator =
+            new Comparator<Map.Entry<DataSegment, Long>>()
+            {
+                @Override
+                public int compare(Map.Entry<DataSegment, Long> left,
+                                   Map.Entry<DataSegment, Long> right)
+                {
+                    return Ints.compare(left.getValue().intValue(), right.getValue().intValue());
+                }
+            };
+
+    private static final Comparator<Map.Entry<DruidServerMetadata, Long>> allocComparator =
+            new Comparator<Map.Entry<DruidServerMetadata, Long>>()
+            {
+                @Override
+                public int compare(Map.Entry<DruidServerMetadata, Long> left,
+                                   Map.Entry<DruidServerMetadata, Long> right)
+                {
+                    return Ints.compare(left.getValue().intValue(), right.getValue().intValue());
+                }
+            };
+
+    private static final long IMBALANCE_THRESHOLD = 30;
 
     public static HashMap<DataSegment,HashMap<DruidServerMetadata,Long>> balanceRoutingTableSegments(
-            HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable){
+            HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable) {
         int numSegmentReplicas = 0;
         int numHns = 0;
         int numSegmentsPerHnGoal = 0;
@@ -472,319 +483,145 @@ public class DruidCoordinatorReplicatorHelper {
         // map of hn to total cpu allocation done on that hn
         HashMap<DruidServerMetadata, Long> hnAllocMap = new HashMap<DruidServerMetadata, Long>();
         // map of hn to the segments it is storing alongwith allocation
-        HashMap<DruidServerMetadata, HashMap<DataSegment,Long>> hnToSegMap = new HashMap<DruidServerMetadata, HashMap<DataSegment, Long>>();
+        HashMap<DruidServerMetadata, HashMap<DataSegment, Long>> hnToSegMap = new HashMap<DruidServerMetadata, HashMap<DataSegment, Long>>();
         // balanced routing table
-        HashMap<DataSegment, HashMap<DruidServerMetadata,Long>> balancedRoutingTable =
+        HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> balancedRoutingTable =
                 new HashMap<DataSegment, HashMap<DruidServerMetadata, Long>>(routingTable);
 
         numSegmentReplicas = buildHnSegmentMaps(hnSegmentCountMap, hnAllocMap, hnToSegMap, routingTable);
         numHns = hnAllocMap.keySet().size();
-        numSegmentsPerHnGoal = Math.round((float)numSegmentReplicas/(float)numHns);
+        numSegmentsPerHnGoal = Math.round((float) numSegmentReplicas / (float) numHns);
 
-        //log.debug("SBAL: numSegmentReplicas %d, numHns %d, numSegmentsPerHnGoal %d", numSegmentReplicas, numHns, numSegmentsPerHnGoal);
-        //log.debug("SBAL: hnToSegMap %s", hnToSegMap.toString());
-        //log.debug("SBAL: hnAllocMap %s", hnAllocMap.toString());
-        //log.debug("SBAL: hnSegmentCountMap %s", hnSegmentCountMap.toString());
-
-        while(true) {
-
-            List<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>>> balancedList =
-                    new ArrayList<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>>>();
-
-            for (Map.Entry<DruidServerMetadata, Integer> e1 : hnSegmentCountMap.entrySet()) {
-                // segment value and its corresponding allocation gets updated later in the code. Allocation value is
-                // initialized with the total allocation of the HN.
-                MutablePair<DataSegment, DruidServerMetadata> p1 = new MutablePair<>(null, e1.getKey());
-                MutablePair<Long, Long> p2 = new MutablePair<>(hnSegmentCountMap.get(e1.getKey()).longValue(), hnAllocMap.get((e1.getKey())));
-                MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>> p3 = new MutablePair<>(p1, p2);
-                balancedList.add(p3);
+        PriorityQueue<Tuple> minheap = new PriorityQueue<Tuple>(numSegmentReplicas, new Comparator<Tuple>() {
+            public int compare(Tuple o1, Tuple o2) {
+                int result = Long.compare(o1.weight, o2.weight);
+                return result;
             }
+        });
 
-            MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>> maxHn = null;
-            MutablePair<MutablePair<DataSegment, DruidServerMetadata>, MutablePair<Long, Long>> minHn = null;
-
-            maxHn = Collections.max(balancedList, segmentComparator);
-            balancedList.remove(maxHn);
-
-            boolean breakFlag = true;
-
-            while(balancedList.size() > 0) {
-                minHn = Collections.min(balancedList, segmentComparator);
-                //log.debug("Testing Max hn %s numseg %d alloc %d, Min hn %s numseg %d alloc %d", maxHn.lhs.rhs.getHost(), maxHn.rhs.lhs, maxHn.rhs.rhs, minHn.lhs.rhs.getHost(), minHn.rhs.lhs, minHn.rhs.rhs);
-
-                Long currAlloc = hnAllocMap.get(minHn.lhs.rhs);
-                float allocRatio = (float)maxHn.rhs.rhs/(float)currAlloc;
-                //log.debug("allocratio = %f", allocRatio);
-//                if(allocRatio > 0.14){
-//                    log.debug("Skipping segment move hn alloc %s, segment alloc %s, ratio %f",currAlloc.toString(),
-//                            maxHn.rhs.toString(), allocRatio);
-//                    balancedList.remove(minHn);
-//                    continue;
-//                }
-                breakFlag = false;
-                break;
-            }
-
-            if (breakFlag == true){
-                break;
-            }
-
-            if (maxHn.rhs.lhs - minHn.rhs.lhs <= 1) {
-                break;
-            }
-            // maxHn is chosen. Now choose the segment with lowest allocation on this hn and update maxHn
-            HashMap<DataSegment, Long> maxHnSegs = hnToSegMap.get(maxHn.lhs.rhs);
-            Long minSegAllocValue = Long.MAX_VALUE;
-            DataSegment minAllocSeg = null;
-            for (Map.Entry<DataSegment, Long> e1 : maxHnSegs.entrySet()) {
-                if(e1.getValue() < minSegAllocValue){
-                    minSegAllocValue = e1.getValue();
-                    minAllocSeg = e1.getKey();
+        for (Map.Entry<DruidServerMetadata, HashMap<DataSegment, Long>> entry : hnToSegMap.entrySet()) {
+            if (entry.getValue().size() > numSegmentsPerHnGoal) {
+                List<Map.Entry<DataSegment, Long>> segmentEntryList = new ArrayList<>(entry.getValue().entrySet());
+                Collections.sort(segmentEntryList, loadComparator);
+                long numCandidates = entry.getValue().size() - numSegmentsPerHnGoal;
+                for (Map.Entry<DataSegment, Long> segmentEntry : segmentEntryList) {
+                    minheap.add(new Tuple(segmentEntry.getKey(), segmentEntry.getValue(), entry.getKey()));
+                    numCandidates--;
+                    if (numCandidates <= 0)
+                        break;
                 }
             }
-            maxHn.lhs.lhs = minAllocSeg;
-            maxHn.rhs.rhs = minSegAllocValue;
-
-            //log.debug("Found Max hn %s numseg %d alloc %d, Min hn %s numseg %d alloc %d", maxHn.lhs.rhs.getHost(), maxHn.rhs.lhs, maxHn.rhs.rhs, minHn.lhs.rhs.getHost(), minHn.rhs.lhs, minHn.rhs.rhs);
-
-            //log.debug("Moving segment %s %s %s ===>>> %s %s", maxHn.lhs.lhs.getInterval().toString(), maxHn.lhs.rhs.getHost(), maxHn.rhs.lhs.toString(), minHn.lhs.rhs.getHost(), minHn.rhs.lhs.toString());
-
-            // remove the moving segment from the old hn in the routing table
-            HashMap<DruidServerMetadata, Long> temp = balancedRoutingTable.get(maxHn.lhs.lhs);
-            temp.remove(maxHn.lhs.rhs);
-            if(temp.isEmpty()){
-                balancedRoutingTable.remove(maxHn.lhs.rhs);
-            }
-            else{
-                balancedRoutingTable.put(maxHn.lhs.lhs, temp);
-            }
-
-            // change the moving segment's allocation in the hnAllocMap
-            Long alloc = hnAllocMap.get(maxHn.lhs.rhs);
-            alloc -= maxHn.rhs.rhs;
-            hnAllocMap.put(maxHn.lhs.rhs, alloc);
-
-            // add the moving segment to the new hn in the routing table
-            temp = balancedRoutingTable.get(maxHn.lhs.lhs);
-            if(temp.containsKey(minHn.lhs.rhs)){
-                Long newAlloc = temp.get(minHn.lhs.rhs) + maxHn.rhs.rhs;
-                temp.put(minHn.lhs.rhs, newAlloc);
-            }
-            else{
-                temp.put(minHn.lhs.rhs, maxHn.rhs.rhs);
-            }
-            balancedRoutingTable.put(maxHn.lhs.lhs, temp);
-
-            // update hnToSegMap
-            //log.debug("hnToSegMap before %s ", hnToSegMap.toString());
-            HashMap<DataSegment, Long> maxHnMap = hnToSegMap.get(maxHn.lhs.rhs);
-            DataSegment maxHnSegment = maxHn.lhs.lhs;
-            //Long maxHnSegmentAlloc = maxHnMap.remove(maxHnSegment);
-            //log.debug("maxhnmap before %s", maxHnMap.toString());
-            maxHnMap.remove(maxHnSegment);
-            //log.debug("maxhnmap after %s", maxHnMap.toString());
-            if(maxHnMap.isEmpty()){
-                hnToSegMap.remove(maxHn.lhs.rhs);
-            }
-            else{
-                hnToSegMap.put(maxHn.lhs.rhs, maxHnMap);
-            }
-            //log.debug("hnToSegMap after %s ", hnToSegMap.toString());
-
-            HashMap<DataSegment, Long> minHnMap = hnToSegMap.get(minHn.lhs.rhs);
-            if (minHnMap == null){
-                minHnMap = new HashMap<DataSegment, Long>();
-                minHnMap.put(maxHnSegment, maxHn.rhs.rhs);
-            }
-            else{
-                Long currAlloc = minHnMap.get(maxHnSegment);
-                if (currAlloc == null){
-                    currAlloc = maxHn.rhs.rhs;
-                }
-                else {
-                    currAlloc += maxHn.rhs.rhs;
-                }
-                minHnMap.put(maxHnSegment, currAlloc);
-            }
-            hnToSegMap.put(minHn.lhs.rhs, minHnMap);
-
-
-            // change the new hn's allocation in the hnAllocMap
-            alloc = hnAllocMap.get(minHn.lhs.rhs);
-            if(alloc!=null){
-                alloc += maxHn.rhs.rhs;
-                hnAllocMap.put(minHn.lhs.rhs, alloc);
-            }
-            else{
-                hnAllocMap.put(maxHn.lhs.rhs, maxHn.rhs.rhs);
-            }
-
-            Integer numSegments = hnSegmentCountMap.get(maxHn.lhs.rhs);
-            numSegments--;
-            hnSegmentCountMap.put(maxHn.lhs.rhs, numSegments);
-
-            numSegments = hnSegmentCountMap.get(minHn.lhs.rhs);
-            numSegments++;
-            hnSegmentCountMap.put(minHn.lhs.rhs, numSegments);
-            //printRoutingTable(balancedRoutingTable);
-        }
-        return balancedRoutingTable;
-    }
-
-/*
-    public static HashMap<DataSegment,HashMap<DruidServerMetadata,Long>> balanceRoutingTableSegments(HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable){
-        int numSegmentReplicas = 0;
-        int numHns = 0;
-        int numSegmentsPerHnGoal = 0;
-
-        // map of hn to number of segment it is storing
-        HashMap<DruidServerMetadata, Integer> hnSegmentCountMap = new HashMap<DruidServerMetadata, Integer>();
-        // map of hn to total cpu allocation done on that hn
-        HashMap<DruidServerMetadata, Long> hnAllocMap = new HashMap<DruidServerMetadata, Long>();
-        // map of hn to the segments it is storing alongwith allocation
-        HashMap<DruidServerMetadata, HashMap<DataSegment,Long>> hnToSegMap = new HashMap<DruidServerMetadata, HashMap<DataSegment, Long>>();
-        // balanced routing table
-        HashMap<DataSegment, HashMap<DruidServerMetadata,Long>> balancedRoutingTable =
-                new HashMap<DataSegment, HashMap<DruidServerMetadata, Long>>(routingTable);
-
-        numSegmentReplicas = buildHnSegmentMaps(hnSegmentCountMap, hnAllocMap, hnToSegMap, routingTable);
-        numHns = hnAllocMap.keySet().size();
-        numSegmentsPerHnGoal = Math.round((float)numSegmentReplicas/(float)numHns);
-
-        log.debug("SBAL: numSegmentReplicas %d, numHns %d, numSegmentsPerHnGoal %d", numSegmentReplicas, numHns, numSegmentsPerHnGoal);
-        log.debug("SBAL: hnToSegMap %s", hnToSegMap.toString());
-        //log.debug("SBAL: hnAllocMap %s", hnAllocMap.toString());
-        log.debug("SBAL: hnSegmentCountMap %s", hnSegmentCountMap.toString());
-
-        List<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>> under =
-                new ArrayList<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>>();
-        List<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>> over =
-                new ArrayList<MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long>>();
-
-        createUnderOverLists(under, over, hnSegmentCountMap, hnToSegMap, numSegmentsPerHnGoal);
-
-        log.debug("SBAL: under list %s", under.toString());
-        log.debug("SBAL: over list %s", over.toString());
-
-        // if routing table is already balanced, return
-        if(under.size() == 0){
-            return balancedRoutingTable;
         }
 
-        //Collections.sort(under, allocCompDescending);
-        //log.debug("SBAL: under sorted list %s", under.toString());
-
-        Collections.sort(over, allocCompAscending);
-        //log.debug("SBAL: over sorted list %s", over.toString());
-
-        int overListSize = over.size();
-        for(int i=0; i<overListSize; i++){
-            // segment that needs to be moved
-            MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long> beforeMove = over.get(i);
-
-            // pick a new hn for the moving segment which has the least number of segments
-            MutablePair<MutablePair<DataSegment, DruidServerMetadata>, Long> afterMove = null;
-            int minSegmentCount = Integer.MAX_VALUE;
-            Collections.shuffle(under);
-            for(int j=0; j<under.size(); j++){
-                if(hnSegmentCountMap.get(under.get(i).lhs.rhs) < minSegmentCount){
-                    // check if the moving segment is too big (i.e. >10% of the hn allotment), then ignore this segment
-                    // move since it can cause performance imbalance
-                    Long currAlloc = hnAllocMap.get(under.get(i).lhs.rhs);
-                    if(currAlloc != null){
-                        float allocRatio = (float)beforeMove.rhs/(float)currAlloc;
-                        log.debug("allocratio = %f", allocRatio);
-//                        if(allocRatio > 0.14){
-//                            log.debug("Skipping segment move hn alloc %s, segment alloc %s, ratio %f",currAlloc.toString(),
-//                                    beforeMove.rhs.toString(), allocRatio);
-//                            continue;
-//                        }
-                    }
-                    afterMove = under.get(i);
-                    minSegmentCount = hnSegmentCountMap.get(afterMove.lhs.rhs);
-                }
-            }
-            if(afterMove==null){
+        while (minheap.peek() != null) {
+            Tuple candidate = minheap.poll();
+            DruidServerMetadata dstBin = findCandidateDestBin(hnAllocMap, hnToSegMap, candidate);
+            if (dstBin == null)
                 continue;
-            }
-            log.debug("Moving segment %s %s %s ===>>> %s %s %s", beforeMove.lhs.lhs.getInterval().toString(), beforeMove.lhs.rhs.getHost(),
-                    beforeMove.rhs.toString(), afterMove.lhs.lhs.getInterval().toString(), afterMove.lhs.rhs.getHost(),
-                    afterMove.rhs.toString());
 
-            // remove the moving segment from the old hn in the routing table
-            HashMap<DruidServerMetadata, Long> temp = balancedRoutingTable.get(beforeMove.lhs.lhs);
-            temp.remove(beforeMove.lhs.rhs);
-            if(temp.isEmpty()){
-                balancedRoutingTable.remove(beforeMove.lhs.rhs);
-            }
-            else{
-                balancedRoutingTable.put(beforeMove.lhs.lhs, temp);
-            }
+            double imbalance = calculateLoadImbalance(hnAllocMap, candidate, dstBin);
+            log.info("Segment [%s] DstBin [%s] SrcBin [%s] Weight [%d] Imbalance [%f]",
+                    candidate.segment.getIdentifier(), dstBin.getHost(), candidate.metadata.getHost(), candidate.weight, imbalance);
 
-            // change the moving segment's allocation in the hnAllocMap
-            Long alloc = hnAllocMap.get(beforeMove.lhs.rhs);
-            alloc -= beforeMove.rhs;
-            hnAllocMap.put(beforeMove.lhs.rhs, alloc);
+            if (imbalance <= IMBALANCE_THRESHOLD) {
+                // Fix the allocations
+                hnAllocMap.put(dstBin, hnAllocMap.get(dstBin) + candidate.weight);
+                hnAllocMap.put(candidate.metadata, hnAllocMap.get(candidate.metadata) - candidate.weight);
 
-            // add the moving segment to the new hn in the routing table
-            temp = balancedRoutingTable.get(beforeMove.lhs.lhs);
-            if(temp.containsKey(afterMove.lhs.rhs)){
-                Long newAlloc = temp.get(afterMove.lhs.rhs) + beforeMove.rhs;
-                temp.put(afterMove.lhs.rhs, newAlloc);
-            }
-            else{
-                temp.put(afterMove.lhs.rhs, beforeMove.rhs);
-            }
-            balancedRoutingTable.put(beforeMove.lhs.lhs, temp);
+                // Fix the routing table
+                balancedRoutingTable.get(candidate.segment).remove(candidate.metadata);
+                balancedRoutingTable.get(candidate.segment).put(dstBin, candidate.weight);
 
-            // change the new hn's allocation in the hnAllocMap
-            alloc = hnAllocMap.get(afterMove.lhs.rhs);
-            if(alloc!=null){
-                alloc += beforeMove.rhs;
-                hnAllocMap.put(afterMove.lhs.rhs, alloc);
+                // Fix the hnToSegMap
+                hnToSegMap.get(candidate.metadata).remove(candidate.segment);
+                hnToSegMap.get(dstBin).put(candidate.segment, candidate.weight);
             }
-            else{
-                hnAllocMap.put(afterMove.lhs.rhs, beforeMove.rhs);
-            }
-
-            Integer numSegments = hnSegmentCountMap.get(beforeMove.lhs.rhs);
-            numSegments--;
-            hnSegmentCountMap.put(beforeMove.lhs.rhs, numSegments);
-
-//            if(numSegments>=numSegmentsPerHnGoal){
-//                under.remove(beforeMove);
-//            }
-            numSegments = hnSegmentCountMap.get(afterMove.lhs.rhs);
-            numSegments++;
-            hnSegmentCountMap.put(afterMove.lhs.rhs, numSegments);
-            //printRoutingTable(balancedRoutingTable);
         }
 
         return balancedRoutingTable;
     }
-*/
 
+    private static DruidServerMetadata findCandidateDestBin(HashMap<DruidServerMetadata, Long> allocMap,
+                                                            HashMap<DruidServerMetadata, HashMap<DataSegment, Long>> hnToSegMap,
+                                                            Tuple candidate)
+    {
+        log.info("AllocMap [%s]", allocMap);
+        boolean first = false;
+        long minLoad = 0;
+        long minSegmentCount = 0;
+        DruidServerMetadata dstBin = null;
+        for (Map.Entry<DruidServerMetadata, Long> allocEntry : allocMap.entrySet())
+        {
+            if (!hnToSegMap.get(allocEntry.getKey()).containsKey(candidate.segment))
+            {
+                if (!first)
+                {
+                    minLoad = allocEntry.getValue();
+                    minSegmentCount = hnToSegMap.get(allocEntry.getKey()).size();
+                    dstBin = allocEntry.getKey();
+                    first = true;
+                }
+                else if (minSegmentCount > hnToSegMap.get(allocEntry.getKey()).size())
+                {
+                    minLoad = allocEntry.getValue();
+                    minSegmentCount = hnToSegMap.get(allocEntry.getKey()).size();
+                    dstBin = allocEntry.getKey();
+                }
+                else if (minSegmentCount == hnToSegMap.get(allocEntry.getKey()).size())
+                {
+                    if (minLoad > allocEntry.getValue())
+                    {
+                        minLoad = allocEntry.getValue();
+                        dstBin = allocEntry.getKey();
+                    }
+                }
+            }
+            else
+                log.info("Server [%s]", allocEntry.getKey());
+        }
 
-    	/* Copyright (c) 2012 Kevin L. Stern
-	 *
-	 * Permission is hereby granted, free of charge, to any person obtaining a copy
-	 * of this software and associated documentation files (the "Software"), to deal
-	 * in the Software without restriction, including without limitation the rights
-	 * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-	 * copies of the Software, and to permit persons to whom the Software is
-	 * furnished to do so, subject to the following conditions:
-	 *
-	 * The above copyright notice and this permission notice shall be included in
-	 * all copies or substantial portions of the Software.
-	 *
-	 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-	 * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-	 * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-	 * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-	 * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-	 * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-	 * SOFTWARE.
-	 */
+        return dstBin;
+    }
+
+    private static double calculateLoadImbalance(HashMap<DruidServerMetadata, Long> allocMap, Tuple candidate, DruidServerMetadata dst)
+    {
+        log.info("AllocMap [%s] DstBin [%s] SrcBin [%s] Weight [%d]",
+                    allocMap, dst.getHost(), candidate.metadata.getHost(), candidate.weight);
+        List<Long> weights = new ArrayList<>();
+        for (Map.Entry<DruidServerMetadata, Long> allocEntry : allocMap.entrySet())
+        {
+            if (allocEntry.getKey().equals(candidate.metadata))
+                weights.add(allocEntry.getValue() - candidate.weight);
+            else if (allocEntry.getKey().equals(dst))
+                weights.add(allocEntry.getValue() + candidate.weight);
+            else
+                weights.add(allocEntry.getValue());
+        }
+
+        double imbalance = (Collections.max(weights) - Collections.min(weights)) * 100.0 / Collections.max(weights);
+        return imbalance;
+    }
+
+        /* Copyright (c) 2012 Kevin L. Stern
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a copy
+     * of this software and associated documentation files (the "Software"), to deal
+     * in the Software without restriction, including without limitation the rights
+     * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the Software is
+     * furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+     * SOFTWARE.
+     */
 
     /**
      * An implementation of the Hungarian algorithm for solving the assignment
@@ -881,11 +718,11 @@ public class DruidCoordinatorReplicatorHelper {
          *         corresponding worker is unassigned.
          */
         public int[] execute() {
-	    /*
-	     * Heuristics to improve performance: Reduce rows and columns by their
-	     * smallest element, compute an initial non-zero dual feasible solution and
-	     * create a greedy matching from workers to jobs of the cost matrix.
-	     */
+        /*
+         * Heuristics to improve performance: Reduce rows and columns by their
+         * smallest element, compute an initial non-zero dual feasible solution and
+         * create a greedy matching from workers to jobs of the cost matrix.
+         */
             reduce();
             computeInitialFeasibleSolution();
             greedyMatch();
@@ -941,9 +778,9 @@ public class DruidCoordinatorReplicatorHelper {
                 }
                 parentWorkerByCommittedJob[minSlackJob] = minSlackWorker;
                 if (matchWorkerByJob[minSlackJob] == -1) {
-	        /*
-	         * An augmenting path has been found.
-	         */
+            /*
+             * An augmenting path has been found.
+             */
                     int committedJob = minSlackJob;
                     int parentWorker = parentWorkerByCommittedJob[committedJob];
                     while (true) {
@@ -957,10 +794,10 @@ public class DruidCoordinatorReplicatorHelper {
                     }
                     return;
                 } else {
-	        /*
-	         * Update slack values since we increased the size of the committed
-	         * workers set.
-	         */
+            /*
+             * Update slack values since we increased the size of the committed
+             * workers set.
+             */
                     int worker = matchWorkerByJob[minSlackJob];
                     committedWorkers[worker] = true;
                     for (int j = 0; j < dim; j++) {
@@ -1092,4 +929,3 @@ public class DruidCoordinatorReplicatorHelper {
 
 
 }
-

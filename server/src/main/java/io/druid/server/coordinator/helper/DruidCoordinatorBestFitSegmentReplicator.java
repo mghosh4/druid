@@ -230,6 +230,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		}
 
 		Map<String, Integer> segments = Maps.newHashMap();
+        List<Long> loadList = new ArrayList<Long>(futures.size());
 		for (Future<Map<String, Integer>> future : futures) {
 			try {
 				segments = future.get();
@@ -241,16 +242,28 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 				e.printStackTrace();
 			}
 
+            long historicalNodeLoad = 0;
 			for (Map.Entry<String, Integer> entry : segments.entrySet()) {
 				DataSegment segment = datasegments.get(entry.getKey());
+                historicalNodeLoad += entry.getValue();
 				if (segmentCounts.contains(segment)) {
 					int currentCount = segmentCounts.count(segment);
 					segmentCounts.setCount(segment, currentCount + entry.getValue());
 				} else
 					segmentCounts.add(segment, entry.getValue());
 			}
+
+            loadList.add(historicalNodeLoad);
 		}
 
+        long maxLoad = Collections.max(loadList);
+        long minLoad = Collections.min(loadList);
+        if (maxLoad > 0)
+        {
+            double imbalance = (maxLoad - minLoad) * 100 / maxLoad;
+            log.info("Observed Query Imbalance [%f]", imbalance);
+        }
+        
 		for (Entry<DataSegment> entry : segmentCounts.entrySet()) {
 			if (entry != null)
 				log.debug("Segment Received [%s] Count [%d]", entry.getElement().getIdentifier(), entry.getCount());
