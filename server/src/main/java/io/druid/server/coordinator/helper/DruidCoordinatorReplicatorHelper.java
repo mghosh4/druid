@@ -545,7 +545,7 @@ public class DruidCoordinatorReplicatorHelper {
                                                             HashMap<DruidServerMetadata, HashMap<DataSegment, Long>> hnToSegMap,
                                                             Tuple candidate)
     {
-        log.info("AllocMap [%s]", allocMap);
+        log.debug("AllocMap [%s]", allocMap);
         boolean first = false;
         long minLoad = 0;
         long minSegmentCount = 0;
@@ -577,7 +577,7 @@ public class DruidCoordinatorReplicatorHelper {
                 }
             }
             else
-                log.info("Server [%s]", allocEntry.getKey());
+                log.debug("Server [%s]", allocEntry.getKey());
         }
 
         return dstBin;
@@ -585,7 +585,7 @@ public class DruidCoordinatorReplicatorHelper {
 
     private static double calculateLoadImbalance(HashMap<DruidServerMetadata, Long> allocMap, Tuple candidate, DruidServerMetadata dst)
     {
-        log.info("AllocMap [%s] DstBin [%s] SrcBin [%s] Weight [%d]",
+        log.debug("AllocMap [%s] DstBin [%s] SrcBin [%s] Weight [%d]",
                     allocMap, dst.getHost(), candidate.metadata.getHost(), candidate.weight);
         List<Long> weights = new ArrayList<>();
         for (Map.Entry<DruidServerMetadata, Long> allocEntry : allocMap.entrySet())
