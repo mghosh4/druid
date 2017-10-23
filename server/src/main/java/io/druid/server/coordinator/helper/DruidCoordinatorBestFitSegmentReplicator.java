@@ -308,7 +308,7 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 			hnQueryTimeProcessed.put(server, totalHnQueryTime);
 			totalQueryTimeProcessedByAllHns += totalHnQueryTime;
 
-			log.debug("HN %s processed %d queries, total %d, querytime %d, total querytime %d ", server.getHost(),
+			log.info("HN %s processed %d queries, total %d, querytime %d, total querytime %d ", server.getHost(),
 							numQueriesProcessed, totalQueryProcessedByAllHns, totalHnQueryTime, totalQueryTimeProcessedByAllHns);
 		}
 		totalQueriesSinceDeployment += totalQueryProcessedByAllHns;
