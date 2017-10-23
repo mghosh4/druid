@@ -370,6 +370,9 @@ done
 echo ""
 
 #start historical FQDN
+hn_type_counter=0
+hn_type_index=0
+IFS=':' read -r -a hn_type_arr <<< "$HISTORICAL_NODE_TYPE"
 counter=0
 echo "Setting up historical nodes:"
 for node in ${NEW_HISTORICAL_NODES//,/ }
@@ -380,7 +383,15 @@ do
 
         #COMMAND=$COMMAND" sudo rm -rf $PATH_TO_DRUID_BIN/conf/druid/historical;"
         #COMMAND=$COMMAND" mkdir $PATH_TO_DRUID_BIN/conf/druid/historical;"
-        COMMAND=$COMMAND" sudo cat $PATH_TO_SOURCE/scripts/deployment/historical.properties > $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"
+        if [ $hn_type_counter -eq ${hn_type_arr[$hn_type_index]} ]
+        then
+            let hn_type_index=hn_type_index+1
+            let hn_type_counter=0
+            #echo "$hn_type_index"
+            #echo "$hn_type_counter"
+        fi
+        let hn_type_counter=hn_type_counter+1
+        COMMAND=$COMMAND" sudo cat $PATH_TO_SOURCE/scripts/deployment/hist_prop/historical.properties_$hn_type_index > $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"
         COMMAND=$COMMAND" sudo sed -i '2s@.*@druid.port=$HISTORICAL_NODE_PORT@' $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"
         #COMMAND=$COMMAND" sudo sed -i '18s@.*@druid.request.logging.dir=$LOG_FILE/historical-$counter@' $PATH_TO_DRUID_BIN/conf/druid/historical/runtime.properties;"
 

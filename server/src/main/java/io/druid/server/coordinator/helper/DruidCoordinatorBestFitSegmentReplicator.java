@@ -30,6 +30,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Multiset.Entry;
+import com.google.common.primitives.Longs;
 import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.HttpClient;
@@ -70,6 +71,14 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 	private final ReplicationThrottler replicatorThrottler;
 	private static final long MIN_THRESHOLD = 5;
 	private static int bestFitReplicationRound = 0;
+	private Map<DruidServerMetadata, Long> hnNumQueriesProcessed;
+	private Map<DruidServerMetadata, Double> hnQueryLoadWeight;
+	private long totalQueryProcessedByAllHns;
+	private Map<DruidServerMetadata, Long> hnQueryTimeProcessed;
+	private Map<DruidServerMetadata, Double> hnQueryTimeWeight;
+	private long totalQueryTimeProcessedByAllHns;
+	private long totalQueriesSinceDeployment;
+	private boolean hetNodeTrainingComplete;
 
 	public DruidCoordinatorBestFitSegmentReplicator(
 					DruidCoordinator coordinator) {
@@ -79,7 +88,14 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 						coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
 						coordinator.getDynamicConfigs().getReplicantLifetime()
 		);
-
+		this.hnNumQueriesProcessed = new HashMap<DruidServerMetadata, Long>();
+		this.hnQueryLoadWeight = new HashMap<DruidServerMetadata, Double>();
+		this.totalQueryProcessedByAllHns = 0;
+		this.hnQueryTimeProcessed = new HashMap<DruidServerMetadata, Long>();
+		this.hnQueryTimeWeight = new HashMap<DruidServerMetadata, Double>();
+		this.totalQueryTimeProcessedByAllHns = 0;
+		this.totalQueriesSinceDeployment = 0;
+		this.hetNodeTrainingComplete = false;
 	}
 
 	@Override
@@ -103,6 +119,12 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		HashMap<DataSegment, Long> weightedAccessCounts = coordinator.getWeightedAccessCounts();
 		calculateWeightedAccessCounts(params, segments, weightedAccessCounts);
 		coordinator.setWeightedAccessCounts(weightedAccessCounts);
+
+		// calculate hn weights based on num queries. This accounts for heterogeneity in the cluster
+		//calculateHnQueryWeights();
+
+		// calculate hn weights based on query time. This accounts for heterogeneity in the cluster
+		//calculateHnQueryTimeWeights();
 
 		// Calculate replication based on popularity
 		HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable = new HashMap<DataSegment, HashMap<DruidServerMetadata, Long>>();
@@ -159,7 +181,19 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		return uris;
 	}
 
+	private List<DruidServerMetadata> getDruidServerList(DruidCoordinatorRuntimeParams params) {
+		List<DruidServerMetadata> servers = new ArrayList<DruidServerMetadata>();
+		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier()) {
+			for (ServerHolder holder : serverQueue) {
+				servers.add(holder.getServer().getMetadata());
+			}
+		}
+		return servers;
+	}
+
 	private void calculateSegmentCounts(DruidCoordinatorRuntimeParams params, Multiset<DataSegment> segmentCounts) {
+
+		List<DruidServerMetadata> servers = getDruidServerList(params);
 		List<URI> urls = getHistoricalURLs(params);
 
 		ExecutorService pool = Executors.newFixedThreadPool(urls.size());
@@ -229,6 +263,12 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 			}
 		}
 
+		int index = 0;
+		hnNumQueriesProcessed.clear();
+		totalQueryProcessedByAllHns = 0;
+		hnQueryTimeProcessed.clear();
+		totalQueryTimeProcessedByAllHns = 0;
+
 		Map<String, Integer> segments = Maps.newHashMap();
 		for (Future<Map<String, Integer>> future : futures) {
 			try {
@@ -241,15 +281,40 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 				e.printStackTrace();
 			}
 
+			DruidServerMetadata server = servers.get(index++);
+
+			// remove the numQueriesProcessed entry from the segments map
+			long numQueriesProcessed = 0;
+//			numQueriesProcessed = segments.remove("numQueriesProcessed") + 1; // add 1 to avoid div by zero errors
+//			hnNumQueriesProcessed.put(server, numQueriesProcessed);
+//			totalQueryProcessedByAllHns += numQueriesProcessed;
+
+			long totalHnQueryTime = 1; // add 1 to avoid div by zero errors
 			for (Map.Entry<String, Integer> entry : segments.entrySet()) {
 				DataSegment segment = datasegments.get(entry.getKey());
+				if(segment == null){
+					log.info("Received null segment from %s", server.getHost());
+					continue;
+				}
 				if (segmentCounts.contains(segment)) {
 					int currentCount = segmentCounts.count(segment);
 					segmentCounts.setCount(segment, currentCount + entry.getValue());
-				} else
+				} else {
 					segmentCounts.add(segment, entry.getValue());
+				}
+				totalHnQueryTime += entry.getValue();
 			}
+
+			hnQueryTimeProcessed.put(server, totalHnQueryTime);
+			totalQueryTimeProcessedByAllHns += totalHnQueryTime;
+
+			log.debug("HN %s processed %d queries, total %d, querytime %d, total querytime %d ", server.getHost(),
+							numQueriesProcessed, totalQueryProcessedByAllHns, totalHnQueryTime, totalQueryTimeProcessedByAllHns);
 		}
+		totalQueriesSinceDeployment += totalQueryProcessedByAllHns;
+		//if(totalQueriesSinceDeployment > 15000){
+			hetNodeTrainingComplete = true;
+		//}
 
 		for (Entry<DataSegment> entry : segmentCounts.entrySet()) {
 			if (entry != null)
@@ -257,6 +322,56 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		}
 	}
 
+	private void calculateHnQueryWeights(){
+
+		//log.debug("Calculating HN query weights numHns %d ", hnNumQueriesProcessed.size());
+
+		double alpha = 0.5;
+
+		for(Map.Entry<DruidServerMetadata, Long> e : hnNumQueriesProcessed.entrySet()){
+			if(!hnQueryLoadWeight.containsKey(e.getKey())){
+				hnQueryLoadWeight.put(e.getKey(), (double)e.getValue()/(double)totalQueryProcessedByAllHns);
+			}
+			else{
+				double perfBasedWeight = alpha*e.getValue()/(double)totalQueryProcessedByAllHns +
+								(double)(1-alpha)*(double)hnQueryLoadWeight.get(e.getKey());
+				log.debug("Performance based load hn %s load %f curr %d old %f", e.getKey(), perfBasedWeight, e.getValue(), hnQueryLoadWeight.get(e.getKey()));
+				hnQueryLoadWeight.put(e.getKey(), perfBasedWeight);
+			}
+		}
+	}
+
+	private void calculateHnQueryTimeWeights(){
+
+		//log.info("Calculating HN query time weights numHns %d ", hnQueryTimeProcessed.size());
+
+		double alpha = 0.5;
+
+		for(Map.Entry<DruidServerMetadata, Long> e : hnQueryTimeProcessed.entrySet()){
+			if(!hnQueryTimeWeight.containsKey(e.getKey())){
+				hnQueryTimeWeight.put(e.getKey(), (double)e.getValue()/(double)totalQueryTimeProcessedByAllHns);
+			}
+			else{
+				double perfBasedWeight = alpha*e.getValue()/(double)totalQueryTimeProcessedByAllHns +
+								(double)(1-alpha)*(double)hnQueryTimeWeight.get(e.getKey());
+				log.debug("Performance based load hn %s load %f curr %d old %f", e.getKey(), perfBasedWeight, e.getValue(), hnQueryTimeWeight.get(e.getKey()));
+				hnQueryTimeWeight.put(e.getKey(), perfBasedWeight);
+			}
+		}
+
+//		long total = 13;
+//		double small = (double)1.0/(double)total;
+//		double large = (double)2.0/(double)total;
+//		for(Map.Entry<DruidServerMetadata, Long> e : hnQueryTimeProcessed.entrySet()){
+//			if(e.getKey().getHost().equals("pc714.emulab.net:8081") || e.getKey().getHost().equals("pc733.emulab.net:8081") ||
+//							e.getKey().getHost().equals("pc828.emulab.net:8081")) {
+//				hnQueryTimeWeight.put(e.getKey(), large);
+//			}
+//			else{
+//				hnQueryTimeWeight.put(e.getKey(), small);
+//			}
+//		}
+	}
 
 	private void calculateWeightedAccessCounts(
 					DruidCoordinatorRuntimeParams params,
@@ -324,7 +439,23 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		HashMap<DruidServerMetadata, Long> nodeCapacities = new HashMap<DruidServerMetadata, Long>();
 		for (MinMaxPriorityQueue<ServerHolder> serverQueue : params.getDruidCluster().getSortedServersByTier()) {
 			for (ServerHolder holder : serverQueue) {
+				/* average load */
 				nodeCapacities.put(holder.getServer().getMetadata(), averageLoad);
+
+//				if(hetNodeTrainingComplete){
+//				  /* num queries based load */
+//					//long queryPerfBasedLoad = (long)Math.ceil(totalWeightCount*hnQueryLoadWeight.get(holder.getServer().getMetadata()));
+//					//nodeCapacities.put(holder.getServer().getMetadata(), queryPerfBasedLoad);
+//
+//					/* query time based load */
+//					long querytimePerfBasedLoad = (long)Math.ceil(totalWeightCount*hnQueryTimeWeight.get(holder.getServer().getMetadata()));
+//					nodeCapacities.put(holder.getServer().getMetadata(), querytimePerfBasedLoad);
+//					log.info("Allocated %d to hn %s ", querytimePerfBasedLoad, holder.getServer().getMetadata().getHost());
+//				}
+//				else {
+//					nodeCapacities.put(holder.getServer().getMetadata(), averageLoad);
+//					//log.debug("Allocated %d to hn %s ", averageLoad, holder.getServer().getMetadata().getHost());
+//				}
 			}
 		}
 
@@ -385,11 +516,28 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 			bestFitReplicationRound++;
 			log.debug("Round robin map is %s", Arrays.toString(roundRobinMap));
 
+			Comparator<Map.Entry<DruidServerMetadata, Long>> valueComparator = new Comparator<Map.Entry<DruidServerMetadata, Long>>() {
+				@Override public int compare(Map.Entry<DruidServerMetadata, Long> e1, Map.Entry<DruidServerMetadata, Long> e2) {
+					Long v1 = e1.getValue();
+					Long v2 = e2.getValue();
+					return v2.compareTo(v1);
+				}
+			};
+
+			Set<Map.Entry<DruidServerMetadata, Long>> entries = hnQueryTimeProcessed.entrySet();
+			List<Map.Entry<DruidServerMetadata, Long>> nodesSortedByQueryTime = new ArrayList<Map.Entry<DruidServerMetadata, Long>>(entries);
+			Collections.sort(nodesSortedByQueryTime, valueComparator);
+
+			int[] queryTimeBasedMap = new int[historicalNodeCount];
+			for (int i = 0; i < historicalNodeCount; i++) {
+				queryTimeBasedMap[i] = metadataToIDMap.get(nodesSortedByQueryTime.get(i).getKey());
+			}
+
 			//6. replace all modified variable based on map
 			HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> matchedTable;
-			matchedTable = DruidCoordinatorReplicatorHelper.rebuildRouting(routingTable, hungarianMap, metadataToIDMap, IDToMetadataMap);
-			//routingTable.clear();
-			//routingTable.putAll(matchedTable);
+			matchedTable = DruidCoordinatorReplicatorHelper.rebuildRouting(routingTable, queryTimeBasedMap, metadataToIDMap, IDToMetadataMap);
+//			routingTable.clear();
+//			routingTable.putAll(matchedTable);
 
 			//7. balance the segments to reduce memory spikes
 			//log.debug("RTUB");
@@ -407,6 +555,8 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 					Tuple candidate,
 					HashMap<DruidServerMetadata, Long> nodeCapacities,
 					HashMap<DataSegment, HashMap<DruidServerMetadata, Long>> routingTable) {
+
+
 		//log.debug("Segment [%s] Weight [%d]", candidate.segment.getIdentifier(), candidate.weight);
 		long val = candidate.weight;
 		if (!routingTable.containsKey(candidate.segment))
@@ -418,8 +568,9 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 		DruidServerMetadata minspillServer = null;
 		boolean fits = false;
 		long empty = 0;
+
 		for (Map.Entry<DruidServerMetadata, Long> entry : nodeCapacities.entrySet()) {
-			//log.debug("Server [%s] Capacity [%d]", entry.getKey().getHost(), entry.getValue());
+			//log.info("Server [%s] Capacity [%d]", entry.getKey().getHost(), entry.getValue());
 			long capacity = entry.getValue();
 			if (capacity == 0)
 				continue;
@@ -430,14 +581,14 @@ public class DruidCoordinatorBestFitSegmentReplicator implements DruidCoordinato
 				if (leftafterfill < mincapleftafterfill) {
 					mincapleftafterfill = leftafterfill;
 					minfitServer = entry.getKey();
-					//log.debug("Server [%s] fits segment [%s]", minfitServer.getHost(), candidate.segment.getIdentifier());
+					//log.info("Server [%s] fits segment [%s]", minfitServer.getHost(), candidate.segment.getIdentifier());
 				}
 			} else {
 				long leftafterfill = val - capacity;
 				if (leftafterfill < minvalleftafterfill) {
 					minvalleftafterfill = leftafterfill;
 					minspillServer = entry.getKey();
-					//log.debug("Server [%s] spills segment [%s]", minspillServer.getHost(), candidate.segment.getIdentifier());
+					//log.info("Server [%s] spills segment [%s]", minspillServer.getHost(), candidate.segment.getIdentifier());
 				}
 			}
 		}

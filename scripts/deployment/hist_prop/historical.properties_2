@@ -1,0 +1,15 @@
+druid.service=druid/historical
+druid.port=8081
+
+# HTTP server threads
+druid.server.http.numThreads=25
+
+# Processing threads and buffers
+druid.processing.buffer.sizeBytes=1073741824
+druid.processing.numThreads=7
+
+# Segment storage
+druid.segmentCache.locations=[{"path":"/mnt/druid/segment-cache","maxSize"\:130000000000}]
+druid.server.maxSize=130000000000
+
+druid.monitoring.monitors=["com.metamx.metrics.SysMonitor","com.metamx.metrics.JvmMonitor","io.druid.server.metrics.HistoricalMetricsMonitor"]
