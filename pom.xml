@@ -186,6 +186,7 @@
         <module>extensions-contrib/influxdb-emitter</module>
         <!-- Twitter-specific extensions -->
         <module>extensions-twitter/scribe-emitter</module>
+        <module>extensions-twitter/twitter-thrift-extensions</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
